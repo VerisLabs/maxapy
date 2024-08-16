@@ -101,6 +101,32 @@ MaxAPY is a yield farming **gas-optimized** and **capital-efficient** vault impl
 
 ## Installation
 
+### Prerequisites
+
+To install Foundry:
+
+```sh
+curl -L https://foundry.paradigm.xyz | bash
+```
+
+This will download foundryup. To start Foundry, run:
+
+```sh
+foundryup
+```
+
+We are using a nightly version of Foundry, so you will need to run the following command to install the nightly version:
+
+```sh
+foundryup -v nightly-f625d0fa7c51e65b4bf1e8f7931cd1c6e2e285e9
+```
+
+To install Soldeer:
+
+```sh
+cargo install soldeer
+```
+
 ### Clone the repo
 
 ```sh
@@ -122,23 +148,6 @@ forge build
 ### Set local environment variables
 
 Create a `.env` file and create the necessary environment variables following the example in `env.example`.
-
-
-## Usage
-
-To install Foundry:
-
-```sh
-curl -L https://foundry.paradigm.xyz | bash
-```
-
-This will download foundryup. To start Foundry, run:
-
-```sh
-foundryup
-```
-
-
 
 ## Testing
 
