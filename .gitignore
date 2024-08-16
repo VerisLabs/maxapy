@@ -1,0 +1,21 @@
+# Compiler files
+cache/
+out/
+
+# Ignores development broadcast logs
+broadcast/
+
+# Ignores git vscode config
+.vscode/
+
+# Docs
+docs/
+
+# Dotenv file
+.env
+
+# Coverage file
+lcov.info
+
+# Soldeer dependencies
+dependencies/

@@ -1,0 +1,48 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["dependencies"]
+gas_reports = ['*']
+
+# needed to test de Morpho Eth Maximizer
+evm_version = "shanghai"
+[fuzz]
+runs = 1000
+max_test_rejects = 65536
+seed = '0x1'
+dictionary_weight = 40
+include_storage = true
+include_push_bytes = true
+extra_output = ["storageLayout", "metadata"]
+
+[invariant]
+runs = 256
+depth = 16
+fail_on_revert = true
+
+[fmt]
+bracket_spacing = true
+int_types = "long"
+line_length = 120
+multiline_func_header = "all"
+number_underscore = "thousands"
+quote_style = "double"
+tab_width = 4
+wrap_comments = true
+
+
+[rpc_endpoints]
+mainnet = "${RPC_MAINNET}" 
+goerli = "${RPC_GOERLI}"
+polygon = "${RPC_POLYGON}"
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_MAINNET_KEY}" }
+goerli = { key = "${ETHERSCAN_API_KEY}" }
+polygon = { key = "${ETHERSCAN_API_KEY}" }
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config
+[dependencies]
+"@openzeppelin-contracts" = { version = "5.0.2" }
+forge-std = { version = "1.8.2" }
+solady = { version = "0.0.201" }
