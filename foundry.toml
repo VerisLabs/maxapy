@@ -3,9 +3,10 @@ src = "src"
 out = "out"
 libs = ["dependencies"]
 gas_reports = ['*']
-
 # needed to test de Morpho Eth Maximizer
 evm_version = "shanghai"
+solc_version = "0.8.20"
+
 [fuzz]
 runs = 1000
 max_test_rejects = 65536
@@ -45,3 +46,11 @@ polygon = { key = "${ETHERSCAN_API_KEY}" }
 "@openzeppelin-contracts" = { version = "5.0.2" }
 forge-std = { version = "1.8.2" }
 solady = { version = "0.0.201" }
+
+[soldeer]
+# whether soldeer manages remappings
+remappings_generated = false
+# whether soldeer re-generates all remappings when installing, updating or uninstalling deps
+remappings_regenerate = false
+# whether to suffix the remapping with the version: `name-a.b.c`
+remappings_version = false
