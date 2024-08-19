@@ -401,7 +401,7 @@ contract YearnV3WETHStrategyTest is BaseTest, StrategyEvents {
         uint256 snapshotId = vm.snapshot();
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-        
+
         vault.deposit(100 ether, users.alice);
 
         vm.startPrank(users.keeper);

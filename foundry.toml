@@ -30,9 +30,8 @@ quote_style = "double"
 tab_width = 4
 wrap_comments = true
 
-
 [rpc_endpoints]
-mainnet = "${RPC_MAINNET}" 
+mainnet = "${RPC_MAINNET}"
 goerli = "${RPC_GOERLI}"
 polygon = "${RPC_POLYGON}"
 

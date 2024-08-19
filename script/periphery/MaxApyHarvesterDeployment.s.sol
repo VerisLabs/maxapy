@@ -23,7 +23,8 @@ contract MaxApyHarvesterDeployment is Script {
         vm.stopBroadcast();
 
         // Verify the contract
-        if (block.chainid == 137) { // Polygon Mainnet
+        if (block.chainid == 137) {
+            // Polygon Mainnet
             verifyContract(address(harvester), abi.encode(admin, keepers, allocators));
         }
     }
