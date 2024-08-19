@@ -1,6 +1,6 @@
 # MaxAPY · [![License](https://img.shields.io/badge/license-GPL-blue.svg)](LICENSE) [![Solidity](https://img.shields.io/badge/Solidity-%5E0.8.19-orange)](https://docs.soliditylang.org/en/latest/)
 
-MaxAPY is a yield farming **gas-optimized** and **capital-efficient** vault implemented in Solidity, designed to **optimize yield** through various strategies, and earn interest in ERC20 tokens. It relies on the safety of the battle-tested [Yearn's yVault](https://github.com/yearn/yearn-vaults/blob/efb47d8a84fcb13ceebd3ceb11b126b323bcc05d/contracts/Vault.vy) and the innovation of MaxAPY.
+MaxAPY is a yield farming **gas-optimized** and **capital-efficient** vault implemented in Solidity, designed to **optimize yield** through various strategies, and earn interest in ERC20 tokens. It relies on the safety of the battle-tested [Yearn&#39;s yVault](https://github.com/yearn/yearn-vaults/blob/efb47d8a84fcb13ceebd3ceb11b126b323bcc05d/contracts/Vault.vy) and the innovation of MaxAPY.
 
 ## Contracts
 
@@ -136,7 +136,7 @@ git clone https://github.com/UnlockdFinance/maxapy-v2.git
 ### Install the dependencies
 
 ```sh
-forge soldeer update
+soldeer install
 ```
 
 ### Compile
@@ -193,7 +193,7 @@ forge script script/local/MaxApy.s.sol:DeploymentScript --fork-url http://localh
 
 ### Interacting with the local fork
 
-Use the sh utils for easier interactions : 
+Use the sh utils for easier interactions :
 
 ```sh
 ./script/local/utils/setupProtocol.sh
