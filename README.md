@@ -130,7 +130,7 @@ cargo install soldeer
 ### Clone the repo
 
 ```sh
-git clone https://github.com/UnlockdFinance/maxapy-v2.git
+git clone https://github.com/UnlockdFinance/maxapy.git
 ```
 
 ### Install the dependencies
