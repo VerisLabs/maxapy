@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseHandler, console2} from "./base/BaseHandler.t.sol";
-import {MaxApyVault, ERC4626} from "src/MaxApyVault.sol";
-import {MockERC20} from "../../mock/MockERC20.sol";
+import { BaseHandler, console2 } from "./base/BaseHandler.t.sol";
+import { MaxApyVault, ERC4626 } from "src/MaxApyVault.sol";
+import { MockERC20 } from "../../mock/MockERC20.sol";
 
 contract MaxApyVaultHandler is BaseHandler {
     MaxApyVault vault;
@@ -71,9 +71,7 @@ contract MaxApyVaultHandler is BaseHandler {
         expectedTotalDeposits = actualTotalDeposits + amount;
         expectedTotalIdle = actualTotalIdle + amount;
         expectedTotalDebt = 0;
-        expectedSharePrice =
-            ((10 ** vault.decimals()) * (expectedTotalAssets + 1)) /
-            (expectedTotalSupply + 10 ** 6);
+        expectedSharePrice = ((10 ** vault.decimals()) * (expectedTotalAssets + 1)) / (expectedTotalSupply + 10 ** 6);
 
         vm.startPrank(currentActor);
         token.approve(address(vault), type(uint256).max);
@@ -111,9 +109,7 @@ contract MaxApyVaultHandler is BaseHandler {
         expectedTotalDeposits = actualTotalDeposits + expectedAssets;
         expectedTotalIdle = actualTotalIdle + expectedAssets;
         expectedTotalDebt = 0;
-        expectedSharePrice =
-            ((10 ** vault.decimals()) * (expectedTotalAssets + 1)) /
-            (expectedTotalSupply + 10 ** 6);
+        expectedSharePrice = ((10 ** vault.decimals()) * (expectedTotalAssets + 1)) / (expectedTotalSupply + 10 ** 6);
 
         vm.startPrank(currentActor);
         token.approve(address(vault), type(uint256).max);
@@ -136,10 +132,7 @@ contract MaxApyVaultHandler is BaseHandler {
         //    previousSharePrice;
     }
 
-    function redeem(
-        uint256 actorSeed,
-        uint256 shares
-    ) public useActor(actorSeed) countCall("redeem") {
+    function redeem(uint256 actorSeed, uint256 shares) public useActor(actorSeed) countCall("redeem") {
         shares = bound(shares, 0, vault.maxRedeem(currentActor));
         if (shares == 0) return;
         if (currentActor == address(vault)) return;
@@ -156,9 +149,7 @@ contract MaxApyVaultHandler is BaseHandler {
         expectedTotalDeposits = _sub0(actualTotalDeposits, expectedAssets);
         expectedTotalIdle = _sub0(actualTotalIdle, expectedAssets);
         expectedTotalDebt = 0;
-        expectedSharePrice =
-            ((10 ** vault.decimals()) * (expectedTotalAssets + 1)) /
-            (expectedTotalSupply + 10 ** 6);
+        expectedSharePrice = ((10 ** vault.decimals()) * (expectedTotalAssets + 1)) / (expectedTotalSupply + 10 ** 6);
 
         vm.startPrank(currentActor);
         actualAssets = vault.redeem(shares, currentActor, currentActor);
@@ -180,10 +171,7 @@ contract MaxApyVaultHandler is BaseHandler {
         //    previousSharePrice;
     }
 
-    function withdraw(
-        uint256 actorSeed,
-        uint256 assets
-    ) public useActor(actorSeed) countCall("withdraw") {
+    function withdraw(uint256 actorSeed, uint256 assets) public useActor(actorSeed) countCall("withdraw") {
         assets = bound(assets, 0, vault.maxWithdraw(currentActor));
         if (assets == 0) return;
         if (currentActor == address(vault)) return;
@@ -196,9 +184,7 @@ contract MaxApyVaultHandler is BaseHandler {
         expectedTotalDeposits = _sub0(actualTotalDeposits, assets);
         expectedTotalIdle = _sub0(actualTotalIdle, assets);
         expectedTotalDebt = 0;
-        expectedSharePrice =
-            ((10 ** vault.decimals()) * (expectedTotalAssets + 1)) /
-            (expectedTotalSupply + 10 ** 6);
+        expectedSharePrice = ((10 ** vault.decimals()) * (expectedTotalAssets + 1)) / (expectedTotalSupply + 10 ** 6);
 
         vm.startPrank(currentActor);
         actualShares = vault.withdraw(assets, currentActor, currentActor);
