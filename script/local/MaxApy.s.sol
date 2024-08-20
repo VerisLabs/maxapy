@@ -98,6 +98,7 @@ contract DeploymentScript is Script, OwnableRoles {
 
     function run() public {
         // use another private key here, dont use a keeper account for deployment
+        address deployerAddress = vm.envAddress("DEPLOYER_ADDRESS");
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         keepers.push(vm.envAddress("KEEPER1_ADDRESS"));
         keepers.push(vm.envAddress("KEEPER2_ADDRESS"));
@@ -112,7 +113,7 @@ contract DeploymentScript is Script, OwnableRoles {
         vm.startBroadcast(deployerPrivateKey);
 
         /// Deploy MaxApyVault
-        vaultDeployment = new MaxApyVault(address(this), WETH, "MaxApyWETHVault", "maxApy", treasury);
+        vaultDeployment = new MaxApyVault(deployerAddress, WETH, "MaxApyWETHVault", "maxApy", treasury);
 
         vault = IMaxApyVault(address(vaultDeployment));
         // grant roles
