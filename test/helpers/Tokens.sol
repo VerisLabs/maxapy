@@ -15,7 +15,7 @@ import {
 
 uint256 constant _1_USDC = 1e6;
 uint256 constant _1_USDCE = 1e6;
-uint256 constant _1_USDT = _1_USDC;
+uint256 constant _1_USDT = 1e6;
 uint256 constant _1_DAI = 1 ether;
 
 function getTokensList(string memory chain) pure returns (address[] memory) {

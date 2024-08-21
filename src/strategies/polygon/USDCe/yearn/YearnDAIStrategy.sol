@@ -46,6 +46,79 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
     }
 
     ////////////////////////////////////////////////////////////////
+    ///                STRATEGY CORE LOGIC                       ///
+    ////////////////////////////////////////////////////////////////
+    /// @notice Withdraws exactly `amountNeeded` to `vault`.
+    /// @dev This may only be called by the respective Vault.
+    /// @param amountNeeded How much `underlyingAsset` to withdraw.
+    /// @return loss Any realized losses
+    /// NOTE : while in the {withdraw} function the vault gets `amountNeeded` - `loss`
+    /// in {liquidate} the vault always gets `amountNeeded` and `loss` is the amount
+    /// that had to be lost in order to withdraw exactly `amountNeeded`
+    function liquidateExact(uint256 amountNeeded) external override checkRoles(VAULT_ROLE) returns (uint256 loss) {
+        uint256 amountRequested = previewLiquidateExact(amountNeeded);
+        uint256 amountFreed;
+        // liquidate `amountRequested` in order to get exactly or more than `amountNeeded`
+        (amountFreed, loss) = _liquidatePosition(amountRequested);
+        // Send it directly back to vault
+        if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(address(vault), amountNeeded);
+        // something didn't work as expected
+        // this should NEVER happen in normal conditions
+        else revert();
+        // Note: Reinvest anything leftover on next `harvest`
+        _snapshotEstimatedTotalAssets();
+    }
+
+    /////////////////////////////////////////////////////////////////
+    ///                    VIEW FUNCTIONS                        ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
+    /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
+    /// @return liquidatedAmount output in assets
+    function previewLiquidate(uint256 requestedAmount) public view override returns (uint256 liquidatedAmount) {
+        uint256 loss;
+        uint256 underlyingBalance = _underlyingBalance();
+        // If underlying balance currently held by strategy is not enough to cover
+        // the requested amount, we divest from the Cellar Vault
+        if (underlyingBalance < requestedAmount) {
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = requestedAmount - underlyingBalance;
+            }
+            uint256 shares = _sharesForAmount(amountToWithdraw);
+            if (shares == 0) return 0;
+            uint256 withdrawn = yVault.previewRedeem(shares);
+            withdrawn = zapper.get_dy_underlying(0, 1, withdrawn) * 9995 / 10_000;
+            if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
+        }
+        // liquidatedAmount = amountNeeded - loss;
+        assembly {
+            liquidatedAmount := sub(requestedAmount, loss)
+        }
+    }
+
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
+    /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
+    /// @return requestedAmount
+    function previewLiquidateExact(uint256 liquidatedAmount) public view override returns (uint256 requestedAmount) {
+        // increase 1% to be pessimistic
+        return previewLiquidate(liquidatedAmount) * 101 / 100;
+    }
+
+    /// @notice Returns the max amount of assets that the strategy can withdraw after losses
+    function maxLiquidate() public view override returns (uint256) {
+        return _estimatedTotalAssets();
+    }
+
+    /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
+    function maxLiquidateExact() public view override returns (uint256) {
+        return previewLiquidate(estimatedTotalAssets()) * 99 / 100;
+    }
+
+    ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
 
@@ -92,7 +165,7 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
 
         assembly {
             // Emit the `Invested` event
-            mstore(0x00, amount)
+            mstore(0x00, depositedAmount)
             log2(0x00, 0x20, _INVESTED_EVENT_SIGNATURE, address())
         }
     }
@@ -127,7 +200,20 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return _shares the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view override returns (uint256 _shares) {
-        amount = zapper.get_dy_underlying(1, 0, amount);
-        return super._sharesForAmount(amount);
+        return super._sharesForAmount(_spotPriceDy(1, amount));
+    }
+
+    /// @notice Returns the price of token USDC<>DAI or DAI<>USDC withouth considering any slippage or fees
+    /// @return _spotDy spot price times amount
+    function _spotPriceDy(uint256 i, uint256 amount) internal view returns (uint256 _spotDy) {
+        if (i == 0) {
+            uint256 spotPrice = zapper.get_dy_underlying(0, 1, 1 ether);
+            return spotPrice * amount / 1 ether;
+        }
+
+        if (i == 1) {
+            uint256 spotPrice = zapper.get_dy_underlying(1, 0, 1e6);
+            return spotPrice * amount / 1e6;
+        }
     }
 }
