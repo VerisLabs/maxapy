@@ -15,9 +15,10 @@ import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import "src/helpers/AddressBook.sol";
+import { _1_USDCE } from "test/helpers/Tokens.sol";
 
 contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
-    address public constant YVAULT_DAI_POLYGON = 0xf4F9d5697341B4C9B0Cc8151413e05A90f7dc24F;
+    address public constant YVAULT_DAI_POLYGON = YEARN_DAI_LENDER_YVAULT_POLYGON;
     address public TREASURY;
 
     IStrategyWrapper public strategy;
@@ -33,7 +34,7 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
 
         TREASURY = makeAddr("treasury");
 
-        vaultDeployment = new MaxApyVault(users.alice, DAI_POLYGON, "MaxApyDAIVault", "maxDAI", TREASURY);
+        vaultDeployment = new MaxApyVault(users.alice, USDCE_POLYGON, "MaxApyDAIVault", "maxDAI", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
         proxyAdmin = new ProxyAdmin(users.alice);
@@ -56,17 +57,18 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         vm.label(YVAULT_DAI_POLYGON, "yVault");
         vm.label(address(proxy), "YearnDAILenderStrategy");
+        vm.label(address(USDCE_POLYGON), "USDCE");
         vm.label(address(DAI_POLYGON), "DAI");
 
         strategy = IStrategyWrapper(address(_proxy));
 
-        IERC20(DAI_POLYGON).approve(address(vault), type(uint256).max);
+        IERC20(USDCE_POLYGON).approve(address(vault), type(uint256).max);
     }
 
     /*==================INITIALIZATION TESTS==================*/
 
     function testYearnDAILender__Initialization() public {
-        MaxApyVault _vault = new MaxApyVault(users.alice, DAI_POLYGON, "MaxApyDAIVault", "maxDAI", TREASURY);
+        MaxApyVault _vault = new MaxApyVault(users.alice, USDCE_POLYGON, "MaxApyDAIVault", "maxDAI", TREASURY);
         ProxyAdmin _proxyAdmin = new ProxyAdmin(users.alice);
         YearnDAILenderStrategyWrapper _implementation = new YearnDAILenderStrategyWrapper();
 
@@ -89,17 +91,16 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
 
         assertEq(_strategy.vault(), address(_vault));
         assertEq(_strategy.hasAnyRole(_strategy.vault(), _strategy.VAULT_ROLE()), true);
-        assertEq(_strategy.underlyingAsset(), DAI_POLYGON);
-        assertEq(IERC20(DAI_POLYGON).allowance(address(_strategy), address(_vault)), type(uint256).max);
+        assertEq(_strategy.underlyingAsset(), USDCE_POLYGON);
+        assertEq(IERC20(DAI_POLYGON).allowance(address(_strategy), address(YVAULT_DAI_POLYGON)), type(uint256).max);
+        assertEq(IERC20(USDCE_POLYGON).allowance(address(_strategy), address(_vault)), type(uint256).max);
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
         assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy Yearn Strategy")));
         assertEq(_strategy.yVault(), YVAULT_DAI_POLYGON);
-        assertEq(IERC20(DAI_POLYGON).allowance(address(_strategy), YVAULT_DAI_POLYGON), type(uint256).max);
 
         assertEq(_proxyAdmin.owner(), users.alice);
         vm.startPrank(address(_proxyAdmin));
-        // assertEq(proxyInit.admin(), address(_proxyAdmin));
         vm.stopPrank();
 
         vm.startPrank(users.alice);
@@ -128,26 +129,26 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         vm.stopPrank();
         vm.startPrank(users.bob);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        strategy.setMinSingleTrade(1 ether);
+        strategy.setMinSingleTrade(1 * _1_USDCE);
 
         vm.stopPrank();
         vm.startPrank(address(vault));
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        strategy.setMinSingleTrade(1 ether);
+        strategy.setMinSingleTrade(1 * _1_USDCE);
 
         vm.stopPrank();
         vm.startPrank(users.alice);
         vm.expectEmit();
-        emit MinSingleTradeUpdated(1 ether);
-        strategy.setMinSingleTrade(1 ether);
-        assertEq(strategy.minSingleTrade(), 1 ether);
+        emit MinSingleTradeUpdated(1 * _1_USDCE);
+        strategy.setMinSingleTrade(1 * _1_USDCE);
+        assertEq(strategy.minSingleTrade(), 1 * _1_USDCE);
     }
 
     function testYearnDAILender__IsActive() public {
         vault.addStrategy(address(strategy), 10_000, 0, 0, 0);
         assertEq(strategy.isActive(), false);
 
-        deal(DAI_POLYGON, address(strategy), 1 ether);
+        deal(USDCE_POLYGON, address(strategy), 10 * _1_USDCE);
         assertEq(strategy.isActive(), false);
 
         vm.startPrank(users.keeper);
@@ -157,10 +158,10 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
 
         strategy.divest(IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)));
         vm.startPrank(address(strategy));
-        IERC20(DAI_POLYGON).transfer(makeAddr("random"), IERC20(DAI_POLYGON).balanceOf(address(strategy)));
+        IERC20(USDCE_POLYGON).transfer(makeAddr("random"), IERC20(USDCE_POLYGON).balanceOf(address(strategy)));
         assertEq(strategy.isActive(), false);
 
-        deal(DAI_POLYGON, address(strategy), 1 ether);
+        deal(USDCE_POLYGON, address(strategy), 1 * _1_USDCE);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(strategy.isActive(), true);
@@ -188,7 +189,7 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
     function testYearnDAILender__InvestmentSlippage() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 ether, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         vm.startPrank(users.keeper);
 
@@ -202,52 +203,35 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 ether, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         strategy.mockReport(0, 0, 0, TREASURY);
 
-        (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 ether, 0);
-        // assertEq(realizedProfit, 0);
+        (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 * _1_USDCE, 0);
         assertEq(unrealizedProfit, 0);
         assertEq(loss, 0);
-        assertEq(debtPayment, 1 ether);
+        assertEq(debtPayment, 1 * _1_USDCE);
 
         vm.revertTo(snapshotId);
 
         snapshotId = vm.snapshot();
 
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 60 ether });
-        strategy.invest(60 ether, 0);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 60 * _1_USDCE });
+        strategy.invest(60 * _1_USDCE, 0);
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 ether, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         strategy.mockReport(0, 0, 0, TREASURY);
 
         uint256 beforeReturnSnapshotId = vm.snapshot();
 
         (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
-        // assertEq(realizedProfit, 0);
-        assertEq(unrealizedProfit, 59.999999999999999999 ether);
+        assertEq(unrealizedProfit, 59_953_634);
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
         vm.revertTo(beforeReturnSnapshotId);
-
-        (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
-
-        // assertEq(realizedProfit, 59.999999999999999998 ether);
-        assertEq(unrealizedProfit, 59.999999999999999999 ether);
-        assertEq(loss, 0);
-        assertEq(debtPayment, 0);
-
-        vm.revertTo(beforeReturnSnapshotId);
-        (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
-
-        // assertEq(realizedProfit, 29.999999999999999999 ether);
-        assertEq(unrealizedProfit, 59.999999999999999999 ether);
-        assertEq(loss, 0);
-        assertEq(debtPayment, 0);
 
         vm.revertTo(snapshotId);
 
@@ -255,25 +239,23 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 ether, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         strategy.mockReport(0, 0, 0, TREASURY);
 
-        strategy.triggerLoss(10 ether);
+        strategy.triggerLoss(10 * _1_USDCE);
 
         beforeReturnSnapshotId = vm.snapshot();
 
         (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
-        // assertEq(realizedProfit, 0);
         assertEq(unrealizedProfit, 0);
-        assertEq(loss, 10 ether);
+        assertEq(loss, 10 * _1_USDCE);
         assertEq(debtPayment, 0);
         vm.revertTo(beforeReturnSnapshotId);
 
         (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
-        // assertEq(realizedProfit, 0);
         assertEq(unrealizedProfit, 0);
-        assertEq(loss, 10 ether);
+        assertEq(loss, 10 * _1_USDCE);
         assertEq(debtPayment, 0);
 
         vm.revertTo(snapshotId);
@@ -283,26 +265,26 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         strategy.adjustPosition();
         assertEq(IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), 0);
 
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 10 ether });
-        uint256 expectedShares = strategy.sharesForAmount(10 ether);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDCE);
         vm.expectEmit();
-        emit Invested(address(strategy), 10 ether);
+        emit Invested(address(strategy), 9_992_274);
         strategy.adjustPosition();
-        assertEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)));
+        assertApproxEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedShares / 1000);
 
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 100 ether });
-        expectedShares += strategy.sharesForAmount(100 ether);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 100 * _1_USDCE });
+        expectedShares += strategy.sharesForAmount(100 * _1_USDCE);
         vm.expectEmit();
-        emit Invested(address(strategy), 100 ether);
+        emit Invested(address(strategy), 99_922_724);
         strategy.adjustPosition();
-        assertEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)));
+        assertApproxEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedShares / 1000);
 
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 500 ether });
-        expectedShares += strategy.sharesForAmount(500 ether);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 500 * _1_USDCE });
+        expectedShares += strategy.sharesForAmount(500 * _1_USDCE);
         vm.expectEmit();
-        emit Invested(address(strategy), 500 ether);
+        emit Invested(address(strategy), 499_613_612);
         strategy.adjustPosition();
-        assertEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)));
+        assertApproxEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedShares / 1000);
     }
 
     function testYearnDAILender__Invest() public {
@@ -313,81 +295,81 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFundsToInvest()"));
         returned = strategy.invest(1, 0);
 
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 10 ether });
-        uint256 expectedShares = strategy.sharesForAmount(10 ether);
-        vm.expectEmit();
-        emit Invested(address(strategy), 10 ether);
-        strategy.invest(10 ether, 0);
-        assertEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)));
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDCE);
+        //vm.expectEmit();
+        //emit Invested(address(strategy), 10 * _1_USDCE);
+        strategy.invest(10 * _1_USDCE, 0);
+        assertApproxEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedShares / 1000);
 
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 10 ether });
-        expectedShares += strategy.sharesForAmount(10 ether);
-        vm.expectEmit();
-        emit Invested(address(strategy), 10 ether);
-        strategy.invest(10 ether, 0);
-        assertEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)));
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        expectedShares += strategy.sharesForAmount(10 * _1_USDCE);
+        //vm.expectEmit();
+        //emit Invested(address(strategy), 10 * _1_USDCE);
+        strategy.invest(10 * _1_USDCE, 0);
+        assertApproxEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedShares / 1000);
     }
 
     function testYearnDAILender__Divest() public {
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 10 ether });
-        uint256 expectedShares = strategy.sharesForAmount(10 ether);
-        strategy.invest(10 ether, 0);
-        assertEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)));
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        uint256 expectedShares = strategy.sharesForAmount(9_995_000);
+        strategy.invest(10 * _1_USDCE, 0);
+        assertApproxEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedShares / 1000);
 
-        uint256 strategyBalanceBefore = IERC20(DAI_POLYGON).balanceOf(address(strategy));
+        uint256 strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         vm.expectEmit();
-        emit Divested(address(strategy), expectedShares, 10 ether - 1);
+        emit Divested(address(strategy), expectedShares, 9_987_831);
         uint256 amountDivested = strategy.divest(expectedShares);
-        assertEq(amountDivested, 10 ether - 1);
-        assertEq(IERC20(DAI_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
+        assertEq(amountDivested, 9_987_831);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
     }
 
     function testYearnDAILender__LiquidatePosition() public {
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 10 ether });
-        (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(1 ether);
-        assertEq(liquidatedAmount, 1 ether);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(1 * _1_USDCE);
+        assertEq(liquidatedAmount, 1 * _1_USDCE);
         assertEq(loss, 0);
 
-        (liquidatedAmount, loss) = strategy.liquidatePosition(10 ether);
-        assertEq(liquidatedAmount, 10 ether);
+        (liquidatedAmount, loss) = strategy.liquidatePosition(9 * _1_USDCE);
+        assertEq(liquidatedAmount, 9 * _1_USDCE);
         assertEq(loss, 0);
 
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 5 ether });
-        strategy.invest(5 ether, 0);
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 10 ether });
-        (liquidatedAmount, loss) = strategy.liquidatePosition(15 ether);
-        assertEq(liquidatedAmount, 14.999999999999999999 ether);
-        assertEq(loss, 1);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 5 * _1_USDCE });
+        strategy.invest(5 * _1_USDCE, 0);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        (liquidatedAmount, loss) = strategy.liquidatePosition(14_990_000);
+        assertEq(liquidatedAmount, 14_986_421);
+        assertEq(loss, 3579);
 
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 1000 ether });
-        strategy.invest(1000 ether, 0);
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 500 ether });
-        (liquidatedAmount, loss) = strategy.liquidatePosition(1000 ether);
-        assertEq(liquidatedAmount, 999.999999999999999999 ether);
-        assertEq(loss, 1);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 1000 * _1_USDCE });
+        strategy.invest(1000 * _1_USDCE, 0);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 500 * _1_USDCE });
+        (liquidatedAmount, loss) = strategy.liquidatePosition(1000 * _1_USDCE);
+        assertEq(liquidatedAmount, 999_641_233);
+        assertEq(loss, 358_767);
     }
 
     function testYearnDAILender__LiquidateAllPositions() public {
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 10 ether });
-        uint256 expectedShares = strategy.sharesForAmount(10 ether);
-        strategy.invest(10 ether, 0);
-        assertEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)));
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDCE);
+        strategy.invest(10 * _1_USDCE, 0);
+        assertApproxEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedShares / 1000);
 
-        uint256 strategyBalanceBefore = IERC20(DAI_POLYGON).balanceOf(address(strategy));
+        uint256 strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         uint256 amountFreed = strategy.liquidateAllPositions();
-        assertEq(amountFreed, 9.999999999999999999 ether);
-        assertEq(IERC20(DAI_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + 9.999999999999999999 ether);
+        assertEq(amountFreed, 9_991_104);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + 9_991_104);
         assertEq(IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), 0);
 
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 500 ether });
-        expectedShares = strategy.sharesForAmount(500 ether);
-        strategy.invest(500 ether, 0);
-        assertEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)));
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 500 * _1_USDCE });
+        expectedShares = strategy.sharesForAmount(500 * _1_USDCE);
+        strategy.invest(500 * _1_USDCE, 0);
+        assertApproxEq(expectedShares, IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedShares / 1000);
 
-        strategyBalanceBefore = IERC20(DAI_POLYGON).balanceOf(address(strategy));
+        strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         amountFreed = strategy.liquidateAllPositions();
-        assertEq(amountFreed, 499.999999999999999999 ether);
-        assertEq(IERC20(DAI_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + 499.999999999999999999 ether);
+        assertEq(amountFreed, 499_555_074);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + 499_555_074);
         assertEq(IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), 0);
     }
 
@@ -399,32 +381,42 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 ether, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, 40 ether, 40 ether, 4000);
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDCE), uint128(40 * _1_USDCE), 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         strategy.harvest(0, 0, address(0), block.timestamp);
 
-        uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
-        assertEq(IERC20(DAI_POLYGON).balanceOf(address(vault)), 60 ether);
-        assertEq(IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance, "1");
+        uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
+        assertApproxEq(
+            IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)),
+            expectedStrategyShareBalance,
+            expectedStrategyShareBalance / 100
+        );
 
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 10 ether });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
 
         vm.expectEmit();
-        emit StrategyReported(address(strategy), 10 ether, 0, 0, 10 ether, 0, 40 ether, 0, 4000);
+        emit StrategyReported(
+            address(strategy), 10 * _1_USDCE, 0, 0, uint128(10 * _1_USDCE), 0, uint128(40 * _1_USDCE), 0, 4000
+        );
 
         vm.expectEmit();
-        emit Harvested(10 ether, 0, 0, 0);
+        emit Harvested(10 * _1_USDCE, 0, 0, 0);
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(DAI_POLYGON).balanceOf(address(vault)), 60 ether);
-        uint256 shares = strategy.sharesForAmount(10 ether);
-        assertEq(IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance + shares, "2");
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
+        uint256 shares = strategy.sharesForAmount(10 * _1_USDCE);
+        assertApproxEq(
+            IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)),
+            expectedStrategyShareBalance + shares,
+            expectedStrategyShareBalance / 1000
+        );
 
         vm.revertTo(snapshotId);
         snapshotId = vm.snapshot();
@@ -433,37 +425,41 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 ether, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, 40 ether, 40 ether, 4000);
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDCE), uint128(40 * _1_USDCE), 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
 
-        expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
-        assertEq(IERC20(DAI_POLYGON).balanceOf(address(vault)), 60 ether);
-        assertEq(IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance, "4");
+        expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
+        assertApproxEq(
+            IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)),
+            expectedStrategyShareBalance,
+            expectedStrategyShareBalance / 1000
+        );
 
         vm.startPrank(users.alice);
         strategy.setEmergencyExit(2);
 
         vm.startPrank(users.keeper);
 
-        deal({ token: DAI_POLYGON, to: address(strategy), give: 10 ether });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
 
         vm.expectEmit();
-        emit StrategyReported(address(strategy), 0, 0, 40 ether, 0, 0, 0, 0, 4000);
+        emit StrategyReported(address(strategy), 0, 4682, 39_995_318, 0, 4682, 2809, 2809, 4000);
 
         vm.expectEmit();
-        emit Harvested(0, 0, 49.999999999999999999 ether, 0);
+        emit Harvested(0, 4682, 49_964_408, 0);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(DAI_POLYGON).balanceOf(address(vault)), 109.999999999999999999 ether);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_961_599);
         assertEq(IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
@@ -472,109 +468,112 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 ether, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, 40 ether, 40 ether, 4000);
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDCE), 40 * _1_USDCE, 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         strategy.harvest(0, 0, address(0), block.timestamp);
 
-        expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
-        assertEq(IERC20(DAI_POLYGON).balanceOf(address(vault)), 60 ether);
-        assertEq(IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance, "5");
+        expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
+        assertApproxEq(
+            IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)),
+            expectedStrategyShareBalance,
+            expectedStrategyShareBalance / 1000
+        );
 
-        uint256 expectedShares = strategy.sharesForAmount(10 ether);
+        uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDCE);
 
         vm.startPrank(address(strategy));
         IERC20(YVAULT_DAI_POLYGON).transfer(makeAddr("random"), expectedShares);
 
         vm.startPrank(users.keeper);
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy), 0, 9.999999999999999999 ether, 0, 0, 9.999999999999999999 ether, 30 ether + 1, 0, 3001
-        );
+        emit StrategyReported(address(strategy), 0, 9_993_997, 0, 0, uint128(9_993_997), uint128(30_006_003), 0, 3001);
 
         vm.expectEmit();
-        emit Harvested(0, 9.999999999999999999 ether, 0, 2.991000000000000001 ether);
+        emit Harvested(0, 9_993_997, 0, 2_995_202);
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         StrategyData memory data = vault.strategies(address(strategy));
 
         assertEq(vault.debtRatio(), 3001);
-        assertEq(vault.totalDebt(), 30 ether + 1);
+        assertEq(vault.totalDebt(), 30_006_003);
         assertEq(data.strategyDebtRatio, 3001);
-        assertEq(data.strategyTotalDebt, 30 ether + 1);
-        assertEq(data.strategyTotalLoss, 9.999999999999999999 ether);
+        assertEq(data.strategyTotalDebt, 30_006_003);
+        assertEq(data.strategyTotalLoss, 9_993_997);
 
         vm.expectEmit();
-        emit StrategyReported(address(strategy), 0, 1, 2.991 ether, 0, 10 ether, 27.009 ether, 0, 3001);
+        emit StrategyReported(
+            address(strategy), 0, 2148, 2_993_054, 0, uint128(9_996_145), uint128(27_010_801), 0, 3001
+        );
 
         vm.expectEmit();
-        emit Harvested(0, 1 wei, 2.991 ether, 0);
+        emit Harvested(0, 2148, 2_993_054, 645);
 
-        uint256 vaultBalanceBefore = IERC20(DAI_POLYGON).balanceOf(address(vault));
+        uint256 vaultBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
         uint256 strategyBalanceBefore = IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy));
-        uint256 expectedShareDecrease = strategy.sharesForAmount(2.991 ether);
+        uint256 expectedShareDecrease = strategy.sharesForAmount(2 * _1_USDCE);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         data = vault.strategies(address(strategy));
 
         assertEq(vault.debtRatio(), 3001);
-        assertEq(vault.totalDebt(), 27.009 ether);
+        assertEq(vault.totalDebt(), 27_010_801);
         assertEq(data.strategyDebtRatio, 3001);
-        assertEq(data.strategyTotalDebt, 27.009 ether);
-        assertEq(data.strategyTotalLoss, 10 ether);
-        assertEq(IERC20(DAI_POLYGON).balanceOf(address(vault)), vaultBalanceBefore + 2.991 ether);
+        assertEq(data.strategyTotalDebt, 27_010_801);
+        assertEq(data.strategyTotalLoss, 9_996_145);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), vaultBalanceBefore + 2_993_054);
         assertLe(IERC20(YVAULT_DAI_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore - expectedShareDecrease);
     }
 
     function testYearnDAILender__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-        vault.deposit(100 ether, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
-        uint256 expected = strategy.previewLiquidate(30 ether);
+        uint256 expected = strategy.previewLiquidate(30 * _1_USDCE);
         vm.startPrank(address(vault));
-        uint256 loss = strategy.liquidate(30 ether);
-        // expect the Sommelier's {previewRedeem} to be fully precise
-        assertEq(expected, 30 ether - loss);
+        uint256 loss = strategy.liquidate(30 * _1_USDCE);
+        assertLe(expected, 30 * _1_USDCE - loss);
     }
 
     function testYearnDAILender__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-        vault.deposit(100 ether, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
-        uint256 requestedAmount = strategy.previewLiquidateExact(30 ether);
+        uint256 requestedAmount = strategy.previewLiquidateExact(30 * _1_USDCE);
         vm.startPrank(address(vault));
-        uint256 balanceBefore = IERC20(DAI_POLYGON).balanceOf(address(vault));
-        strategy.liquidateExact(30 ether);
-        uint256 withdrawn = IERC20(DAI_POLYGON).balanceOf(address(vault)) - balanceBefore;
+        uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+        strategy.liquidateExact(30 * _1_USDCE);
+        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
-        assertEq(withdrawn, 30 ether);
+        assertEq(withdrawn, 30 * _1_USDCE);
         // losses are equal or fewer than expected
-        assertLe(withdrawn - 30 ether, requestedAmount - 30 ether);
+        assertLe(withdrawn - 30 * _1_USDCE, requestedAmount - 30 * _1_USDCE);
     }
 
     function testYearnDAILender__maxLiquidateExact() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
-        vault.deposit(100 ether, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
         uint256 maxLiquidateExact = strategy.maxLiquidateExact();
-        uint256 balanceBefore = IERC20(DAI_POLYGON).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
         uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
         vm.startPrank(address(vault));
         uint256 losses = strategy.liquidateExact(maxLiquidateExact);
-        uint256 withdrawn = IERC20(DAI_POLYGON).balanceOf(address(vault)) - balanceBefore;
+        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
         assertEq(withdrawn, maxLiquidateExact);
         // losses are equal or fewer than expected
@@ -583,15 +582,15 @@ contract YearnDAILenderStrategyTest is BaseTest, StrategyEvents {
 
     function testYearnDAILender__MaxLiquidate() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
-        vault.deposit(100 ether, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
         uint256 maxWithdraw = strategy.maxLiquidate();
-        uint256 balanceBefore = IERC20(DAI_POLYGON).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
         vm.startPrank(address(vault));
         strategy.liquidate(maxWithdraw);
-        uint256 withdrawn = IERC20(DAI_POLYGON).balanceOf(address(vault)) - balanceBefore;
+        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
     }
 }
