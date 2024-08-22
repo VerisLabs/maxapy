@@ -60,7 +60,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         TREASURY = makeAddr("treasury");
 
-        vaultDeployment = new MaxApyVault(users.alice, USDC_POLYGON, "MaxApyUSDCVault", "maxUSDC", TREASURY);
+        vaultDeployment = new MaxApyVault(users.alice, USDCE_POLYGON, "MaxApyUSDCVault", "maxUSDC", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
 
@@ -85,11 +85,12 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         proxy = ITransparentUpgradeableProxy(address(_proxy));
 
         strategy = IStrategyWrapper(address(_proxy));
-        USDC_POLYGON.safeApprove(address(vault), type(uint256).max);
+        USDCE_POLYGON.safeApprove(address(vault), type(uint256).max);
 
         _dealUsdc(users.alice, 1000 * 10 ** 6);
 
         vm.label(USDC_POLYGON, "USDC_POLYGON");
+        vm.label(USDCE_POLYGON, "USDCE_POLYGON");
         vm.label(CRV_POLYGON, "CRV_POLYGON");
         vm.label(CRV_USD_POLYGON, "CRV-USD_POLYGON");
     }
@@ -97,7 +98,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     /*==================INITIALIZATION TESTS==================*/
 
     function testConvexUSDCCrvUSD__Initialization() public {
-        MaxApyVault _vault = new MaxApyVault(users.alice, USDC_POLYGON, "MaxApyUSDCVault", "maxUSDC", TREASURY);
+        MaxApyVault _vault = new MaxApyVault(users.alice, USDCE_POLYGON, "MaxApyUSDCVault", "maxUSDC", TREASURY);
 
         ProxyAdmin _proxyAdmin = new ProxyAdmin(users.alice);
         ConvexUSDCCrvUSDStrategyWrapper _implementation = new ConvexUSDCCrvUSDStrategyWrapper();

@@ -14,6 +14,7 @@ import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import {
     CRV_USD_POLYGON,
+    USDC_POLYGON,
     WMATIC_POLYGON,
     CRV_POLYGON,
     CONVEX_BOOSTER_POLYGON,
@@ -101,11 +102,14 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         router = _router;
 
         // Approve tokens
+        USDC_POLYGON.safeApprove(address(_router), type(uint256).max);
+        underlyingAsset.safeApprove(address(_router), type(uint256).max);
         crv.safeApprove(address(_router), type(uint256).max);
         crvUsd.safeApprove(address(curveLpPool), type(uint256).max);
         underlyingAsset.safeApprove(address(curveLpPool), type(uint256).max);
 
         minSwapCrv = 1e17;
+        maxSingleTrade = 100_000e6;
     }
 
     /// @notice Sets the new router
@@ -160,7 +164,19 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         uint256 lpReceived;
 
         if (amount > 0) {
-            uint256 price = curveLpPool.get_virtual_price();
+            // Swap the base asset to USDC
+            router.exactInputSingle(
+                IRouter.ExactInputSingleParams({
+                    tokenIn: underlyingAsset,
+                    tokenOut: USDC_POLYGON,
+                    fee: 100, // 0.01% fee
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: amount,
+                    amountOutMinimum: 0,
+                    sqrtPriceLimitX96: 0
+                })
+            );
             uint256[] memory amounts = new uint256[](2);
             amounts[1] = amount;
             // Add liquidity to the crvUsd<>usdc pool in usdc [coin1 -> usdc]
@@ -202,12 +218,26 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         convexRewardPool.withdraw(amount, false);
 
         // Remove liquidity and obtain usdc
-        return curveLpPool.remove_liquidity_one_coin(
+        uint256 amountIn = curveLpPool.remove_liquidity_one_coin(
             amount,
             1,
             //usdc
             0,
             address(this)
+        );
+
+        // Swap USDC to base asset
+        return router.exactInputSingle(
+            IRouter.ExactInputSingleParams({
+                tokenIn: USDC_POLYGON,
+                tokenOut: underlyingAsset,
+                fee: 100, // 0.01% fee
+                recipient: address(this),
+                deadline: block.timestamp,
+                amountIn: amountIn,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 0
+            })
         );
     }
 
@@ -226,7 +256,7 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         if (crvBalance > minSwapCrv) {
             bytes memory path = abi.encodePacked(
                 _crv(),
-                uint24(3000), // CRV <> WMATIC 0.3%
+                uint24(3000), // CRV <> WMATIC 0.03%
                 wmatic,
                 uint24(500), // WMATIC <> USDC 0.005%
                 underlyingAsset
