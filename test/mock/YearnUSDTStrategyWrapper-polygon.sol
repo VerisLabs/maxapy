@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { YearnUSDTStrategy, SafeTransferLib } from "src/strategies/polygon/USDT/yearn/YearnUSDTStrategy.sol";
+import { YearnUSDTStrategy, SafeTransferLib } from "src/strategies/polygon/USDCe/yearn/YearnUSDTStrategy.sol";
 
 contract YearnUSDTStrategyWrapper is YearnUSDTStrategy {
     using SafeTransferLib for address;
