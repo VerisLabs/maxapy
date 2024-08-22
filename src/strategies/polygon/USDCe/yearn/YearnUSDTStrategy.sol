@@ -145,7 +145,7 @@ contract YearnUSDTStrategy is BaseYearnV3Strategy {
         amount = Math.min(Math.min(amount, maxDeposit), maxSingleTrade);
 
         uint256 balanceBefore = USDT_POLYGON.balanceOf(address(this));
-        // Swap the USDCe to base asset
+        // Swap the USDCe to USDT
         zapper.exchange_underlying(1, 2, amount, 0, address(this));
 
         // Deposit into the underlying vault
@@ -203,7 +203,7 @@ contract YearnUSDTStrategy is BaseYearnV3Strategy {
         return super._sharesForAmount(_spotPriceDy(1, amount));
     }
 
-    /// @notice Returns the price of token USDC<>DAI or DAI<>USDC withouth considering any slippage or fees
+    /// @notice Returns the price of token USDT<>USDC or USDC<>USDT withouth considering any slippage or fees
     /// @return _spotDy spot price times amount
     function _spotPriceDy(uint256 i, uint256 amount) internal view returns (uint256 _spotDy) {
         if (i == 2) {
