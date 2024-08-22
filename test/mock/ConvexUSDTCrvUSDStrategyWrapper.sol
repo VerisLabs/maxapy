@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {
     ConvexUSDTCrvUSDStrategy, SafeTransferLib
-} from "src/strategies/polygon/USDT/convex/ConvexUSDTCrvUSDStrategy.sol";
+} from "src/strategies/polygon/USDCe/convex/ConvexUSDTCrvUSDStrategy.sol";
 
 contract ConvexUSDTCrvUSDStrategyWrapper is ConvexUSDTCrvUSDStrategy {
     using SafeTransferLib for address;
