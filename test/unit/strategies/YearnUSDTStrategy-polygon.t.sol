@@ -18,7 +18,7 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { USDT_POLYGON, _1_USDCE } from "test/helpers/Tokens.sol";
 import "src/helpers/AddressBook.sol";
 
-import "forge-std/console.sol"; 
+import "forge-std/console.sol";
 
 contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
     using SafeTransferLib for address;
@@ -207,7 +207,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         uint256 snapshotId = vm.snapshot();
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-        
+
         vault.deposit(100 * _1_USDCE, users.alice);
 
         strategy.mockReport(0, 0, 0, TREASURY);
@@ -302,19 +302,19 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
 
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDCE);
-        
+
         vm.expectEmit();
         emit Invested(address(strategy), 9_992_594);
-        
+
         strategy.invest(10 * _1_USDCE, 0);
         assertApproxEq(expectedShares, IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), expectedShares / 1000);
 
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         expectedShares += strategy.sharesForAmount(10 * _1_USDCE);
-        
+
         vm.expectEmit();
         emit Invested(address(strategy), 9_992_594);
-        
+
         strategy.invest(10 * _1_USDCE, 0);
         assertApproxEq(expectedShares, IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), expectedShares / 1000);
     }
@@ -348,7 +348,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         (liquidatedAmount, loss) = strategy.liquidatePosition(14_990_000);
         assertEq(liquidatedAmount, 14_986_557);
-        assertEq(loss, 3_443);
+        assertEq(loss, 3443);
 
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 1000 * _1_USDCE });
         strategy.invest(1000 * _1_USDCE, 0);
@@ -402,7 +402,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
         assertApproxEq(
-            IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), 
+            IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)),
             expectedStrategyShareBalance,
             expectedStrategyShareBalance / 1000
         );
@@ -419,7 +419,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
         uint256 shares = strategy.sharesForAmount(10 * _1_USDCE);
         assertApproxEq(
-            IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), 
+            IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)),
             expectedStrategyShareBalance + shares,
             expectedStrategyShareBalance / 1000
         );
@@ -445,7 +445,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
         assertApproxEq(
-            IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), 
+            IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)),
             expectedStrategyShareBalance,
             expectedStrategyShareBalance / 1000
         );
@@ -485,7 +485,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
         assertApproxEq(
-            IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)), 
+            IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy)),
             expectedStrategyShareBalance,
             expectedStrategyShareBalance / 1000
         );
@@ -497,29 +497,27 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
 
         vm.startPrank(users.keeper);
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy), 0, 9_993_693, 0, 0, uint128(9_993_693), uint128(30_006_307), 0, 3001
-        );
+        emit StrategyReported(address(strategy), 0, 9_993_693, 0, 0, uint128(9_993_693), uint128(30_006_307), 0, 3001);
         vm.expectEmit();
         emit Harvested(0, 9_993_693, 0, 2_995_415);
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         StrategyData memory data = vault.strategies(address(strategy));
-        
+
         assertEq(vault.debtRatio(), 3001);
         assertEq(vault.totalDebt(), 30_006_307);
         assertEq(data.strategyDebtRatio, 3001);
         assertEq(data.strategyTotalDebt, 30_006_307);
         assertEq(data.strategyTotalLoss, 9_993_693);
-        
+
         vm.expectEmit();
         emit StrategyReported(
             address(strategy), 0, 2067, 2_993_348, 0, uint128(9_995_760), uint128(27_010_892), 0, 3001
         );
-        
+
         vm.expectEmit();
         emit Harvested(0, 2067, 2_993_348, 620);
-        
+
         uint256 vaultBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
         uint256 strategyBalanceBefore = IERC20(YVAULT_USDT_POLYGON).balanceOf(address(strategy));
         uint256 expectedShareDecrease = strategy.sharesForAmount(2 * _1_USDCE);

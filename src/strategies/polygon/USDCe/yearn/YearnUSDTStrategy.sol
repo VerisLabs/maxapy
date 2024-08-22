@@ -11,9 +11,9 @@ import { USDT_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON } from "src/helpers/
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `YearnUSDTStrategy` supplies an underlying token into a generic Yearn Vault,
 /// earning the Yearn Vault's yield
-contract YearnUSDTStrategy is BaseYearnV3Strategy { 
+contract YearnUSDTStrategy is BaseYearnV3Strategy {
     using SafeTransferLib for address;
-    
+
     ICurveAtriCryptoZapper constant zapper = ICurveAtriCryptoZapper(CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON);
 
     /// @notice Initialize the Strategy
