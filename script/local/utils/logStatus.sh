@@ -1,73 +1,63 @@
 #!/bin/bash
-source .env
+source .env.strategies
 
 # 1.- Share price
-sharePrice=$(cast call $VAULT "sharePrice()(uint256)")
+sharePrice=$(cast call $MAX_APY_VAULT "sharePrice()(uint256)")
 
-# 2.- [4eStrategy] estimatedTotalAssets
-estimatedTotalAssetsYearn=$(cast call $YEARN_STRATEGY "estimatedTotalAssets()(uint256)")
-estimatedTotalAssetsConvex=$(cast call $CONVEX_STRATEGY "estimatedTotalAssets()(uint256)")
-estimatedTotalAssetsSommelier1=$(cast call $SOMMELIER_ST_ETH_STRATEGY "estimatedTotalAssets()(uint256)")
-estimatedTotalAssetsSommelier2=$(cast call $SOMMELIER_ST_ETH_DEPOSIT_ST_ETH_STRATEGY "estimatedTotalAssets()(uint256)")
+query_strategy(){
+    local strategy_name=$1
+    local strategy_address=$2
 
-# 2.5.- [4eStrategy] getStrategyTotalDebt
-getStrategyTotalDebtYearn=$(cast call $VAULT "getStrategyTotalDebt(address)(uint256)" $YEARN_STRATEGY)
-getStrategyTotalDebtConvex=$(cast call $VAULT "getStrategyTotalDebt(address)(uint256)" $CONVEX_STRATEGY)
-getStrategyTotalDebtSommelier1=$(cast call $VAULT "getStrategyTotalDebt(address)(uint256)" $SOMMELIER_ST_ETH_STRATEGY)
-getStrategyTotalDebtSommelier2=$(cast call $VAULT "getStrategyTotalDebt(address)(uint256)" $SOMMELIER_ST_ETH_DEPOSIT_ST_ETH_STRATEGY)
+    # 2.- [4eStrategy] estimatedTotalAssets
+    local estimated_total_assets=$(cast call $strategy_address "estimatedTotalAssets()(uint256)")
+    local strategy_total_debt=$(cast call $MAX_APY_VAULT "getStrategyTotalDebt(address)(uint256)" $strategy_address)
+    local unharvested_amount=$(cast call $strategy_address "unharvestedAmount()(int256)" | awk '{print $1}')
 
-# 4.- [4eStrategy] unharvestedAmount
-unharvestedAmountYearn=$(cast call $YEARN_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
-unharvestedAmountConvex=$(cast call $CONVEX_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
-unharvestedAmountSommelier1=$(cast call $SOMMELIER_ST_ETH_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
-unharvestedAmountSommelier2=$(cast call $SOMMELIER_ST_ETH_DEPOSIT_ST_ETH_STRATEGY "unharvestedAmount()(int256)" | awk '{print $1}')
+    echo "--------------------------------------------------------------------------------------------"
+    echo "[$strategy_name] Total Assets: (rewards included)" $estimated_total_assets
+    echo "[$strategy_name] Principal:" $strategy_total_debt
+    echo "[$strategy_name] unharvestedAmount:" $unharvested_amount
+}
 
-# 3.- [Vault] totalAssets
-totalAssets=$(cast call $VAULT "totalAssets()(uint256)")
+for var in $(compgen -v); do
+    if [[ $var == *_STRATEGY ]]; then
+        strategy_name=${var}
+        strategy_address=${!var}
+        query_strategy $strategy_name $strategy_address
+    fi
+done
 
-# 3.5.- [Vault] totalAccountedAssets
-totalAccountedAssets=$(cast call $VAULT "totalDeposits()(uint256)")
+source .env
+# 3.- [MAX_APY_VAULT] totalAssets
+totalAssets=$(cast call $MAX_APY_VAULT "totalAssets()(uint256)")
 
-# 4.- [Vault] balanceOf(user)
-balanceUser=$(cast call $VAULT "balanceOf(address)(uint256)" $DEPLOYER_ADDRESS)
+# 3.5.- [MAX_APY_VAULT] totalAccountedAssets
+totalAccountedAssets=$(cast call $MAX_APY_VAULT "totalDeposits()(uint256)")
 
-# 5.- [Vault] convertToAssets(#4: shares_user)
-convertToAssets=$(cast call $VAULT "convertToAssets(uint256)(uint256)" $balanceUser)
+# 4.- [MAX_APY_VAULT] balanceOf(user)
+balanceUser=$(cast call $MAX_APY_VAULT "balanceOf(address)(uint256)" $DEPLOYER_ADDRESS)
 
-# 6.- [Vault] previewRedeem(#4: shares_user)
-previewRedeem=$(cast call $VAULT "previewRedeem(uint256)(uint256)" $balanceUser)
+# 5.- [MAX_APY_VAULT] convertToAssets(#4: shares_user)
+convertToAssets=$(cast call $MAX_APY_VAULT "convertToAssets(uint256)(uint256)" $balanceUser)
 
-# 7.- [Vault] totalIdle
-totalIdle=$(cast call $VAULT "totalIdle()(uint256)")
+# 6.- [MAX_APY_VAULT] previewRedeem(#4: shares_user)
+previewRedeem=$(cast call $MAX_APY_VAULT "previewRedeem(uint256)(uint256)" $balanceUser)
 
-# 8.- [Vault] totalDebt
-totalDebt=$(cast call $VAULT "totalDebt()(uint256)")
+# 7.- [MAX_APY_VAULT] totalIdle
+totalIdle=$(cast call $MAX_APY_VAULT "totalIdle()(uint256)")
+
+# 8.- [MAX_APY_VAULT] totalDebt
+totalDebt=$(cast call $MAX_APY_VAULT "totalDebt()(uint256)")
 
 echo ""
-echo "[VAULT] sharePrice:" $sharePrice
-echo "----------------------------------------------------------------"
-echo "[YSTRAT] Total Assets: (rewards included)" $estimatedTotalAssetsYearn
-echo "[YSTRAT] Principal:" $getStrategyTotalDebtYearn
-echo "[YSTRAT] unharvestedAmount:" $unharvestedAmountYearn
-echo "----------------------------------------------------------------"
-echo "[CSTRAT] Total Assets: (rewards included)" $estimatedTotalAssetsConvex
-echo "[CSTRAT] Principal:" $getStrategyTotalDebtConvex
-echo "[CSTRAT] unharvestedAmount:" $unharvestedAmountConvex
-echo "----------------------------------------------------------------"
-echo "[SSTRAT1] Total Assets: (rewards included)" $estimatedTotalAssetsSommelier1
-echo "[SSTRAT1] Principal:" $getStrategyTotalDebtSommelier1
-echo "[SSTRAT1] unharvestedAmount:" $unharvestedAmountSommelier1
-echo "----------------------------------------------------------------"
-echo "[SSTRAT2] Total Assets: (rewards included)" $estimatedTotalAssetsSommelier2
-echo "[SSTRAT2] Principal:" $getStrategyTotalDebtSommelier2
-echo "[SSTRAT2] unharvestedAmount: $unharvestedAmountSommelier2"
-echo "----------------------------------------------------------------"
-echo "[VAULT] totalIdle:" $totalIdle
-echo "[VAULT] totalDebt:" $totalDebt
-echo "[VAULT] totalDeposits:" $totalAccountedAssets
-echo "----------------------------------------------------------------"
-echo "[VAULT] totalAssets (rewards included):" $totalAssets
-echo "[VAULT] balanceOf(user) (shares):" $balanceUser
-echo "[VAULT] convertToAssets:" $convertToAssets
-echo "[VAULT] previewRedeem:" $previewRedeem
+echo "[MAX_APY_VAULT] sharePrice:" $sharePrice
+echo "--------------------------------------------------------------------------------------------"
+echo "[MAX_APY_VAULT] totalIdle:" $totalIdle
+echo "[MAX_APY_VAULT] totalDebt:" $totalDebt
+echo "[MAX_APY_VAULT] totalDeposits:" $totalAccountedAssets
+echo "--------------------------------------------------------------------------------------------"
+echo "[MAX_APY_VAULT] totalAssets (rewards included):" $totalAssets
+echo "[MAX_APY_VAULT] balanceOf(user) (shares):" $balanceUser
+echo "[MAX_APY_VAULT] convertToAssets:" $convertToAssets
+echo "[MAX_APY_VAULT] previewRedeem:" $previewRedeem
 echo ""
