@@ -168,7 +168,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice This function is meant to be called from the vault
-    /// @dev calculates estunated the real output of a withdrawal(including losses) for a @param requestedAmount
+    /// @dev calculates estimated the real output of a withdrawal (including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
     function previewLiquidate(uint256 requestedAmount)

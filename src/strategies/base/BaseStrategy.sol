@@ -72,7 +72,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @notice Name of the strategy
     bytes32 public strategyName;
     /// @notice Strategist's address
-    address public strategist;
+    address public strategist;                      
     /// @notice Strategy's last recorded estimated total assets
     uint256 public lastEstimatedTotalAssets;
     /// @notice Gap for upgradeability

@@ -540,6 +540,154 @@ contract YearnUSDCeLenderStrategyTest is BaseTest, StrategyEvents {
         );
     }
 
+    function testYearnUSDCeLender__Harvest_Invest_Divest() public {
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()")); 
+        strategy.harvest(0, 0, address(0), block.timestamp);
+
+        uint256 snapshotId = vm.snapshot();
+
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        vm.startPrank(users.keeper);
+
+        vm.expectEmit();
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDC), 40 * _1_USDC, 4000);
+
+        vm.expectEmit();
+        emit Harvested(0, 0, 0, 0);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+
+        uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDC);
+        assertEq(IERC20(YVAULT_USDCE_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance);
+
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDC });
+
+        vm.expectEmit();
+        emit StrategyReported(
+            address(strategy), 10 * _1_USDC, 0, 0, uint128(10 * _1_USDC), 0, uint128(40 * _1_USDC), 0, 4000
+        );
+
+        vm.expectEmit();
+        emit Harvested(10 * _1_USDC, 0, 0, 0);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDC);
+        uint256 shares = strategy.sharesForAmount(10 * _1_USDC);
+        assertEq(IERC20(YVAULT_USDCE_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance + shares);
+
+        vm.revertTo(snapshotId);
+        snapshotId = vm.snapshot();
+
+        vm.startPrank(users.alice);
+
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        vm.startPrank(users.keeper);
+
+        vm.expectEmit();
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDC), uint128(40 * _1_USDC), 4000);
+
+        vm.expectEmit();
+        emit Harvested(0, 0, 0, 0);
+
+        strategy.harvest(0, 0, address(0), block.timestamp);
+
+        expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDC);
+        assertEq(IERC20(YVAULT_USDCE_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance);
+
+        vm.startPrank(users.alice);
+        strategy.setEmergencyExit(2);
+
+        vm.startPrank(users.keeper);
+
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDC });
+
+        vm.expectEmit();
+        emit StrategyReported(address(strategy), 0, 0, 40 * _1_USDC, uint128(0), 0, 0, 0, 4000);
+
+        vm.expectEmit();
+        emit Harvested(0, 0, 49_999_999, 0);
+
+        strategy.harvest(0, 0, address(0), block.timestamp);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_999_999);
+        assertEq(IERC20(YVAULT_USDCE_POLYGON).balanceOf(address(strategy)), 0, "ZERO IN StRAT");
+
+        vm.revertTo(snapshotId);
+
+        vm.startPrank(users.alice);
+
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        vm.startPrank(users.keeper);
+
+        vm.expectEmit();
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDC), uint128(40 * _1_USDC), 4000);
+
+        vm.expectEmit();
+        emit Harvested(0, 0, 0, 0);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+
+        expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDC);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDC);
+        assertEq(IERC20(YVAULT_USDCE_POLYGON).balanceOf(address(strategy)), expectedStrategyShareBalance);
+
+        uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC);
+
+        vm.startPrank(address(strategy));
+        IERC20(YVAULT_USDCE_POLYGON).transfer(makeAddr("random"), expectedShares);
+
+        vm.startPrank(users.keeper);
+        vm.expectEmit();
+        emit StrategyReported(
+            address(strategy), 0, 10 * _1_USDC, 0, 0, uint128(10 * _1_USDC), uint128(30 * _1_USDC), 0, 3000
+        );
+
+        vm.expectEmit();
+        emit Harvested(0, 10 * _1_USDC, 0, 3 * _1_USDC);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+
+        StrategyData memory data = vault.strategies(address(strategy));
+
+        assertEq(vault.debtRatio(), 3000);
+        assertEq(vault.totalDebt(), 30 * _1_USDC);
+        assertEq(data.strategyDebtRatio, 3000);
+        assertEq(data.strategyTotalDebt, 30 * _1_USDC);
+        assertEq(data.strategyTotalLoss, 10 * _1_USDC);
+
+        vm.expectEmit();
+        emit StrategyReported(
+            address(strategy), 0, 1, 2_999_999, 0, uint128(10 * _1_USDC + 1), uint128(27 * _1_USDC), 0, 3000
+        );
+
+        vm.expectEmit();
+        emit Harvested(0, 1 wei, 2_999_999, 1);
+
+        uint256 vaultBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+        uint256 strategyBalanceBefore = IERC20(YVAULT_USDCE_POLYGON).balanceOf(address(strategy));
+        uint256 expectedShareDecrease = strategy.sharesForAmount(2_999_999);
+
+        strategy.harvest(0, 0, address(0), block.timestamp);
+
+        data = vault.strategies(address(strategy));
+
+        assertEq(vault.debtRatio(), 3000);
+        assertEq(vault.totalDebt(), 27 * _1_USDC);
+        assertEq(data.strategyDebtRatio, 3000);
+        assertEq(data.strategyTotalDebt, 27 * _1_USDC);
+        assertEq(data.strategyTotalLoss, 10 * _1_USDC + 1);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), vaultBalanceBefore + 2_999_999);
+        assertLe(
+            IERC20(YVAULT_USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore - expectedShareDecrease
+        );
+    }
+
     function testYearnUSDCeLender__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);

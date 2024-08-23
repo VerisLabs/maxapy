@@ -12,11 +12,13 @@ query_strategy(){
     local estimated_total_assets=$(cast call $strategy_address "estimatedTotalAssets()(uint256)")
     local strategy_total_debt=$(cast call $MAX_APY_VAULT "getStrategyTotalDebt(address)(uint256)" $strategy_address)
     local unharvested_amount=$(cast call $strategy_address "unharvestedAmount()(int256)" | awk '{print $1}')
+    local debtRatio=$(cast call $MAX_APY_VAULT "strategies(address)(uint16,uint16,uint48,uint48,uint128,uint128,uint128,uint128,uint128,bool)" $strategy_address | head -n 1)
 
     echo "--------------------------------------------------------------------------------------------"
     echo "[$strategy_name] Total Assets: (rewards included)" $estimated_total_assets
     echo "[$strategy_name] Principal:" $strategy_total_debt
     echo "[$strategy_name] unharvestedAmount:" $unharvested_amount
+    echo "[$strategy_name] debtRatio:" $debtRatio
 }
 
 for var in $(compgen -v); do

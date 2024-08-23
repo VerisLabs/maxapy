@@ -8,3 +8,4 @@ import { BaseYearnV3Strategy, IMaxApyVault, SafeTransferLib } from "src/strategi
 /// @notice `YearnCompoundUSDCeLenderStrategy` supplies an underlying token into a generic Yearn Vault,
 /// earning the Yearn Vault's yield
 contract YearnCompoundUSDCeLenderStrategy is BaseYearnV3Strategy { }
+    
