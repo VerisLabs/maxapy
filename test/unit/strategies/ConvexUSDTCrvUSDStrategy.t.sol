@@ -21,8 +21,10 @@ import { ConvexUSDTCrvUSDStrategyWrapper } from "../../mock/ConvexUSDTCrvUSDStra
 import { MockConvexBooster } from "../../mock/MockConvexBooster.sol";
 import { MockCurvePool } from "../../mock/MockCurvePool.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { _1_USDT } from "test/helpers/Tokens.sol";
+import { _1_USDCE } from "test/helpers/Tokens.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+
+import "forge-std/console.sol";
 
 contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     using SafeTransferLib for address;
@@ -41,7 +43,7 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         TREASURY = makeAddr("treasury");
 
-        vaultDeployment = new MaxApyVault(users.alice, USDT_POLYGON, "MaxApyUSDTVault", "maxUSDT", TREASURY);
+        vaultDeployment = new MaxApyVault(users.alice, USDCE_POLYGON, "MaxApyUSDTVault", "maxUSDT", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
 
@@ -66,9 +68,10 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         proxy = ITransparentUpgradeableProxy(address(_proxy));
 
         strategy = IStrategyWrapper(address(_proxy));
-        USDT_POLYGON.safeApprove(address(vault), type(uint256).max);
+        USDCE_POLYGON.safeApprove(address(vault), type(uint256).max);
 
         vm.label(USDT_POLYGON, "USDT_POLYGON");
+        vm.label(USDCE_POLYGON, "USDCE_POLYGON");
         vm.label(CRV_POLYGON, "CRV_POLYGON");
         vm.label(CRV_USD_POLYGON, "CRV-USD_POLYGON");
     }
@@ -76,7 +79,7 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     /*==================INITIALIZATION TESTS==================*/
 
     function testConvexUSDTCrvUSD__Initialization() public {
-        MaxApyVault _vault = new MaxApyVault(users.alice, USDT_POLYGON, "MaxApyUSDTVault", "maxUSDT", TREASURY);
+        MaxApyVault _vault = new MaxApyVault(users.alice, USDCE_POLYGON, "MaxApyUSDCVault", "maxUSDC", TREASURY);
 
         ProxyAdmin _proxyAdmin = new ProxyAdmin(users.alice);
         ConvexUSDTCrvUSDStrategyWrapper _implementation = new ConvexUSDTCrvUSDStrategyWrapper();
@@ -101,8 +104,8 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
         assertEq(_strategy.vault(), address(_vault));
         assertEq(_strategy.hasAnyRole(address(_vault), _strategy.VAULT_ROLE()), true);
-        assertEq(_strategy.underlyingAsset(), USDT_POLYGON);
-        assertEq(IERC20(USDT_POLYGON).allowance(address(_strategy), address(_vault)), type(uint256).max);
+        assertEq(_strategy.underlyingAsset(), USDCE_POLYGON);
+        assertEq(IERC20(USDCE_POLYGON).allowance(address(_strategy), address(_vault)), type(uint256).max);
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
         assertEq(_strategy.owner(), users.alice);
@@ -153,12 +156,12 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         vm.stopPrank();
         vm.startPrank(users.bob);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        strategy.setMaxSingleTrade(1 * _1_USDT);
+        strategy.setMaxSingleTrade(1 * _1_USDCE);
 
         vm.stopPrank();
         vm.startPrank(address(vault));
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        strategy.setMaxSingleTrade(1 * _1_USDT);
+        strategy.setMaxSingleTrade(1 * _1_USDCE);
 
         vm.stopPrank();
         vm.startPrank(users.alice);
@@ -166,16 +169,16 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         strategy.setMaxSingleTrade(0);
 
         vm.expectEmit();
-        emit MaxSingleTradeUpdated(1 * _1_USDT);
-        strategy.setMaxSingleTrade(1 * _1_USDT);
-        assertEq(strategy.maxSingleTrade(), 1 * _1_USDT);
+        emit MaxSingleTradeUpdated(1 * _1_USDCE);
+        strategy.setMaxSingleTrade(1 * _1_USDCE);
+        assertEq(strategy.maxSingleTrade(), 1 * _1_USDCE);
     }
 
     function testConvexUSDTCrvUSD__IsActive() public {
         vault.addStrategy(address(strategy), 10_000, 0, 0, 0);
         assertEq(strategy.isActive(), false);
 
-        deal(USDT_POLYGON, address(strategy), 1 * _1_USDT);
+        deal(USDCE_POLYGON, address(strategy), 1 * _1_USDCE);
         assertEq(strategy.isActive(), false);
 
         vm.startPrank(users.keeper);
@@ -185,10 +188,10 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         strategy.liquidateAllPositions();
         vm.startPrank(address(strategy));
-        IERC20(USDT_POLYGON).transfer(makeAddr("random"), IERC20(USDT_POLYGON).balanceOf(address(strategy)));
+        IERC20(USDCE_POLYGON).transfer(makeAddr("random"), IERC20(USDCE_POLYGON).balanceOf(address(strategy)));
         assertEq(strategy.isActive(), false);
 
-        deal(USDT_POLYGON, address(strategy), 1 * _1_USDT);
+        deal(USDCE_POLYGON, address(strategy), 1 * _1_USDCE);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(strategy.isActive(), true);
@@ -212,7 +215,7 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
     function testConvexUSDTCrvUSD__InvestmentSlippage() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 * _1_USDT, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         vm.startPrank(users.keeper);
 
@@ -226,7 +229,7 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
             uint24(3000), // CRV <> WMATIC 0.3%
             0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270,
             uint24(500), // WMATIC <> USDT 0.005%
-            USDT_POLYGON
+            USDCE_POLYGON
         );
 
         uint256 expectedAmountCrv = IRouter(strategy.router()).exactInput(
@@ -254,27 +257,27 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 * _1_USDT, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         strategy.mockReport(0, 0, 0, TREASURY);
 
-        (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 * _1_USDT, 0);
+        (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 * _1_USDCE, 0);
         assertEq(loss, 0);
-        assertEq(debtPayment, 1 * _1_USDT);
+        assertEq(debtPayment, 1 * _1_USDCE);
 
         vm.revertTo(snapshotId);
 
         snapshotId = vm.snapshot();
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 60 * _1_USDT });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 60 * _1_USDCE });
         strategy.adjustPosition();
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 * _1_USDT, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
 
-        assertApproxEq(unrealizedProfit, 60 * _1_USDT, _1_USDT / 10);
+        assertApproxEq(unrealizedProfit, 60 * _1_USDCE, _1_USDCE / 10);
         assertEq(loss, 0);
         assertEq(debtPayment, 0);
 
@@ -284,29 +287,29 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 * _1_USDT, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         strategy.mockReport(0, 0, 0, TREASURY);
 
-        strategy.triggerLoss(10 * _1_USDT);
+        strategy.triggerLoss(10 * _1_USDCE);
 
         (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
 
         assertEq(unrealizedProfit, 0);
-        assertEq(loss, 10 * _1_USDT);
+        assertEq(loss, 10 * _1_USDCE);
         assertEq(debtPayment, 0);
 
         vm.revertTo(snapshotId);
 
         snapshotId = vm.snapshot();
 
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 80 * _1_USDT });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 80 * _1_USDCE });
 
         strategy.adjustPosition();
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 * _1_USDT, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         strategy.mockReport(0, 0, 0, TREASURY);
 
@@ -322,10 +325,10 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         uint256 snapshotId = vm.snapshot();
 
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 10 * _1_USDT });
-        uint256 expectedLp = strategy.lpForAmount(10 * _1_USDT);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        uint256 expectedLp = strategy.lpForAmount(10 * _1_USDCE);
         vm.expectEmit();
-        emit Invested(address(strategy), 10 * _1_USDT);
+        emit Invested(address(strategy), 10 * _1_USDCE);
         strategy.adjustPosition();
         assertGt(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
 
@@ -333,10 +336,10 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         snapshotId = vm.snapshot();
 
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 100 * _1_USDT });
-        expectedLp = strategy.lpForAmount(100 * _1_USDT);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 100 * _1_USDCE });
+        expectedLp = strategy.lpForAmount(100 * _1_USDCE);
         vm.expectEmit();
-        emit Invested(address(strategy), 100 * _1_USDT);
+        emit Invested(address(strategy), 100 * _1_USDCE);
         strategy.adjustPosition();
         assertGt(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
 
@@ -344,10 +347,10 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         snapshotId = vm.snapshot();
 
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 500 * _1_USDT });
-        expectedLp = strategy.lpForAmount(500 * _1_USDT);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 500 * _1_USDCE });
+        expectedLp = strategy.lpForAmount(500 * _1_USDCE);
         vm.expectEmit();
-        emit Invested(address(strategy), 500 * _1_USDT);
+        emit Invested(address(strategy), 500 * _1_USDCE);
         strategy.adjustPosition();
 
         assertGt(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
@@ -365,102 +368,102 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFundsToInvest()"));
         returned = strategy.invest(1, 0);
 
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 10 * _1_USDT });
-        uint256 expectedLp = strategy.lpForAmount(10 * _1_USDT);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        uint256 expectedLp = strategy.lpForAmount(10 * _1_USDCE);
         vm.expectEmit();
-        emit Invested(address(strategy), 10 * _1_USDT);
-        strategy.invest(10 * _1_USDT, 0);
+        emit Invested(address(strategy), 10 * _1_USDCE);
+        strategy.invest(10 * _1_USDCE, 0);
 
         assertApproxEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), expectedLp, 0.01 ether);
     }
 
     function testConvexUSDTCrvUSD__Divest() public {
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 10 * _1_USDT });
-        uint256 expectedLp = strategy.lpForAmount(10 * _1_USDT);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        uint256 expectedLp = strategy.lpForAmount(10 * _1_USDCE);
         vm.expectEmit();
-        emit Invested(address(strategy), 10 * _1_USDT);
-        strategy.invest(10 * _1_USDT, 0);
+        emit Invested(address(strategy), 10 * _1_USDCE);
+        strategy.invest(10 * _1_USDCE, 0);
         assertApproxEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), expectedLp, 0.01 ether);
 
-        uint256 strategyBalanceBefore = IERC20(USDT_POLYGON).balanceOf(address(strategy));
+        uint256 strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         uint256 amountDivested = strategy.divest(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)));
 
-        assertEq(IERC20(USDT_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
     }
 
     function testConvexUSDTCrvUSD__LiquidatePosition() public {
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 10 * _1_USDT });
-        (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(1 * _1_USDT);
-        assertEq(liquidatedAmount, 1 * _1_USDT);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(1 * _1_USDCE);
+        assertEq(liquidatedAmount, 1 * _1_USDCE);
         assertEq(loss, 0);
 
-        (liquidatedAmount, loss) = strategy.liquidatePosition(10 * _1_USDT);
-        assertEq(liquidatedAmount, 10 * _1_USDT);
+        (liquidatedAmount, loss) = strategy.liquidatePosition(10 * _1_USDCE);
+        assertEq(liquidatedAmount, 10 * _1_USDCE);
         assertEq(loss, 0);
 
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 5 * _1_USDT });
-        uint256 invested = strategy.invest(5 * _1_USDT, 0);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 5 * _1_USDCE });
+        uint256 invested = strategy.invest(5 * _1_USDCE, 0);
 
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 10 * _1_USDT });
-        (liquidatedAmount, loss) = strategy.liquidatePosition(15 * _1_USDT);
-        assertGt(liquidatedAmount, 14 * _1_USDT);
-        assertLt(loss, _1_USDT / 5);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        (liquidatedAmount, loss) = strategy.liquidatePosition(15 * _1_USDCE);
+        assertGt(liquidatedAmount, 14 * _1_USDCE);
+        assertLt(loss, _1_USDCE / 5);
 
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 50 * _1_USDT });
-        invested = strategy.invest(50 * _1_USDT, 0);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 50 * _1_USDCE });
+        invested = strategy.invest(50 * _1_USDCE, 0);
 
-        (liquidatedAmount, loss) = strategy.liquidatePosition(50 * _1_USDT);
+        (liquidatedAmount, loss) = strategy.liquidatePosition(50 * _1_USDCE);
 
-        assertGt(liquidatedAmount, 49 * _1_USDT);
-        assertLt(loss, _1_USDT / 5);
+        assertGt(liquidatedAmount, 49 * _1_USDCE);
+        assertLt(loss, _1_USDCE / 5);
     }
 
     function testConvexUSDTCrvUSD__LiquidateAllPositions() public {
         uint256 snapshotId = vm.snapshot();
 
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 10 * _1_USDT });
-        uint256 expectedLp = strategy.lpForAmount(10 * _1_USDT);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        uint256 expectedLp = strategy.lpForAmount(10 * _1_USDCE);
         vm.expectEmit();
-        emit Invested(address(strategy), 10 * _1_USDT);
-        strategy.invest(10 * _1_USDT, 0);
+        emit Invested(address(strategy), 10 * _1_USDCE);
+        strategy.invest(10 * _1_USDCE, 0);
 
         assertApproxEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), expectedLp, 0.01 ether);
 
-        uint256 strategyBalanceBefore = IERC20(USDT_POLYGON).balanceOf(address(strategy));
+        uint256 strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         uint256 amountFreed = strategy.liquidateAllPositions();
 
-        assertApproxEq(amountFreed, 10 * _1_USDT, _1_USDT / 100);
+        assertApproxEq(amountFreed, 10 * _1_USDCE, _1_USDCE / 100);
 
-        assertEq(IERC20(USDT_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + amountFreed);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + amountFreed);
         assertEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
 
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 500 * _1_USDT });
-        expectedLp = strategy.lpForAmount(500 * _1_USDT);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 500 * _1_USDCE });
+        expectedLp = strategy.lpForAmount(500 * _1_USDCE);
         vm.expectEmit();
-        emit Invested(address(strategy), 500 * _1_USDT);
-        strategy.invest(500 * _1_USDT, 0);
+        emit Invested(address(strategy), 500 * _1_USDCE);
+        strategy.invest(500 * _1_USDCE, 0);
 
         assertApproxEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), expectedLp, 1 ether);
 
-        strategyBalanceBefore = IERC20(USDT_POLYGON).balanceOf(address(strategy));
+        strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         amountFreed = strategy.liquidateAllPositions();
 
-        assertApproxEq(amountFreed, 500 * _1_USDT, _1_USDT);
+        assertApproxEq(amountFreed, 500 * _1_USDCE, _1_USDCE);
 
-        assertEq(IERC20(USDT_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + amountFreed);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + amountFreed);
         assertEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
     }
 
     function testConvexUSDTCrvUSD__UnwindRewards() public {
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 100 * _1_USDT });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 100 * _1_USDCE });
         vm.expectEmit();
-        emit Invested(address(strategy), 100 * _1_USDT);
-        strategy.invest(100 * _1_USDT, 0);
+        emit Invested(address(strategy), 100 * _1_USDCE);
+        strategy.invest(100 * _1_USDCE, 0);
 
         strategy.unwindRewards();
-        assertEq(IERC20(USDT_POLYGON).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), 0);
 
         skip(30 days);
 
@@ -477,27 +480,27 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 * _1_USDT, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDT), uint128(40 * _1_USDT), 4000);
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDCE), uint128(40 * _1_USDCE), 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
 
-        uint256 expectedStrategyLpBalance = strategy.lpForAmount(40 * _1_USDT);
-        assertEq(IERC20(USDT_POLYGON).balanceOf(address(vault)), 60 * _1_USDT);
-        assertEq(IERC20(USDT_POLYGON).balanceOf(address(strategy)), 0);
+        uint256 expectedStrategyLpBalance = strategy.lpForAmount(40 * _1_USDCE);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), 0);
 
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 10 * _1_USDT });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         vm.warp(block.timestamp + 1 days);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(USDT_POLYGON).balanceOf(address(vault)), 60 * _1_USDT);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
 
         vm.revertTo(snapshotId);
         snapshotId = vm.snapshot();
@@ -506,31 +509,31 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        vault.deposit(100 * _1_USDT, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDT), uint128(40 * _1_USDT), 4000);
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDCE), uint128(40 * _1_USDCE), 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
 
-        expectedStrategyLpBalance = strategy.lpForAmount(40 * _1_USDT);
-        assertEq(IERC20(USDT_POLYGON).balanceOf(address(vault)), 60 * _1_USDT);
+        expectedStrategyLpBalance = strategy.lpForAmount(40 * _1_USDCE);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
 
         vm.startPrank(users.alice);
         strategy.setEmergencyExit(2);
 
         vm.startPrank(users.keeper);
 
-        deal({ token: USDT_POLYGON, to: address(strategy), give: 10 * _1_USDT });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         vm.warp(block.timestamp + 1 days);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(USDT_POLYGON).balanceOf(address(vault)), 109_997_232);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_963_178);
         assertEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
         vm.revertTo(snapshotId);
 
@@ -538,77 +541,81 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        expectedStrategyLpBalance = strategy.lpForAmount(40 * _1_USDT);
-        vault.deposit(100 * _1_USDT, users.alice);
+        expectedStrategyLpBalance = strategy.lpForAmount(40 * _1_USDCE);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDT), uint128(40 * _1_USDT), 4000);
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDCE), uint128(40 * _1_USDCE), 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         strategy.harvest(0, 0, address(0), block.timestamp);
 
-        assertEq(IERC20(USDT_POLYGON).balanceOf(address(vault)), 60 * _1_USDT);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
 
-        uint256 expectedLp = strategy.lpForAmount(10 * _1_USDT);
+        uint256 expectedLp = strategy.lpForAmount(10 * _1_USDCE);
 
         vm.startPrank(address(strategy));
         uint256 withdrawn = strategy.divest(expectedLp);
 
-        IERC20(USDT_POLYGON).transfer(makeAddr("random"), withdrawn);
+        IERC20(USDCE_POLYGON).transfer(makeAddr("random"), withdrawn);
         vm.startPrank(users.keeper);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         StrategyData memory data = vault.strategies(address(strategy));
 
-        assertEq(vault.debtRatio(), 3000);
-        assertEq(data.strategyDebtRatio, 3000);
+        // Validate 3001
+        assertEq(vault.debtRatio(), 3001);
+        assertEq(data.strategyDebtRatio, 3001);
     }
 
     function testConvexUSDTCrvUSD__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-        vault.deposit(100 * _1_USDT, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
-        uint256 expected = strategy.previewLiquidate(30 * _1_USDT);
+        uint256 expected = strategy.previewLiquidate(30 * _1_USDCE);
         vm.startPrank(address(vault));
-        uint256 loss = strategy.liquidate(30 * _1_USDT);
-        assertEq(expected, 30 * _1_USDT - loss);
+        uint256 loss = strategy.liquidate(30 * _1_USDCE);
+
+        // VALIDATE
+        uint256 tolerance = _1_USDCE;
+        assertApproxEqAbs(expected, 30 * _1_USDCE - loss, tolerance);
     }
 
     function testConvexUSDTCrvUSD__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-        vault.deposit(100 * _1_USDT, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
-        uint256 requestedAmount = strategy.previewLiquidateExact(30 * _1_USDT);
+        uint256 requestedAmount = strategy.previewLiquidateExact(30 * _1_USDCE);
         vm.startPrank(address(vault));
-        uint256 balanceBefore = IERC20(USDT_POLYGON).balanceOf(address(vault));
-        strategy.liquidateExact(30 * _1_USDT);
-        uint256 withdrawn = IERC20(USDT_POLYGON).balanceOf(address(vault)) - balanceBefore;
+        uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+        strategy.liquidateExact(30 * _1_USDCE);
+        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
-        assertEq(withdrawn, 30 * _1_USDT);
+        assertEq(withdrawn, 30 * _1_USDCE);
         // losses are equal or fewer than expected
-        assertLe(withdrawn - 30 * _1_USDT, requestedAmount - 30 * _1_USDT);
+        assertLe(withdrawn - 30 * _1_USDCE, requestedAmount - 30 * _1_USDCE);
     }
 
     function testConvexUSDTCrvUSD__maxLiquidateExact() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
-        vault.deposit(100 * _1_USDT, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
         uint256 maxLiquidateExact = strategy.maxLiquidateExact();
-        uint256 balanceBefore = IERC20(USDT_POLYGON).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
         uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
         vm.startPrank(address(vault));
         uint256 losses = strategy.liquidateExact(maxLiquidateExact);
-        uint256 withdrawn = IERC20(USDT_POLYGON).balanceOf(address(vault)) - balanceBefore;
+        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
         assertEq(withdrawn, maxLiquidateExact);
         // losses are equal or fewer than expected
@@ -617,15 +624,15 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
     function testConvexUSDTCrvUSD__MaxLiquidate() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
-        vault.deposit(100 * _1_USDT, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
         uint256 maxWithdraw = strategy.maxLiquidate();
-        uint256 balanceBefore = IERC20(USDT_POLYGON).balanceOf(address(vault));
+        uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
         vm.startPrank(address(vault));
         strategy.liquidate(maxWithdraw);
-        uint256 withdrawn = IERC20(USDT_POLYGON).balanceOf(address(vault)) - balanceBefore;
+        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
     }
 }

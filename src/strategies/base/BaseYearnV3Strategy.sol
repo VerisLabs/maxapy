@@ -464,7 +464,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
 
     /// @notice Determines the current value of `shares`.
     /// @return _assets the estimated amount of underlying computed from shares `shares`
-    function _shareValue(uint256 shares) internal view returns (uint256 _assets) {
+    function _shareValue(uint256 shares) internal view virtual returns (uint256 _assets) {
         assembly {
             // return yVault.previewRedeem(shares);
             mstore(0x00, 0x4cdad506)
@@ -476,7 +476,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return _shares the estimated amount of shares computed in exchange for underlying `amount`
-    function _sharesForAmount(uint256 amount) internal view returns (uint256 _shares) {
+    function _sharesForAmount(uint256 amount) internal view virtual returns (uint256 _shares) {
         assembly {
             // return yVault.convertToShares(amount);
             mstore(0x00, 0xc6e6f592)
