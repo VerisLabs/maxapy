@@ -14,7 +14,13 @@ import { DAI_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON } from "src/helpers/A
 contract YearnDAILenderStrategy is BaseYearnV3Strategy {
     using SafeTransferLib for address;
 
+    ////////////////////////////////////////////////////////////////
+    ///                        CONSTANTS                         ///
+    ////////////////////////////////////////////////////////////////
+    /// @notice Curve AtriCrypto(DAI,USDCe,USDT,wBTC,WETH) pool zapper in polygon
     ICurveAtriCryptoZapper constant zapper = ICurveAtriCryptoZapper(CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON);
+    /// @notice DAI in polygon
+    address public constant dai = DAI_POLYGON;
 
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -37,8 +43,8 @@ contract YearnDAILenderStrategy is BaseYearnV3Strategy {
         yVault = _yVault;
 
         /// Perform needed approvals
-        DAI_POLYGON.safeApprove(address(zapper), type(uint256).max);
-        DAI_POLYGON.safeApprove(address(_yVault), type(uint256).max);
+        dai.safeApprove(address(zapper), type(uint256).max);
+        dai.safeApprove(address(_yVault), type(uint256).max);
         underlyingAsset.safeApprove(address(zapper), type(uint256).max);
 
         minSingleTrade = 1 * 10 ** 6; // 1 USD

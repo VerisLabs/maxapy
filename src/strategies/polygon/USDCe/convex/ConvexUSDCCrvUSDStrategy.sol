@@ -48,6 +48,8 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
     uint256 public constant CRVUSD_USDC_CONVEX_POOL_ID = CRVUSD_USDC_CONVEX_POOL_ID_POLYGON;
     /// @notice Address of Uniswap V3 USDC-LUSD pool
     address public constant pool = UNISWAP_V3_USDC_USDCE_POOL_POLYGON;
+    /// @notice USDC token for polygon
+    address public constant usdc = USDC_POLYGON;
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -106,11 +108,11 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         router = _router;
 
         // Approve tokens
-        USDC_POLYGON.safeApprove(address(_router), type(uint256).max);
+        usdc.safeApprove(address(_router), type(uint256).max);
         underlyingAsset.safeApprove(address(_router), type(uint256).max);
         crv.safeApprove(address(_router), type(uint256).max);
         crvUsd.safeApprove(address(curveLpPool), type(uint256).max);
-        USDC_POLYGON.safeApprove(address(curveLpPool), type(uint256).max);
+        usdc.safeApprove(address(curveLpPool), type(uint256).max);
 
         minSwapCrv = 1e17;
         maxSingleTrade = 100_000e6;
@@ -172,7 +174,7 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
             uint256 usdcAmount = router.exactInputSingle(
                 IRouter.ExactInputSingleParams({
                     tokenIn: underlyingAsset,
-                    tokenOut: USDC_POLYGON,
+                    tokenOut: usdc,
                     fee: 100, // 0.01% fee
                     recipient: address(this),
                     deadline: block.timestamp,
@@ -233,7 +235,7 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         // Swap USDC to base asset
         return router.exactInputSingle(
             IRouter.ExactInputSingleParams({
-                tokenIn: USDC_POLYGON,
+                tokenIn: usdc,
                 tokenOut: underlyingAsset,
                 fee: 100, // 0.01% fee
                 recipient: address(this),

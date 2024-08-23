@@ -45,9 +45,11 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
     /// @notice Router to perform Stable swaps
     ICurveAtriCryptoZapper constant zapper = ICurveAtriCryptoZapper(CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON);
     /// @notice Router to perform CRV-WETH swaps
-    IRouter public router; 
-    /// @notice Identifier for the dETH<>usdt Convex pool
+    IRouter public router;
+    /// @notice Identifier for the dETH<>USDT Convex pool
     uint256 public constant CRVUSD_USDT_CONVEX_POOL_ID = CRVUSD_USDT_CONVEX_POOL_ID_POLYGON;
+    /// @notice USDT token in polygon
+    address public constant usdt = USDT_POLYGON;
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -100,26 +102,26 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
 
         // Approve pools
         address(convexLpToken).safeApprove(address(convexBooster), type(uint256).max);
-        
+
         // Set router
         router = _router;
 
         // Approve tokens
-        USDT_POLYGON.safeApprove(address(_router), type(uint256).max);
+        usdt.safeApprove(address(_router), type(uint256).max);
         underlyingAsset.safeApprove(address(_router), type(uint256).max);
         crv.safeApprove(address(_router), type(uint256).max);
-        
-        USDT_POLYGON.safeApprove(address(zapper), type(uint256).max);
+
+        usdt.safeApprove(address(zapper), type(uint256).max);
         underlyingAsset.safeApprove(address(zapper), type(uint256).max);
         crv.safeApprove(address(zapper), type(uint256).max);
-        
+
         crvUsd.safeApprove(address(curveLpPool), type(uint256).max);
-        USDT_POLYGON.safeApprove(address(curveLpPool), type(uint256).max);
+        usdt.safeApprove(address(curveLpPool), type(uint256).max);
 
         minSwapCrv = 1e17;
         maxSingleTrade = 100_000e6;
     }
-    
+
     /// @notice Sets the new router
     /// @dev Approval for CRV will be granted to the new router if it was not already granted
     /// @param _newRouter The new router address
@@ -171,11 +173,11 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
 
         amount = Math.min(amount, maxSingleTrade);
 
-        uint256 balanceBefore = USDT_POLYGON.balanceOf(address(this));
+        uint256 balanceBefore = usdt.balanceOf(address(this));
         // Swap the USDCe to USDT
         zapper.exchange_underlying(1, 2, amount, 0, address(this));
         // Get the amount of USDT received
-        uint256 amountUSDT = USDT_POLYGON.balanceOf(address(this)) - balanceBefore;
+        uint256 amountUSDT = usdt.balanceOf(address(this)) - balanceBefore;
 
         uint256[] memory amounts = new uint256[](2);
         amounts[1] = amountUSDT;
@@ -331,7 +333,7 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
             ) / 1 ether
         );
     }
-    
+
     /// @notice Returns the real time estimation of the value in assets held by the strategy
     /// @dev This function calculates the total value of the strategy's assets in USDCe,
     ///      including both the unstaked USDCe balance and the value of staked LP tokens.
@@ -360,7 +362,7 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
         uint256 usdtAmount = _convertUsdceToUsdt(amount);
         return super._lpForAmount(usdtAmount);
     }
-  
+
     // @notice Converts USDT to USDCe
     /// @param usdtAmount Amount of USDT
     /// @return Equivalent amount in USDCe
@@ -372,6 +374,6 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
     /// @param usdceAmount Amount of USDCe
     /// @return Equivalent amount in USDT
     function _convertUsdceToUsdt(uint256 usdceAmount) internal view returns (uint256) {
-        return zapper.get_dy_underlying(1, 2, usdceAmount);  
+        return zapper.get_dy_underlying(1, 2, usdceAmount);
     }
 }
