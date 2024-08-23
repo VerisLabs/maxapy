@@ -540,6 +540,26 @@ contract YearnCompoundUSDCeLenderStrategyTest is BaseTest, StrategyEvents {
         );
     }
 
+    function testYearnCompoundUSDCeLender__Harvest_minOutput_InvestDivest() public {
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        strategy.harvest(0, 0, address(0), block.timestamp);
+
+        uint256 snapshotId = vm.snapshot();
+
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        vm.startPrank(users.keeper);
+
+        vm.expectEmit();
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDC), 40 * _1_USDC, 4000);
+
+        vm.expectEmit();
+        emit Harvested(0, 0, 0, 0);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+    }
+
     function testYearnCompoundUSDCeLender__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
