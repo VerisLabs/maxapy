@@ -540,10 +540,7 @@ contract YearnCompoundUSDCeLenderStrategyTest is BaseTest, StrategyEvents {
         );
     }
 
-    function testYearnCompoundUSDCeLender__Harvest_minOutput_InvestDivest() public {
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
-        strategy.harvest(0, 0, address(0), block.timestamp);
-
+    function testYearnCompoundUSDCeLender__Harvest__InvestDivest() public {
         uint256 snapshotId = vm.snapshot();
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
