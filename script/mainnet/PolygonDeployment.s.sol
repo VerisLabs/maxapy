@@ -81,6 +81,8 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         keepers.push(vm.envAddress("KEEPER3_ADDRESS"));
 
         vaultAdmin = vm.envAddress("VAULT_ADMIN_ADDRESS");
+        keepers.push(vaultAdmin);
+
         vaultEmergencyAdmin = vm.envAddress("VAULT_EMERGENCY_ADMIN_ADDRESS");
         strategyAdmin = vm.envAddress("STRATEGY_ADMIN_ADDRESS");
         strategyEmergencyAdmin = vm.envAddress("STRATEGY_EMERGENCY_ADMIN_ADDRESS");

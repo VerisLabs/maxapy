@@ -1930,11 +1930,11 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         address strategy,
         uint256 newDebtRatio,
         uint256 newMaxDebtPerHarvest,
-        uint256 newMinDebtPerHarvest,
+        uint256 newMinDebtPerHarvest,   
         uint256 newPerformanceFee
     )
         external
-        checkRoles(ADMIN_ROLE)
+            
     {
         uint256 slot; // Slot where strategies[strategy] slot will be stored
         uint256 slotContent; // Used to store strategies[strategy] slot content

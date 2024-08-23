@@ -21,8 +21,8 @@ contract MaxApyHarvester is OwnableRoles {
     ////////////////////////////////////////////////////////////////
     /// @dev Params for harvesting
     struct HarvestData {
-        address strategyAddress;
-        uint256 minExpectedBalance;
+        address strategyAddress;        
+        uint256 minExpectedBalance;     
         uint256 minOutputAfterInvestment;
         uint256 deadline;
     }
@@ -154,10 +154,10 @@ contract MaxApyHarvester is OwnableRoles {
         }
     }
 
-    function allocateAndHarvest(
-        IMaxApyVault vault,
-        AllocationData[] calldata allocations,
-        HarvestData[] calldata harvests
+    function batchAllocateAndHarvest(
+            IMaxApyVault vault,
+            AllocationData[] calldata allocations,
+            HarvestData[] calldata harvests
     ) external returns (bool) {
         batchAllocate(vault, allocations);
         batchHarvests(harvests);
