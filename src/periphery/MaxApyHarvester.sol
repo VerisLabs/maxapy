@@ -138,12 +138,12 @@ contract MaxApyHarvester is OwnableRoles {
         uint256 length = allocations.length;
 
         // Iterate through each strategy in the array in order to call the allocate.
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i = 0; i < length;){
             address strategyAddress = allocations[i].strategyAddress;
             uint256 debtRatio = allocations[i].debtRatio;
             uint256 maxDebtPerHarvest = allocations[i].maxDebtPerHarvest;
             uint256 minDebtPerHarvest = allocations[i].minDebtPerHarvest;
-            uint256 performanceFee = allocations[i].performanceFee;
+            uint256 performanceFee = allocations[i].performanceFee; 
 
             vault.updateStrategyData(strategyAddress, debtRatio, maxDebtPerHarvest, minDebtPerHarvest, performanceFee);
 
