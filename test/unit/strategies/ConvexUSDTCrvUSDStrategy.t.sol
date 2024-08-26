@@ -24,8 +24,6 @@ import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
 import { _1_USDCE } from "test/helpers/Tokens.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import "forge-std/console.sol";
-
 contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     using SafeTransferLib for address;
 

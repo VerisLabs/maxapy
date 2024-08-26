@@ -263,8 +263,7 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
                 })
             );
         }
-
-        // Exchange crvUSD <> USDT
+        // Exchange crvUSD <> USDCe
         uint256 crvUsdBalance = _crvUsdBalance();
         if (crvUsdBalance > minSwapCrv) {
             uint256 amountUSDT = curveLpPool.exchange(1, 0, crvUsdBalance, 0);

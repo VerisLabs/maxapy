@@ -119,7 +119,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
             IERC20(_strategy.curveLpPool()).allowance(address(_strategy), address(_strategy.convexBooster())),
             type(uint256).max
         );
-        assertEq(IERC20(CRV_POLYGON).allowance(address(_strategy), address(_strategy.router())), type(uint256).max);
+        assertEq(IERC20(CRVUSD_POLYGON).allowance(address(_strategy), address(_strategy.router())), type(uint256).max);
 
         assertEq(_strategy.minSwapCrv(), 1e17);
 
