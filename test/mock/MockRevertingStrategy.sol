@@ -47,7 +47,7 @@ contract MockRevertingStrategy {
         IMaxApyVault(vault).setAutoPilot(_autoPilot);
     }
 
-    function estimatedTotalAssets() external view returns (uint256) {
+    function estimatedTotalAssets() external pure returns (uint256) {
         return 0;
     }
 }

@@ -81,4 +81,6 @@ interface IStrategy {
     function setMaxSingleTrade(uint256) external;
 
     function setMinSingleTrade(uint256) external;
+
+    function unharvestedAmount() external view returns (int256);
 }

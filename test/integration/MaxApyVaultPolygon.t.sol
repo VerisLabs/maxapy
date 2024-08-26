@@ -78,6 +78,7 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
     IStrategy public strategy4; // YearnUSDCeLender
     IStrategy public strategy5; // YearnUSDCe
 
+    address[] strategyAddresses;
     address[] public keepers;
     address public TREASURY;
 
@@ -94,6 +95,23 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
     MaxApyRouter router;
     MaxApyVaultFactory vaultFactory;
     MaxApyHarvester harvester;
+
+    function logStatus(address strategyAddress) internal {
+        StrategyData memory data = vaultUsdce.strategies(strategyAddress);
+
+        console2.log("");
+        console2.log(strategyAddress);
+        console2.log("debt ratio:",data.strategyDebtRatio);
+        console2.log("total debt:", data.strategyTotalDebt);
+        console2.log("uPnL:", data.strategyTotalUnrealizedGain);
+        console2.log("unharvested:", IStrategy(strategyAddress).unharvestedAmount());
+        console2.log("unharvested: $", IStrategy(strategyAddress).unharvestedAmount()/10**6);
+    }
+
+    function logStatusAllStrategies() internal {
+        for(uint256 i=0; i<5; ++i) logStatus(strategyAddresses[i]);
+        console2.log("*********************************************************************************");
+    }
 
     function setUp() public {
         super._setUp("POLYGON");
@@ -147,6 +165,7 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
         strategy1 = IStrategy(address(proxy));
         strategy1.grantRoles(users.alice, strategy1.ADMIN_ROLE());
         strategy1.grantRoles(users.alice, strategy1.EMERGENCY_ADMIN_ROLE());
+        strategyAddresses.push(address(strategy1));
 
         // Strategy2(YearnCompoundUSDCeLender)
         YearnCompoundUSDCeLenderStrategy implementation2 = new YearnCompoundUSDCeLenderStrategy();
@@ -166,6 +185,8 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
         strategy2 = IStrategy(address(proxy));
         strategy2.grantRoles(users.alice, strategy2.ADMIN_ROLE());
         strategy2.grantRoles(users.alice, strategy2.EMERGENCY_ADMIN_ROLE());
+        strategyAddresses.push(address(strategy2));
+
 
         // Strategy3(YearnMaticUSDCStakingStrategy)
         YearnMaticUSDCStakingStrategy implementation3 = new YearnMaticUSDCStakingStrategy();
@@ -185,6 +206,8 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
         strategy3 = IStrategy(address(proxy));
         strategy3.grantRoles(users.alice, strategy3.ADMIN_ROLE());
         strategy3.grantRoles(users.alice, strategy3.EMERGENCY_ADMIN_ROLE());
+        strategyAddresses.push(address(strategy3));
+
 
         // Strategy4(YeaarnUSDCeStrategy)
         YearnUSDCeStrategy implementation4 = new YearnUSDCeStrategy();
@@ -204,6 +227,8 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
         strategy4 = IStrategy(address(proxy));
         strategy4.grantRoles(users.alice, strategy4.ADMIN_ROLE());
         strategy4.grantRoles(users.alice, strategy4.EMERGENCY_ADMIN_ROLE());
+        strategyAddresses.push(address(strategy4));
+
 
         // Strategy5(YearnUSDCeLender)
         YearnUSDCeLenderStrategy implementation5 = new YearnUSDCeLenderStrategy();
@@ -223,6 +248,7 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
         strategy5 = IStrategy(address(proxy));
         strategy5.grantRoles(users.alice, strategy5.ADMIN_ROLE());
         strategy5.grantRoles(users.alice, strategy5.EMERGENCY_ADMIN_ROLE());
+        strategyAddresses.push(address(strategy5));
 
          // Add 13 strategies to the vault
         vaultUsdce.addStrategy(address(strategy1), 1900, type(uint72).max, 0, 0);  // -
@@ -246,15 +272,8 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
         IERC20(USDCE_POLYGON).approve(address(vaultUsdce), type(uint256).max);
     }
 
-    function logStatus(address strategyAddress) internal {
-        StrategyData memory data = vaultUsdce.strategies(strategyAddress);
-        console2.log("debt ratio:",data.strategyDebtRatio);
-        console2.log("total debt:", data.strategyTotalDebt);
-        console2.log("uPnL:", data.strategyTotalUnrealizedGain);
-    }
-
     function testMaxApyVaultPolygon_firstTest() public {
-        vaultUsdce.deposit(100*_1_USDCE, users.alice);
+        vaultUsdce.deposit(100_000*_1_USDCE, users.alice);
 
         // HARVESTER
         MaxApyHarvester.HarvestData []memory harvestData = new MaxApyHarvester.HarvestData[](5);
@@ -263,15 +282,10 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
         harvestData[2] = MaxApyHarvester.HarvestData(address(strategy3), 0, 0, block.timestamp + 1000);
         harvestData[3] = MaxApyHarvester.HarvestData(address(strategy4), 0, 0, block.timestamp + 1000);
         harvestData[4] = MaxApyHarvester.HarvestData(address(strategy5), 0, 0, block.timestamp + 1000);
-
         harvester.batchHarvests(harvestData);
         
-        // Test
-        logStatus(address(strategy1));
-        logStatus(address(strategy2));
-        logStatus(address(strategy3));
-        logStatus(address(strategy4));
-        logStatus(address(strategy5));
-
+        logStatusAllStrategies();
+        skip(140 days);      
+        logStatusAllStrategies();                      
     }
 }

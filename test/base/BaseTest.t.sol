@@ -36,7 +36,7 @@ contract BaseTest is Test {
     function _setUp(string memory chain) internal virtual {
         if (vm.envOr("FORK", false)) {
             chainFork = vm.createSelectFork(vm.envString(string.concat("RPC_", chain)));
-            vm.rollFork(60_063_910); //17_635_792
+            vm.rollFork(55_562_786);//52_562_786; //17_635_792
         }
         // Setup utils
         utils = new Utilities();
