@@ -794,7 +794,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
 
     /// @dev Override to return a non-zero value to make the inflation attack even more unfeasible.
     function _decimalsOffset() internal pure override returns (uint8) {
-        return 6;
+            
     }
 
     /// @notice Returns the estimate amount of assets held by the vault and strategy positions,

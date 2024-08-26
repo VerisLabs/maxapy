@@ -49,12 +49,6 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
 
     address public TREASURY;
 
-    function _dealStEth(address give, uint256 wethIn) internal returns (uint256 stEthOut) {
-        vm.deal(give, wethIn);
-        stEthOut = ICurveLpPool(CURVE_POOL).exchange{ value: wethIn }(0, 1, wethIn, 0);
-        IERC20(STETH_MAINNET).transfer(give, stEthOut >= wethIn ? wethIn : stEthOut);
-    }
-
     IStrategyWrapper public strategy1; // yearn
     IStrategyWrapper public strategy2; // sommelier turbo steth
     IStrategyWrapper public strategy3; // sommelier steth deposit

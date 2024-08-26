@@ -188,7 +188,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
             uint256 shares = _sharesForAmount(amountToWithdraw);
-            uint256 withdrawn = _shareValue(shares);
+            uint256 withdrawn = _shareValue(shares);            
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
         liquidatedAmount = requestedAmount - loss;
