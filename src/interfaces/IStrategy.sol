@@ -31,11 +31,11 @@ interface IStrategy {
 
     function setStrategist(address _newStrategist) external;
 
-    function vault() external returns (address);
+    function vault() external view returns (address);
 
-    function underlyingAsset() external returns (address);
+    function underlyingAsset() external view returns (address);
 
-    function emergencyExit() external returns (uint256);
+    function emergencyExit() external view returns (uint256);
 
     function liquidate(uint256 amountNeeded) external returns (uint256);
 
@@ -81,4 +81,10 @@ interface IStrategy {
     function setMaxSingleTrade(uint256) external;
 
     function setMinSingleTrade(uint256) external;
+
+    function cellar() external view returns (address);
+
+    function convexLpToken() external view returns (address);
+
+    function unharvestedAmount() external view returns (int256);
 }

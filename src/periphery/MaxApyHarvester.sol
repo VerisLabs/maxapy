@@ -4,13 +4,17 @@ pragma solidity ^0.8.19;
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { IStrategy } from "src/interfaces/IStrategy.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {IYVaultV3} from "src/interfaces/IYVaultV3.sol";
 
 /// @title MaxApyHarvester
 /// @dev This is an internal contract to call harvest in an atomic way.
 contract MaxApyHarvester is OwnableRoles {
+    using SafeTransferLib for address;
     ////////////////////////////////////////////////////////////////
     ///                        ERRORS                            ///
     ////////////////////////////////////////////////////////////////
+
     error HarvestFailed();
     error NotOwner();
     error CantReceiveETH();
@@ -154,6 +158,7 @@ contract MaxApyHarvester is OwnableRoles {
         }
     }
 
+    /// @dev Batch allocate & batch harvest multicall
     function batchAllocateAndHarvest(
         IMaxApyVault vault,
         AllocationData[] calldata allocations,
@@ -165,5 +170,53 @@ contract MaxApyHarvester is OwnableRoles {
         batchAllocate(vault, allocations);
         batchHarvests(harvests);
         return true;
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                     VIEW FUNCTIONS                       ///
+    ////////////////////////////////////////////////////////////////
+
+    function previewInvest(IStrategy strategy) public view returns (uint256) {
+        uint256 strategyType = getStrategyType(strategy);
+
+        if (strategyType == 1) { }
+
+        if (strategyType == 2) {
+
+        }
+
+        if (strategyType == 3) { }
+
+        if (strategyType == 4) { }
+    }
+
+    function previewDivest(IStrategy strategy) public view returns (uint256) {
+        int256 unharvestedAmount = strategy.unharvestedAmount();
+        if (unharvestedAmount < 0) return 0;
+        IMaxApyVault vault = IMaxApyVault(strategy.vault());
+        uint256 debtOutstanding = vault.debtOutstanding(address(strategy));
+        return strategy.previewLiquidate(debtOutstanding);
+    }
+
+    function getStrategyType(IStrategy strategy) public view returns (uint256) {
+        try strategy.yVault() returns (address _yVault) {
+            IYVaultV3 vault = IYVaultV3(_yVault);
+            try vault.asset() returns(address _asset) {
+                return 2;
+            }
+            catch {
+                return 1;
+            }
+        } catch { }
+
+        try strategy.cellar() returns (address _cellar) {
+            _cellar;
+            return 3;
+        } catch { }
+
+        try strategy.convexLpToken() returns (address _convexLpToken) {
+            _convexLpToken;
+            return 4;
+        } catch { }
     }
 }
