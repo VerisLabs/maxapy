@@ -105,7 +105,7 @@ contract MaxApyHarvester is OwnableRoles {
     ////////////////////////////////////////////////////////////////
     /// @notice Orchestrates a batch harvest for the MaxApy protocol.
     /// @param harvests An array of strategy harvests
-    function batchHarvests(HarvestData[] calldata harvests) external checkRoles(KEEPER_ROLE) {
+    function batchHarvests(HarvestData[] calldata harvests) public checkRoles(KEEPER_ROLE) {
         uint256 length = harvests.length;
 
         // Iterate through each strategy in the array in order to call the harvest.
@@ -132,7 +132,7 @@ contract MaxApyHarvester is OwnableRoles {
         IMaxApyVault vault,
         AllocationData[] calldata allocations
     )
-        external
+        public
         checkRoles(ALLOCATOR_ROLE)
     {
         uint256 length = allocations.length;
@@ -152,5 +152,18 @@ contract MaxApyHarvester is OwnableRoles {
                 i++;
             }
         }
+    }
+
+    function batchAllocateAndHarvest(
+        IMaxApyVault vault,
+        AllocationData[] calldata allocations,
+        HarvestData[] calldata harvests
+    )
+        external
+        returns (bool)
+    {
+        batchAllocate(vault, allocations);
+        batchHarvests(harvests);
+        return true;
     }
 }
