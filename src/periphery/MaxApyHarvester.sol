@@ -4,17 +4,19 @@ pragma solidity ^0.8.19;
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { IStrategy } from "src/interfaces/IStrategy.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import {IYVaultV3} from "src/interfaces/IYVaultV3.sol";
+
+/// @dev preview module interface
+interface IPreviewModule {
+    function previewInvest(IStrategy strategy) external view returns (uint256);
+    function previewDivest(IStrategy strategy) external view returns (uint256);
+}
 
 /// @title MaxApyHarvester
 /// @dev This is an internal contract to call harvest in an atomic way.
 contract MaxApyHarvester is OwnableRoles {
-    using SafeTransferLib for address;
     ////////////////////////////////////////////////////////////////
     ///                        ERRORS                            ///
     ////////////////////////////////////////////////////////////////
-
     error HarvestFailed();
     error NotOwner();
     error CantReceiveETH();
@@ -57,12 +59,19 @@ contract MaxApyHarvester is OwnableRoles {
     }
 
     ////////////////////////////////////////////////////////////////
+    ///                     GLOBAL STATE VARIABLES               ///
+    ////////////////////////////////////////////////////////////////
+    /// @notice contract with implementation of harvest preview logic
+    IPreviewModule previewModule;
+
+    ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
 
     /// @dev Constructor to set the initial state of the contract.
     /// @param admin Contract admin
     /// @param keepers The addresses that will be added to a keeper role
+    /// @param allocators The addresses that will be added to a allocator role
     constructor(address admin, address[] memory keepers, address[] memory allocators) {
         // loop to add the keepers to a mapping
         _initializeOwner(admin);
@@ -131,6 +140,7 @@ contract MaxApyHarvester is OwnableRoles {
     }
 
     /// @notice Orchestrates a batch allocation for the MaxApy protocol.
+    /// @param vault vault instance
     /// @param allocations An array of strategy allocations
     function batchAllocate(
         IMaxApyVault vault,
@@ -171,52 +181,23 @@ contract MaxApyHarvester is OwnableRoles {
         batchHarvests(harvests);
         return true;
     }
+    /// @notice sets the preview contract for a strategy
+    function setPreviewModule(IPreviewModule _previewModule) external checkRoles(ADMIN_ROLE) {
+        previewModule = _previewModule;
+    }
 
     ////////////////////////////////////////////////////////////////
     ///                     VIEW FUNCTIONS                       ///
     ////////////////////////////////////////////////////////////////
-
+    /// @notice simulates the investment of a strategy after harvesting it
+    /// @param strategy instance of strategy to preview
     function previewInvest(IStrategy strategy) public view returns (uint256) {
-        uint256 strategyType = getStrategyType(strategy);
-
-        if (strategyType == 1) { }
-
-        if (strategyType == 2) {
-
-        }
-
-        if (strategyType == 3) { }
-
-        if (strategyType == 4) { }
+        return previewModule.previewInvest(strategy);
     }
 
+    /// @notice simulates the divestment of a strategy after harvesting it
+    /// @param strategy instance of strategy to preview
     function previewDivest(IStrategy strategy) public view returns (uint256) {
-        int256 unharvestedAmount = strategy.unharvestedAmount();
-        if (unharvestedAmount < 0) return 0;
-        IMaxApyVault vault = IMaxApyVault(strategy.vault());
-        uint256 debtOutstanding = vault.debtOutstanding(address(strategy));
-        return strategy.previewLiquidate(debtOutstanding);
-    }
-
-    function getStrategyType(IStrategy strategy) public view returns (uint256) {
-        try strategy.yVault() returns (address _yVault) {
-            IYVaultV3 vault = IYVaultV3(_yVault);
-            try vault.asset() returns(address _asset) {
-                return 2;
-            }
-            catch {
-                return 1;
-            }
-        } catch { }
-
-        try strategy.cellar() returns (address _cellar) {
-            _cellar;
-            return 3;
-        } catch { }
-
-        try strategy.convexLpToken() returns (address _convexLpToken) {
-            _convexLpToken;
-            return 4;
-        } catch { }
+        return previewModule.previewDivest(strategy);
     }
 }

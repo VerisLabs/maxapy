@@ -137,4 +137,6 @@ interface IMaxApyVault is IERC4626 {
     function treasury() external view returns (address);
 
     function sharePrice() external view returns (uint256);
+
+    function creditAvailable(address strategy) external view returns (uint256);
 }
