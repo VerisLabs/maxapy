@@ -285,7 +285,12 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
         harvester.batchHarvests(harvestData);
         
         logStatusAllStrategies();
+        console2.log(vaultUsdce.totalAssets());
+        console2.log(vaultUsdce.totalDeposits());
+
         skip(140 days);      
-        logStatusAllStrategies();                      
+        logStatusAllStrategies();     
+        console2.log(vaultUsdce.totalAssets());
+        console2.log(vaultUsdce.totalDeposits());                 
     }
 }
