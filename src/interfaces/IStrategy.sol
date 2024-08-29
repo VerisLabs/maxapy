@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import { StrategyData } from "../helpers/VaultTypes.sol";
-import {ICurveLpPool,ICurveLendingPool} from "src/interfaces/ICurve.sol";
+import { ICurveLpPool, ICurveLendingPool } from "src/interfaces/ICurve.sol";
 
 interface IStrategy {
     function ADMIN_ROLE() external view returns (uint256);

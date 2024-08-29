@@ -128,6 +128,10 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
+        // Check max deposit just in case
+        uint256 maxDeposit = yVault.maxDeposit(address(this));
+        amount = Math.min(amount, maxDeposit);
+
         uint256 shares = yVault.deposit(amount, address(this));
 
         assembly ("memory-safe") {
