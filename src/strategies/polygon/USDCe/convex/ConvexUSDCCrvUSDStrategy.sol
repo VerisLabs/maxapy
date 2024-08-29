@@ -12,6 +12,7 @@ import { IConvexRewardsPolygon } from "src/interfaces/IConvexRewards.sol";
 import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IUniswapV3Router as IRouter, IUniswapV3Pool } from "src/interfaces/IUniswap.sol";
 import { OracleLibrary } from "src/lib/OracleLibrary.sol";
+import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import {
     CRV_USD_POLYGON,
@@ -21,6 +22,7 @@ import {
     CONVEX_BOOSTER_POLYGON,
     CRVUSD_USDC_CONVEX_POOL_ID_POLYGON,
     CURVE_CRVUSD_USDC_POOL_POLYGON,
+    CURVE_CRV_ATRICRYPTO_ZAPPER_POLYGON,
     UNISWAP_V3_USDC_USDCE_POOL_POLYGON
 } from "src/helpers/AddressBook.sol";
 
@@ -48,6 +50,12 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
     uint256 public constant CRVUSD_USDC_CONVEX_POOL_ID = CRVUSD_USDC_CONVEX_POOL_ID_POLYGON;
     /// @notice Address of Uniswap V3 USDC-LUSD pool
     address public constant pool = UNISWAP_V3_USDC_USDCE_POOL_POLYGON;
+    /// @notice USDC token for polygon
+    address public constant usdc = USDC_POLYGON;
+    /// @notice Curve CrvTricrypto zapper in polygon
+    ICurveAtriCryptoZapper public constant zapper = ICurveAtriCryptoZapper(CURVE_CRV_ATRICRYPTO_ZAPPER_POLYGON);
+    /// @notice CrvTricrypto pool address in polygon
+    address public constant triCryptoPool = 0xc7c939A474CB10EB837894D1ed1a77C61B268Fa7;
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -106,11 +114,11 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         router = _router;
 
         // Approve tokens
-        USDC_POLYGON.safeApprove(address(_router), type(uint256).max);
+        usdc.safeApprove(address(_router), type(uint256).max);
         underlyingAsset.safeApprove(address(_router), type(uint256).max);
-        crv.safeApprove(address(_router), type(uint256).max);
-        crvUsd.safeApprove(address(curveLpPool), type(uint256).max);
-        USDC_POLYGON.safeApprove(address(curveLpPool), type(uint256).max);
+        crv.safeApprove(address(zapper), type(uint256).max);
+        crvUsd.safeApprove(address(_router), type(uint256).max);
+        usdc.safeApprove(address(curveLpPool), type(uint256).max);
 
         minSwapCrv = 1e17;
         maxSingleTrade = 100_000e6;
@@ -172,7 +180,7 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
             uint256 usdcAmount = router.exactInputSingle(
                 IRouter.ExactInputSingleParams({
                     tokenIn: underlyingAsset,
-                    tokenOut: USDC_POLYGON,
+                    tokenOut: usdc,
                     fee: 100, // 0.01% fee
                     recipient: address(this),
                     deadline: block.timestamp,
@@ -233,7 +241,7 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         // Swap USDC to base asset
         return router.exactInputSingle(
             IRouter.ExactInputSingleParams({
-                tokenIn: USDC_POLYGON,
+                tokenIn: usdc,
                 tokenOut: underlyingAsset,
                 fee: 100, // 0.01% fee
                 recipient: address(this),
@@ -258,11 +266,18 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         // Exchange CRV <> USDC
         uint256 crvBalance = _crvBalance();
         if (crvBalance > minSwapCrv) {
+            zapper.exchange(triCryptoPool, 0, 2, crvBalance, 0);
+        }
+
+        // Exchange crvUSD <> USDCe
+        uint256 crvUsdBalance = _crvUsdBalance();
+
+        if (crvUsdBalance > 0) {
             bytes memory path = abi.encodePacked(
-                _crv(),
-                uint24(3000), // CRV <> WMATIC 0.03%
+                crvUsd,
+                uint24(3000), // CRV <> WMATIC 0.3%
                 wmatic,
-                uint24(500), // WMATIC <> USDC 0.005%
+                uint24(500), // WMATIC <> USDCe 0.05%
                 underlyingAsset
             );
             router.exactInput(
@@ -270,16 +285,10 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
                     path: path,
                     recipient: address(this),
                     deadline: block.timestamp,
-                    amountIn: crvBalance,
+                    amountIn: crvUsdBalance,
                     amountOutMinimum: 0
                 })
             );
-        }
-
-        // Exchange crvUSD <> USDC
-        uint256 crvUsdBalance = _crvUsdBalance();
-        if (crvUsdBalance > minSwapCrv) {
-            curveLpPool.exchange(1, 0, crvUsdBalance, 0);
         }
     }
 

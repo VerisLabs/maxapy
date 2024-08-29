@@ -18,7 +18,6 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
     ////////////////////////////////////////////////////////////////
     ///                         CONSTANTS                        ///
     ////////////////////////////////////////////////////////////////
-
     /// @notice Ethereum mainnet's Matic Token
     address public constant wmatic = WMATIC_POLYGON;
     /// @notice Router to perform WMATIC-USDC swaps

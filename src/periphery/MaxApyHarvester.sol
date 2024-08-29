@@ -5,6 +5,12 @@ import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { IStrategy } from "src/interfaces/IStrategy.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 
+/// @dev preview module interface
+interface IPreviewModule {
+    function previewInvest(IStrategy strategy) external view returns (uint256);
+    function previewDivest(IStrategy strategy) external view returns (uint256);
+}
+
 /// @title MaxApyHarvester
 /// @dev This is an internal contract to call harvest in an atomic way.
 contract MaxApyHarvester is OwnableRoles {
@@ -53,12 +59,19 @@ contract MaxApyHarvester is OwnableRoles {
     }
 
     ////////////////////////////////////////////////////////////////
+    ///                     GLOBAL STATE VARIABLES               ///
+    ////////////////////////////////////////////////////////////////
+    /// @notice contract with implementation of harvest preview logic
+    IPreviewModule previewModule;
+
+    ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
 
     /// @dev Constructor to set the initial state of the contract.
     /// @param admin Contract admin
     /// @param keepers The addresses that will be added to a keeper role
+    /// @param allocators The addresses that will be added to a allocator role
     constructor(address admin, address[] memory keepers, address[] memory allocators) {
         // loop to add the keepers to a mapping
         _initializeOwner(admin);
@@ -127,6 +140,7 @@ contract MaxApyHarvester is OwnableRoles {
     }
 
     /// @notice Orchestrates a batch allocation for the MaxApy protocol.
+    /// @param vault vault instance
     /// @param allocations An array of strategy allocations
     function batchAllocate(
         IMaxApyVault vault,
@@ -154,13 +168,36 @@ contract MaxApyHarvester is OwnableRoles {
         }
     }
 
+    /// @dev Batch allocate & batch harvest multicall
     function batchAllocateAndHarvest(
-            IMaxApyVault vault,
-            AllocationData[] calldata allocations,
-            HarvestData[] calldata harvests
-    ) external returns (bool) {
+        IMaxApyVault vault,
+        AllocationData[] calldata allocations,
+        HarvestData[] calldata harvests
+    )
+        external
+        returns (bool)
+    {
         batchAllocate(vault, allocations);
         batchHarvests(harvests);
         return true;
+    }
+    /// @notice sets the preview contract for a strategy
+    function setPreviewModule(IPreviewModule _previewModule) external checkRoles(ADMIN_ROLE) {
+        previewModule = _previewModule;
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                     VIEW FUNCTIONS                       ///
+    ////////////////////////////////////////////////////////////////
+    /// @notice simulates the investment of a strategy after harvesting it
+    /// @param strategy instance of strategy to preview
+    function previewInvest(IStrategy strategy) public view returns (uint256) {
+        return previewModule.previewInvest(strategy);
+    }
+
+    /// @notice simulates the divestment of a strategy after harvesting it
+    /// @param strategy instance of strategy to preview
+    function previewDivest(IStrategy strategy) public view returns (uint256) {
+        return previewModule.previewDivest(strategy);
     }
 }

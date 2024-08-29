@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import { StrategyData } from "../helpers/VaultTypes.sol";
+import {ICurveLpPool,ICurveLendingPool} from "src/interfaces/ICurve.sol";
 
 interface IStrategy {
     function ADMIN_ROLE() external view returns (uint256);
@@ -31,11 +32,11 @@ interface IStrategy {
 
     function setStrategist(address _newStrategist) external;
 
-    function vault() external returns (address);
+    function vault() external view returns (address);
 
-    function underlyingAsset() external returns (address);
+    function underlyingAsset() external view returns (address);
 
-    function emergencyExit() external returns (uint256);
+    function emergencyExit() external view returns (uint256);
 
     function liquidate(uint256 amountNeeded) external returns (uint256);
 

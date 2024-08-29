@@ -14,7 +14,13 @@ import { USDT_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON } from "src/helpers/
 contract YearnUSDTStrategy is BaseYearnV3Strategy {
     using SafeTransferLib for address;
 
+    ////////////////////////////////////////////////////////////////
+    ///                        CONSTANTS                         ///
+    ////////////////////////////////////////////////////////////////
+    /// @notice Curve AtriCrypto(DAI,USDCe,USDT,wBTC,WETH) pool zapper in polygon
     ICurveAtriCryptoZapper constant zapper = ICurveAtriCryptoZapper(CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON);
+    /// @notice USDT token in polygon
+    address public constant usdt = USDT_POLYGON;
 
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -37,8 +43,8 @@ contract YearnUSDTStrategy is BaseYearnV3Strategy {
         yVault = _yVault;
 
         /// Perform needed approvals
-        USDT_POLYGON.safeApprove(address(zapper), type(uint256).max);
-        USDT_POLYGON.safeApprove(address(_yVault), type(uint256).max);
+        usdt.safeApprove(address(zapper), type(uint256).max);
+        usdt.safeApprove(address(_yVault), type(uint256).max);
         underlyingAsset.safeApprove(address(zapper), type(uint256).max);
 
         minSingleTrade = 1 * 10 ** 6; // 1 USD
@@ -144,7 +150,7 @@ contract YearnUSDTStrategy is BaseYearnV3Strategy {
         uint256 maxDeposit = yVault.maxDeposit(address(this));
         amount = Math.min(Math.min(amount, maxDeposit), maxSingleTrade);
 
-        uint256 balanceBefore = USDT_POLYGON.balanceOf(address(this));
+        uint256 balanceBefore = usdt.balanceOf(address(this));
         // Swap the USDCe to USDT
         zapper.exchange_underlying(1, 2, amount, 0, address(this));
 

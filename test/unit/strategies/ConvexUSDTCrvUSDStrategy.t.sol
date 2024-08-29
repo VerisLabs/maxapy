@@ -24,8 +24,6 @@ import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
 import { _1_USDCE } from "test/helpers/Tokens.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import "forge-std/console.sol";
-
 contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     using SafeTransferLib for address;
 
@@ -566,7 +564,7 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         StrategyData memory data = vault.strategies(address(strategy));
-        
+
         // Validate 3001
         assertEq(vault.debtRatio(), 3001);
         assertEq(data.strategyDebtRatio, 3001);
@@ -581,7 +579,7 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         uint256 expected = strategy.previewLiquidate(30 * _1_USDCE);
         vm.startPrank(address(vault));
         uint256 loss = strategy.liquidate(30 * _1_USDCE);
-        
+
         // VALIDATE
         uint256 tolerance = _1_USDCE;
         assertApproxEqAbs(expected, 30 * _1_USDCE - loss, tolerance);
