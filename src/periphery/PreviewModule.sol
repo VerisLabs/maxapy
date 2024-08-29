@@ -36,7 +36,6 @@ contract PreviewModule {
         if (strategyType == 1) {
             if (amount > minSingleTrade) {
                 IYVault yVault = IYVault(strategy.yVault());
-                uint256 amount = creditAvailable;
                 minSingleTrade = strategy.minSingleTrade();
                 if (amount < minSingleTrade) return 0;
                 uint256 shares;
@@ -54,7 +53,7 @@ contract PreviewModule {
             if (amount > minSingleTrade) {
                 IYVaultV3 yVault = IYVaultV3(strategy.yVault());
                 return
-                    yVault.convertToAssets(yVault.previewDeposit(Math.min(creditAvailable, yVault.maxDeposit(address(strategy)))));
+                    yVault.convertToAssets(yVault.previewDeposit(Math.min(amount, yVault.maxDeposit(address(strategy)))));
             }
         }
         /// Sommelier
@@ -66,7 +65,7 @@ contract PreviewModule {
         }
         /// Convex Lp Pool
         else if (strategyType == 4) {
-            if (creditAvailable > minSingleTrade) {
+            if (amount > minSingleTrade) {
                 uint256 assetIndex;
                 ICurveLpPool pool = ICurveLpPool(strategy.curveLpPool());
                 address underlyingAsset = strategy.underlyingAsset();
@@ -76,7 +75,7 @@ contract PreviewModule {
                         break;
                     }
                 }
-                uint256[2] memory amounts = assetIndex == 0 ? [creditAvailable, 0] : [0, creditAvailable];
+                uint256[2] memory amounts = assetIndex == 0 ? [amount, 0] : [0, amount];
                 uint256 shares = pool.calc_token_amount(amounts, true);
                 return _lpValue(strategy, shares);
             }
@@ -96,7 +95,7 @@ contract PreviewModule {
     /// @notice simulates the divestment of a strategy after harvesting it
     /// @param strategy instance of strategy to preview
 
-    function previewDivest(IStrategyWrapper strategy) public view returns (uint256) {
+    function previewDivest(IStrategyWrapper strategy, uint256 amount) public view returns (uint256) {
         int256 unharvestedAmount = strategy.unharvestedAmount();
         if (unharvestedAmount < 0) return 0;
         IMaxApyVault vault = IMaxApyVault(strategy.vault());

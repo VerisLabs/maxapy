@@ -426,7 +426,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
         strategyRNG.seed(strategySeed);
 
         IStrategyWrapper strategy = IStrategyWrapper(strategyFuzzer.pickRandomStrategy(strategyRNG));
-        uint256 investPreview = harvester.previewInvest(strategy);
+        uint256 investPreview = harvester.previewInvest(strategy, 0);
         uint256 amount = vault.creditAvailable(address(strategy));
         deal(WETH_MAINNET, address(strategy), amount);
         uint256 invested = strategy.invest(amount, 0);
