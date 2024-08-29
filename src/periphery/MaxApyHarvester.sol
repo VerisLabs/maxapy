@@ -182,8 +182,9 @@ contract MaxApyHarvester is OwnableRoles {
         return true;
     }
     /// @notice sets the preview contract for a strategy
-    function setPreviewModule(IPreviewModule _previewModule) external checkRoles(ADMIN_ROLE) {
-        previewModule = _previewModule;
+
+    function setPreviewModule(address _previewModule) external checkRoles(ADMIN_ROLE) {
+        previewModule = IPreviewModule(_previewModule);
     }
 
     ////////////////////////////////////////////////////////////////

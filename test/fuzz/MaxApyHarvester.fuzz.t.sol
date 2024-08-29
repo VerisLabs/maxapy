@@ -39,13 +39,18 @@ import { YearnCompoundV3WETHLenderStrategyWrapper } from "../mock/YearnCompoundV
 
 // Vault fuzzer
 import { MaxApyVaultFuzzer } from "./fuzzers/MaxApyVaultFuzzer.t.sol";
+// Strategy fuzzer
 import { StrategyFuzzer } from "./fuzzers/StrategyFuzzer.t.sol";
+// Harvester
+import { MaxApyHarvester } from "src/periphery/MaxApyHarvester.sol";
+// Helper contract for harvester previews
+import { PreviewModule } from "src/periphery/PreviewModule.sol";
 
 // Import Random Number Generator
 import { LibPRNG } from "solady/utils/LibPRNG.sol";
 
 /// @dev Integration fuzz tests for the mainnet WETH vault
-contract MaxApyVaultIntegrationTest is BaseTest, StrategyEvents {
+contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
     using LibPRNG for LibPRNG.PRNG;
 
     ////////////////////////////////////////////////////////////////
@@ -86,21 +91,16 @@ contract MaxApyVaultIntegrationTest is BaseTest, StrategyEvents {
     address public TREASURY;
 
     ////////////////////////////////////////////////////////////////
-    ///                      HELPER FUNCTION                     ///
-    ////////////////////////////////////////////////////////////////
-    function _dealStEth(address give, uint256 wethIn) internal returns (uint256 stEthOut) {
-        vm.deal(give, wethIn);
-        stEthOut = ICurveLpPool(CURVE_POOL).exchange{ value: wethIn }(0, 1, wethIn, 0);
-        IERC20(STETH_MAINNET).transfer(give, stEthOut >= wethIn ? wethIn : stEthOut);
-    }
-
-    ////////////////////////////////////////////////////////////////
     ///                      STORAGE                             ///
     ////////////////////////////////////////////////////////////////
     // Vault Fuzzer
     MaxApyVaultFuzzer public vaultFuzzer;
     // Strategies fuzzer
     StrategyFuzzer public strategyFuzzer;
+    // Harvester
+    MaxApyHarvester public harvester;
+    // Previews module
+    PreviewModule public previews;
 
     IStrategyWrapper public strategy1; // yearn weth
     IStrategyWrapper public strategy2; // sommelier turbo steth
@@ -353,19 +353,20 @@ contract MaxApyVaultIntegrationTest is BaseTest, StrategyEvents {
 
         strategy11 = IStrategyWrapper(address(_proxy));
 
-        address[] memory strategyList = new address[](10);
-
-        strategyList[0] = address(strategy1);
-        strategyList[1] = address(strategy2);
-        strategyList[2] = address(strategy3);
-        strategyList[3] = address(strategy4);
-        strategyList[4] = address(strategy5);
-        strategyList[5] = address(strategy6);
-        strategyList[6] = address(strategy7);
-        strategyList[7] = address(strategy8);
-        strategyList[8] = address(strategy9);
-        // strategyList[9] = address(strategy10);
-        strategyList[9] = address(strategy11);
+        address[] memory strategyList = new address[](7);
+        {
+            strategyList[0] = address(strategy1);
+            strategyList[1] = address(strategy2);
+            //strategyList[2] = address(strategy3);
+            //strategyList[2] = address(strategy4);
+            strategyList[2] = address(strategy5);
+            strategyList[3] = address(strategy6);
+            strategyList[4] = address(strategy7);
+            strategyList[5] = address(strategy8);
+            // strategyList[8] = address(strategy9);
+            // strategyList[9] = address(strategy10);
+            strategyList[6] = address(strategy11);
+        }
 
         // Add all the strategies
         vault.addStrategy(address(strategy1), 700, type(uint72).max, 0, 0);
@@ -388,279 +389,50 @@ contract MaxApyVaultIntegrationTest is BaseTest, StrategyEvents {
         vm.stopPrank();
         vm.startPrank(users.alice);
 
+        // Deploy harvester + previews module
+        previews = new PreviewModule();
+        {
+            harvester = new MaxApyHarvester(users.alice, keepers, keepers);
+            harvester.setPreviewModule(address(previews));
+        }
         // deploy fuzzers
         strategyFuzzer = new StrategyFuzzer(strategyList, vault, WETH_MAINNET);
         vaultFuzzer = new MaxApyVaultFuzzer(vault, WETH_MAINNET);
 
         vault.grantRoles(address(strategyFuzzer), vault.ADMIN_ROLE());
         uint256 _keeperRole = strategy1.KEEPER_ROLE();
-
-        strategy1.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy2.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy3.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy4.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy5.grantRoles(address(strategyFuzzer), _keeperRole);
+        {
+            strategy1.grantRoles(address(strategyFuzzer), _keeperRole);
+            strategy2.grantRoles(address(strategyFuzzer), _keeperRole);
+            strategy3.grantRoles(address(strategyFuzzer), _keeperRole);
+            strategy4.grantRoles(address(strategyFuzzer), _keeperRole);
+            strategy5.grantRoles(address(strategyFuzzer), _keeperRole);
+            strategy6.grantRoles(address(strategyFuzzer), _keeperRole);
+            strategy7.grantRoles(address(strategyFuzzer), _keeperRole);
+            strategy8.grantRoles(address(strategyFuzzer), _keeperRole);
+            strategy9.grantRoles(address(strategyFuzzer), _keeperRole);
+            strategy10.grantRoles(address(strategyFuzzer), _keeperRole);
+            strategy11.grantRoles(address(strategyFuzzer), _keeperRole);
+        }
     }
 
-    function testFuzzMaxApyVault__DepositAndRedeemWithoutHarvests(
-        uint256 actorSeed,
-        uint256 assets,
-        uint256 shares
+    function testMaxApyHarvester__PreviewInvest(
+        uint256 strategySeed
     )
         public
     {
-        LibPRNG.PRNG memory actorSeedRNG;
-        actorSeedRNG.seed(actorSeed);
-        vaultFuzzer.deposit(assets);
-        vaultFuzzer.deposit(assets);
-        vaultFuzzer.deposit(assets);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-    }
-
-    function testFuzzMaxApyVault__DepositAndRedeemWithHarvests(
-        uint256 actorSeed,
-        uint256 strategySeed,
-        uint256 assets,
-        uint256 shares
-    )
-        public
-    {
-        LibPRNG.PRNG memory actorSeedRNG;
         LibPRNG.PRNG memory strategyRNG;
-        actorSeedRNG.seed(actorSeed);
+
         strategyRNG.seed(strategySeed);
 
-        vaultFuzzer.deposit(assets);
-        strategyFuzzer.harvest(strategyRNG);
-        vaultFuzzer.deposit(assets);
-        strategyFuzzer.harvest(strategyRNG);
-        vaultFuzzer.deposit(assets);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-        strategyFuzzer.harvest(strategyRNG);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
+        IStrategyWrapper strategy = IStrategyWrapper(strategyFuzzer.pickRandomStrategy(strategyRNG));
+        uint256 investPreview = harvester.previewInvest(strategy);
+        uint256 amount = vault.creditAvailable(address(strategy));
+        deal(WETH_MAINNET, address(strategy), amount);
+        uint256 invested = strategy.invest(amount, 0);
+        assertApproxEq(invested, investPreview, investPreview / 100);
     }
 
-    function testFuzzMaxApyVault__DepositAndRedeemAfterExitStrategy(
-        uint256 actorSeed,
-        uint256 strategySeed,
-        uint256 assets,
-        uint256 shares
-    )
-        public
-    {
-        LibPRNG.PRNG memory actorSeedRNG;
-        LibPRNG.PRNG memory strategyRNG;
-        actorSeedRNG.seed(actorSeed);
-        strategyRNG.seed(strategySeed);
-
-        vaultFuzzer.deposit(assets);
-        strategyFuzzer.exitStrategy(strategyRNG);
-        vaultFuzzer.deposit(assets);
-        strategyFuzzer.exitStrategy(strategyRNG);
-        vaultFuzzer.deposit(assets);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-        strategyFuzzer.exitStrategy(strategyRNG);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-    }
-
-    function testFuzzMaxApyVault__DepositAndRedeemWithGainsAndLossesWithoutHarvests(
-        uint256 actorSeed,
-        uint256 strategySeed,
-        uint256 gainsAndLossesSeed,
-        uint256 assets,
-        uint256 shares
-    )
-        public
-    {
-        LibPRNG.PRNG memory actorSeedRNG;
-        LibPRNG.PRNG memory strategyRNG;
-        LibPRNG.PRNG memory gainAndLossesRNG;
-
-        actorSeedRNG.seed(actorSeed);
-        strategyFuzzer.harvest(strategyRNG);
-        strategyFuzzer.harvest(strategyRNG);
-        strategyRNG.seed(strategySeed);
-        gainAndLossesRNG.seed(gainsAndLossesSeed);
-        strategyFuzzer.harvest(strategyRNG);
-        vaultFuzzer.deposit(assets);
-        strategyFuzzer.harvest(strategyRNG);
-        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
-        vaultFuzzer.deposit(assets);
-        strategyFuzzer.harvest(strategyRNG);
-        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
-        strategyFuzzer.harvest(strategyRNG);
-        strategyFuzzer.harvest(strategyRNG);
-        strategyFuzzer.harvest(strategyRNG);
-        vaultFuzzer.deposit(assets);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
-        strategyFuzzer.harvest(strategyRNG);
-        strategyFuzzer.harvest(strategyRNG);
-        strategyFuzzer.harvest(strategyRNG);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-    }
-
-    function testFuzzMaxApyVault__DepositAndRedeemWithGainsAndLossesWithHarvests(
-        uint256 actorSeed,
-        uint256 strategySeed,
-        uint256 gainsAndLossesSeed,
-        uint256 assets,
-        uint256 shares
-    )
-        public
-    {
-        LibPRNG.PRNG memory actorSeedRNG;
-        LibPRNG.PRNG memory strategyRNG;
-        LibPRNG.PRNG memory gainAndLossesRNG;
-
-        actorSeedRNG.seed(actorSeed);
-        strategyRNG.seed(strategySeed);
-        gainAndLossesRNG.seed(gainsAndLossesSeed);
-
-        vaultFuzzer.deposit(assets);
-        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
-        vaultFuzzer.deposit(assets);
-        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
-        vaultFuzzer.deposit(assets);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-    }
-
-    function testFuzzMaxApyVault__MintAndWithdrawWithoutHarvests(
-        uint256 actorSeed,
-        uint256 assets,
-        uint256 shares
-    )
-        public
-    {
-        LibPRNG.PRNG memory actorSeedRNG;
-        actorSeedRNG.seed(actorSeed);
-        vaultFuzzer.mint(shares);
-        vaultFuzzer.mint(shares);
-        vaultFuzzer.mint(shares);
-        vaultFuzzer.withdraw(actorSeedRNG, assets);
-        vaultFuzzer.withdraw(actorSeedRNG, assets);
-        vaultFuzzer.withdraw(actorSeedRNG, assets);
-    }
-
-    function testFuzzMaxApyVault__MintAndWithdrawWithHarvests(
-        uint256 actorSeed,
-        uint256 strategySeed,
-        uint256 shares,
-        uint256 assets
-    )
-        public
-    {
-        LibPRNG.PRNG memory actorSeedRNG;
-        LibPRNG.PRNG memory strategySeedRNG;
-        actorSeedRNG.seed(actorSeed);
-        strategySeedRNG.seed(strategySeed);
-
-        vaultFuzzer.mint(shares);
-        strategyFuzzer.harvest(strategySeedRNG);
-        vaultFuzzer.mint(shares);
-        strategyFuzzer.harvest(strategySeedRNG);
-        vaultFuzzer.mint(shares);
-        vaultFuzzer.withdraw(actorSeedRNG, assets);
-        strategyFuzzer.harvest(strategySeedRNG);
-        vaultFuzzer.withdraw(actorSeedRNG, assets);
-        vaultFuzzer.withdraw(actorSeedRNG, assets);
-    }
-
-    function testFuzzMaxApyVault__MintAndWithdrawGainsAndLossesWithoutHarvests(
-        uint256 actorSeed,
-        uint256 strategySeed,
-        uint256 gainsAndLossesSeed,
-        uint256 shares,
-        uint256 assets
-    )
-        public
-    {
-        LibPRNG.PRNG memory actorSeedRNG;
-        LibPRNG.PRNG memory strategyRNG;
-        LibPRNG.PRNG memory gainAndLossesRNG;
-
-        actorSeedRNG.seed(actorSeed);
-        strategyRNG.seed(strategySeed);
-        gainAndLossesRNG.seed(gainsAndLossesSeed);
-
-        vaultFuzzer.mint(shares);
-        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
-        vaultFuzzer.mint(shares);
-        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
-        vaultFuzzer.mint(shares);
-        vaultFuzzer.withdraw(actorSeedRNG, assets);
-        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
-        vaultFuzzer.withdraw(actorSeedRNG, assets);
-        vaultFuzzer.withdraw(actorSeedRNG, assets);
-    }
-
-    function testFuzzMaxApyVault__MintAndWithdrawGainsAndLossesWithHarvests(
-        uint256 actorSeed,
-        uint256 strategySeed,
-        uint256 gainsAndLossesSeed,
-        uint256 shares,
-        uint256 assets
-    )
-        public
-    {
-        LibPRNG.PRNG memory actorRNG;
-        LibPRNG.PRNG memory strategyRNG;
-        LibPRNG.PRNG memory gainAndLossesRNG;
-
-        actorRNG.seed(actorSeed);
-        strategyRNG.seed(strategySeed);
-        gainAndLossesRNG.seed(gainsAndLossesSeed);
-
-        vaultFuzzer.mint(shares);
-        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
-        strategyFuzzer.harvest(strategyRNG);
-        strategyFuzzer.harvest(strategyRNG);
-        vaultFuzzer.mint(shares);
-        strategyFuzzer.gain(strategyRNG, gainAndLossesRNG.next());
-        strategyFuzzer.harvest(strategyRNG);
-        vaultFuzzer.mint(shares);
-        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
-        vaultFuzzer.withdraw(actorRNG, assets);
-        strategyFuzzer.harvest(strategyRNG);
-        strategyFuzzer.harvest(strategyRNG);
-        strategyFuzzer.harvest(strategyRNG);
-        vaultFuzzer.withdraw(actorRNG, assets);
-        strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
-        vaultFuzzer.withdraw(actorRNG, assets);
-        strategyFuzzer.harvest(strategyRNG);
-    }
-
-    function testFuzzMaxApyVault__RandomSequence(
-        uint256 actorSeed,
-        uint256 strategySeed,
-        uint256 functionSeed,
-        uint256 argumentsSeed
-    )
-        public
-    {
-        LibPRNG.PRNG memory actorRNG;
-        LibPRNG.PRNG memory strategyRNG;
-        LibPRNG.PRNG memory functionRNG;
-        LibPRNG.PRNG memory argumentsRNG;
-
-        actorRNG.seed(actorSeed);
-        strategyRNG.seed(strategySeed);
-        functionRNG.seed(functionSeed);
-        argumentsRNG.seed(argumentsSeed);
-
-        vaultFuzzer.rand(actorRNG, functionRNG, argumentsRNG);
-        strategyFuzzer.rand(functionRNG, strategyRNG, argumentsRNG);
-        vaultFuzzer.rand(actorRNG, functionRNG, argumentsRNG);
-        strategyFuzzer.rand(functionRNG, strategyRNG, argumentsRNG);
-        vaultFuzzer.rand(actorRNG, functionRNG, argumentsRNG);
-        strategyFuzzer.rand(functionRNG, strategyRNG, argumentsRNG);
+    function testMaxApyHarvester__PreviewLiquidate(uint256 strategySeed) public {
     }
 }

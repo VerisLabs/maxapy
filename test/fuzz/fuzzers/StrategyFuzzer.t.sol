@@ -85,4 +85,8 @@ contract StrategyFuzzer is BaseFuzzer {
             this.loss(strategySeedRNG, argumentsSeedRNG.next());
         }
     }
+
+    function pickRandomStrategy(LibPRNG.PRNG memory strategySeedRNG) public view returns (address) {
+        return strats.rand(strategySeedRNG.next());
+    }
 }

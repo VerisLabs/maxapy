@@ -6,8 +6,7 @@ import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { IYVaultV3 } from "src/interfaces/IYVaultV3.sol";
 import { IYVault } from "src/interfaces/IYVault.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import { ICurveLpPool, ICurveLendingPool } from "../../test/interfaces/ICurve.sol";
-
+import { ICurveLpPool, ICurveLendingPool } from "src/interfaces/ICurve.sol";
 
 /// @title PreviewModule
 /// @notice helper contract that implements the logic to preview all the money flow
@@ -37,14 +36,25 @@ contract PreviewModule {
         if (strategyType == 1) {
             if (creditAvailable > minSingleTrade) {
                 IYVault yVault = IYVault(strategy.yVault());
-                return _shareValue(yVault, _sharesForAmount(yVault, creditAvailable));
+                uint256 amount = creditAvailable;
+                minSingleTrade = strategy.minSingleTrade();
+                if (amount < minSingleTrade) return 0;
+                uint256 shares;
+
+                uint256 vaultTotalSupply = yVault.totalSupply();
+                shares = _sharesForAmount(yVault, amount);
+                if (vaultTotalSupply == 0) return shares;
+                // we add the new deposit to the balance and shares to the supply
+                amount = shares * (_freeFunds(yVault) + amount) / (vaultTotalSupply + shares);
+                return amount;
             }
         }
         /// Yearn V3
         else if (strategyType == 2) {
             if (creditAvailable > minSingleTrade) {
                 IYVaultV3 yVault = IYVaultV3(strategy.yVault());
-                return yVault.convertToAssets(yVault.previewDeposit(creditAvailable));
+                return
+                    yVault.convertToAssets(yVault.previewDeposit(Math.min(creditAvailable, yVault.maxDeposit(address(strategy)))));
             }
         }
         /// Sommelier
@@ -57,8 +67,18 @@ contract PreviewModule {
         /// Convex Lp Pool
         else if (strategyType == 4) {
             if (creditAvailable > minSingleTrade) {
-                uint256 shares = ICurveLpPool(strategy.curveLpPool()).previewDeposit();
-
+                uint256 assetIndex;
+                ICurveLpPool pool = ICurveLpPool(strategy.curveLpPool());
+                address underlyingAsset = strategy.underlyingAsset();
+                for (uint256 i = 0;; i++) {
+                    if (pool.coins(i) == underlyingAsset) {
+                        assetIndex = i;
+                        break;
+                    }
+                }
+                uint256[2] memory amounts = assetIndex == 0 ? [creditAvailable, 0] : [0, creditAvailable];
+                uint256 shares = pool.calc_token_amount(amounts, true);
+                return _lpValue(strategy, shares);
             }
         }
         /// Convex Lending Pool
@@ -75,6 +95,7 @@ contract PreviewModule {
     }
     /// @notice simulates the divestment of a strategy after harvesting it
     /// @param strategy instance of strategy to preview
+
     function previewDivest(IStrategyWrapper strategy) public view returns (uint256) {
         int256 unharvestedAmount = strategy.unharvestedAmount();
         if (unharvestedAmount < 0) return 0;
@@ -117,36 +138,17 @@ contract PreviewModule {
     /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
     /// @return returns the estimated amount of underlying computed from shares `shares`
     function _shareValue(IYVault yVault, uint256 shares) internal view virtual returns (uint256) {
-        uint256 vaultTotalSupply;
-        assembly {
-            // get yVault.totalSupply()
-            mstore(0x00, 0x18160ddd)
-            if iszero(staticcall(gas(), sload(yVault), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
-            vaultTotalSupply := mload(0x00)
-        }
+        uint256 vaultTotalSupply = yVault.totalSupply();
         if (vaultTotalSupply == 0) return shares;
-
-        return Math.mulDiv(shares, _freeFunds(yVault), vaultTotalSupply);
+        // share value is calculated free funds, instead of the total funds
+        return shares * _freeFunds(yVault) / vaultTotalSupply;
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return shares returns the estimated amount of shares computed in exchange for the underlying `amount`
     function _sharesForAmount(IYVault yVault, uint256 amount) internal view virtual returns (uint256 shares) {
-        uint256 freeFunds = _freeFunds(yVault);
-        assembly {
-            // if freeFunds != 0 return amount
-            if gt(freeFunds, 0) {
-                // get yVault.totalSupply()
-                mstore(0x00, 0x18160ddd)
-                if iszero(staticcall(gas(), yVault, 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
-                let totalSupply := mload(0x00)
-
-                // Overflow check equivalent to require(totalSupply == 0 || amount <= type(uint256).max / totalSupply)
-                if iszero(iszero(mul(totalSupply, gt(amount, div(not(0), totalSupply))))) { revert(0, 0) }
-
-                shares := div(mul(amount, totalSupply), freeFunds)
-            }
-        }
+        uint256 vaultTotalSupply = yVault.totalSupply();
+        return amount * vaultTotalSupply / _freeFunds(yVault);
     }
 
     /// @notice Calculates the yearn vault free funds considering the locked profit
@@ -206,17 +208,20 @@ contract PreviewModule {
     /// @dev Some loss of precision is occured, but it is not critical as this is only an underestimation of
     /// the actual assets, and profit will be later accounted for.
     /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
-    function _lpValue(uint256 lp) internal view virtual returns (uint256) {
-        return (lp * _lpPrice()) / 1e18;
-    }
-
-    /// @notice Determines how many lp tokens depositor of `amount` of underlying would receive.
-    /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
-    function _lpForAmount(uint256 amount) internal view virtual returns (uint256) {
-        return (amount * 1e18) / _lpPrice();
+    function _lpValue(IStrategyWrapper strategy, uint256 lp) internal view virtual returns (uint256) {
+        return (lp * _lpPrice(strategy.curveLpPool())) / 1e18;
     }
 
     /// @notice Returns the estimated price for the strategy's Convex's LP token
     /// @return returns the estimated lp token price
-    function _lpPrice() internal view virtual returns (uint256);
+    function _lpPrice(address curveLpPool) internal view returns (uint256) {
+        return (
+            (
+                ICurveLpPool(curveLpPool).get_virtual_price()
+                    * Math.min(
+                        ICurveLpPool(curveLpPool).get_dy(1, 0, 1 ether), ICurveLpPool(curveLpPool).get_dy(0, 1, 1 ether)
+                    )
+            ) / 1 ether
+        );
+    }
 }
