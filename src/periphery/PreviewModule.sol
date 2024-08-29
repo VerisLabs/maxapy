@@ -23,10 +23,9 @@ contract PreviewModule {
     ////////////////////////////////////////////////////////////////
     /// @notice simulates the investment of a strategy after harvesting it
     /// @param strategy instance of strategy to preview
-    function previewInvest(IStrategyWrapper strategy) public view returns (uint256 investedAmount) {
+    function previewInvest(IStrategyWrapper strategy, uint256 amount) public view returns (uint256 investedAmount) {
         uint256 strategyType = _getStrategyType(strategy);
         IMaxApyVault vault = IMaxApyVault(strategy.vault());
-        uint256 creditAvailable = vault.creditAvailable(address(strategy));
         uint256 minSingleTrade;
 
         try strategy.minSingleTrade() returns (uint256 _minSingleTrade) {
@@ -35,37 +34,37 @@ contract PreviewModule {
 
         /// Yearn V2
         if (strategyType == 1) {
-            if (creditAvailable > minSingleTrade) {
+            if (amount > minSingleTrade) {
                 IYVault yVault = IYVault(strategy.yVault());
-                return _shareValue(yVault, _sharesForAmount(yVault, creditAvailable));
+                return _shareValue(yVault, _sharesForAmount(yVault, amount));
             }
         }
         /// Yearn V3
         else if (strategyType == 2) {
-            if (creditAvailable > minSingleTrade) {
+            if (amount > minSingleTrade) {
                 IYVaultV3 yVault = IYVaultV3(strategy.yVault());
-                return yVault.convertToAssets(yVault.previewDeposit(creditAvailable));
+                return yVault.convertToAssets(yVault.previewDeposit(amount));
             }
         }
         /// Sommelier
         else if (strategyType == 3) {
-            if (creditAvailable > minSingleTrade) {
+            if (amount > minSingleTrade) {
                 IYVaultV3 cellar = IYVaultV3(strategy.cellar());
-                return cellar.convertToAssets(cellar.previewDeposit(creditAvailable));
+                return cellar.convertToAssets(cellar.previewDeposit(amount));
             }
         }
         /// Convex Lp Pool
         else if (strategyType == 4) {
-            if (creditAvailable > minSingleTrade) {
+            if (amount > minSingleTrade) {
                 uint256 shares = ICurveLpPool(strategy.curveLpPool()).previewDeposit();
 
             }
         }
         /// Convex Lending Pool
         else if (strategyType == 5) {
-            if (creditAvailable > minSingleTrade) {
+            if (amount > minSingleTrade) {
                 ICurveLendingPool lendingPool = ICurveLendingPool(strategy.curveLendingPool());
-                return lendingPool.previewRedeem(lendingPool.previewDeposit(creditAvailable));
+                return lendingPool.previewRedeem(lendingPool.previewDeposit(amount));
             }
         }
         /// Other
@@ -75,12 +74,11 @@ contract PreviewModule {
     }
     /// @notice simulates the divestment of a strategy after harvesting it
     /// @param strategy instance of strategy to preview
-    function previewDivest(IStrategyWrapper strategy) public view returns (uint256) {
+    function previewDivest(IStrategyWrapper strategy, uint256 amount) public view returns (uint256) {
         int256 unharvestedAmount = strategy.unharvestedAmount();
         if (unharvestedAmount < 0) return 0;
         IMaxApyVault vault = IMaxApyVault(strategy.vault());
-        uint256 debtOutstanding = vault.debtOutstanding(address(strategy));
-        return strategy.previewLiquidate(debtOutstanding);
+        return strategy.previewLiquidate(amount);
     }
 
     /// @notice returns the type of the strategy

@@ -7,8 +7,8 @@ import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 
 /// @dev preview module interface
 interface IPreviewModule {
-    function previewInvest(IStrategy strategy) external view returns (uint256);
-    function previewDivest(IStrategy strategy) external view returns (uint256);
+    function previewInvest(IStrategy strategy, uint256 amount) external view returns (uint256);
+    function previewDivest(IStrategy strategy, uint256 amount) external view returns (uint256);
 }
 
 /// @title MaxApyHarvester
@@ -191,13 +191,13 @@ contract MaxApyHarvester is OwnableRoles {
     ////////////////////////////////////////////////////////////////
     /// @notice simulates the investment of a strategy after harvesting it
     /// @param strategy instance of strategy to preview
-    function previewInvest(IStrategy strategy) public view returns (uint256) {
-        return previewModule.previewInvest(strategy);
+    function previewInvest(IStrategy strategy, uint256 amount) public view returns (uint256) {
+        return previewModule.previewInvest(strategy, amount);
     }
 
     /// @notice simulates the divestment of a strategy after harvesting it
     /// @param strategy instance of strategy to preview
-    function previewDivest(IStrategy strategy) public view returns (uint256) {
-        return previewModule.previewDivest(strategy);
+    function previewDivest(IStrategy strategy, uint256 amount) public view returns (uint256) {
+        return previewModule.previewDivest(strategy, amount);
     }
 }
