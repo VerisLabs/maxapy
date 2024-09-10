@@ -4,7 +4,10 @@ pragma solidity ^0.8.19;
 import { BaseBeefyStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
 import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
-import { USDT_POLYGON } from "src/helpers/AddressBook.sol";
+import { USDCE_POLYGON, UNISWAP_V3_USDC_USDCE_POOL_POLYGON } from "src/helpers/AddressBook.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { IUniswapV3Pool } from "src/interfaces/IUniswap.sol";
+import { OracleLibrary } from "src/lib/OracleLibrary.sol";
 
 /// @title BeefyMaiUSDCeStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -17,7 +20,9 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
     ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
     /// @notice USDT token in polygon
-    address public constant usdt = USDT_POLYGON;
+    address public constant usdce = USDCE_POLYGON;
+    /// @notice Address of Uniswap V3 USDC-LUSD pool
+    address public constant pool = UNISWAP_V3_USDC_USDCE_POOL_POLYGON;
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -54,7 +59,7 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
         // Curve init
         curveLpPool = _curveLpPool;
 
-        usdt.safeApprove(address(curveLpPool), type(uint256).max);
+        usdce.safeApprove(address(curveLpPool), type(uint256).max);
     }
 
 
@@ -92,6 +97,8 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
         beefyVault.deposit(lpReceived);
         return _sharesForAmount(amount);
 
+        // minOutputAfterInvestment  -  TODO
+
     }
 
     /// @dev care should be taken, as the `amount` parameter is not in terms of underlying,
@@ -119,6 +126,123 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
             0,
             address(this)
         );
+    }
+
+    /////////////////////////////////////////////////////////////////
+    ///                    VIEW FUNCTIONS                        ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
+    /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
+    /// @return liquidatedAmount output in assets
+    function previewLiquidate(uint256 requestedAmount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 liquidatedAmount)
+    {
+        uint256 loss;
+        uint256 underlyingBalance = _underlyingBalance();
+        // If underlying balance currently held by strategy is not enough to cover
+        // the requested amount, we divest from the beefy Vault
+        if (underlyingBalance < requestedAmount) {
+            uint256 amountToWithdraw;
+            unchecked {
+                amountToWithdraw = requestedAmount - underlyingBalance;
+            }
+            uint256 shares = _sharesForAmount(amountToWithdraw);
+            uint256 withdrawn = _shareValue(shares);
+            if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
+        }
+        liquidatedAmount = requestedAmount - loss;
+    }
+
+
+
+    ////////////////////////////////////////////////////////////////
+    ///                 INTERNAL VIEW FUNCTIONS                  ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @notice Determines the current value of `shares`.
+    /// @return _assets the estimated amount of underlying computed from shares `shares`
+    // function _shareValue(uint256 shares) internal view override returns (uint256 _assets) {
+
+    //     assembly{
+    //         //get beefyVault.balance()
+    //         mstore(0x00, 0xb69ef8a8)
+    //         if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+    //         let vaultBalance := mload(0x00)
+
+    //         //get beefyVault.totalSupply
+    //         mstore(0x00, 0x18160ddd)
+    //         if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+    //         let vaultTotalSupply := mload(0x00)
+
+    //         _assets := div(mul(shares, vaultBalance), vaultTotalSupply)
+    //     }
+
+    // }
+
+    /// @notice Determines how many shares depositor of `amount` of underlying would receive.
+    /// @return shares the estimated amount of shares computed in exchange for underlying `amount`
+    function _sharesForAmount(uint256 amount) internal view override returns (uint256 shares) {
+
+        uint256 lpTokenAmount = _lpForAmount(amount);
+        return super._sharesForAmount(lpTokenAmount);
+    }
+
+
+    /// @notice Determines how many lp tokens depositor of `amount` of underlying would receive.
+    /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
+    function _lpForAmount(uint256 amount) internal view returns (uint256) {
+        return _estimateAmountOut(underlyingAsset, USDCE_POLYGON, uint128(amount), 1800) * 1e18 / _lpPrice();
+    }
+
+    /// @notice Returns the estimated price for the strategy's Convex's LP token
+    /// @return returns the estimated lp token price
+    function _lpPrice() internal view returns (uint256) {
+        return (
+            (
+                curveLpPool.get_virtual_price()
+                    * Math.min(curveLpPool.get_dy(1, 0, 1e6), curveLpPool.get_dy(0, 1, 1 ether))
+            ) / 1 ether
+        );
+    }
+
+    /// @notice returns the estimated result of a Uniswap V3 swap
+    /// @dev use TWAP oracle for more safety
+    function _estimateAmountOut(
+        address tokenIn,
+        address tokenOut,
+        uint128 amountIn,
+        uint32 secondsAgo
+    )
+        internal
+        view
+        returns (uint256 amountOut)
+    {
+        // Code copied from OracleLibrary.sol, consult()
+        uint32[] memory secondsAgos = new uint32[](2);
+        secondsAgos[0] = secondsAgo;
+        secondsAgos[1] = 0;
+
+        // int56 since tick * time = int24 * uint32
+        // 56 = 24 + 32
+        (int56[] memory tickCumulatives,) = IUniswapV3Pool(pool).observe(secondsAgos);
+
+        int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
+
+        // int56 / uint32 = int24
+        int24 tick = int24(int256(tickCumulativesDelta) / int256(int32(secondsAgo)));
+        // Always round to negative infinity
+
+        if (tickCumulativesDelta < 0 && (int256(tickCumulativesDelta) % int256(int32(secondsAgo)) != 0)) {
+            tick--;
+        }
+
+        amountOut = OracleLibrary.getQuoteAtTick(tick, amountIn, tokenIn, tokenOut);
     }
     
 }
