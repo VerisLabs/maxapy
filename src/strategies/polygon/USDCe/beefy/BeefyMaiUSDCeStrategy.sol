@@ -167,40 +167,35 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
 
     /// @notice Determines the current value of `shares`.
     /// @return _assets the estimated amount of underlying computed from shares `shares`
-    // function _shareValue(uint256 shares) internal view override returns (uint256 _assets) {
+    function _shareValue(uint256 shares) internal view override returns (uint256 _assets) {
 
-    //     assembly{
-    //         //get beefyVault.balance()
-    //         mstore(0x00, 0xb69ef8a8)
-    //         if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
-    //         let vaultBalance := mload(0x00)
-
-    //         //get beefyVault.totalSupply
-    //         mstore(0x00, 0x18160ddd)
-    //         if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
-    //         let vaultTotalSupply := mload(0x00)
-
-    //         _assets := div(mul(shares, vaultBalance), vaultTotalSupply)
-    //     }
-
-    // }
+        uint256 lpTokenAmount = super._shareValue(shares);
+        assembly {
+            //get _lpPrice()
+            mstore(0x00, 0xf81a3796)
+            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            let lpPrice := mload(0x00)
+            _assets := mul(lpTokenAmount, lpPrice)
+        }
+    }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return shares the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view override returns (uint256 shares) {
-
-        uint256 lpTokenAmount = _lpForAmount(amount);
-        return super._sharesForAmount(lpTokenAmount);
+        uint256 lpTokenAmount;
+        assembly {
+            //get _lpPrice()
+            mstore(0x00, 0xf81a3796)
+            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            let lpPrice := mload(0x00)
+            let scale := 0xde0b6b3a7640000 // This is 1e18 in hexadecimal
+            lpTokenAmount := div(mul(amount, scale), lpPrice)
+        }
+        shares = super._sharesForAmount(lpTokenAmount);
     }
 
 
-    /// @notice Determines how many lp tokens depositor of `amount` of underlying would receive.
-    /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
-    function _lpForAmount(uint256 amount) internal view returns (uint256) {
-        return _estimateAmountOut(underlyingAsset, USDCE_POLYGON, uint128(amount), 1800) * 1e18 / _lpPrice();
-    }
-
-    /// @notice Returns the estimated price for the strategy's Convex's LP token
+    /// @notice Returns the estimated price for the strategy's curve's LP token
     /// @return returns the estimated lp token price
     function _lpPrice() internal view returns (uint256) {
         return (
@@ -211,38 +206,5 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
         );
     }
 
-    /// @notice returns the estimated result of a Uniswap V3 swap
-    /// @dev use TWAP oracle for more safety
-    function _estimateAmountOut(
-        address tokenIn,
-        address tokenOut,
-        uint128 amountIn,
-        uint32 secondsAgo
-    )
-        internal
-        view
-        returns (uint256 amountOut)
-    {
-        // Code copied from OracleLibrary.sol, consult()
-        uint32[] memory secondsAgos = new uint32[](2);
-        secondsAgos[0] = secondsAgo;
-        secondsAgos[1] = 0;
-
-        // int56 since tick * time = int24 * uint32
-        // 56 = 24 + 32
-        (int56[] memory tickCumulatives,) = IUniswapV3Pool(pool).observe(secondsAgos);
-
-        int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
-
-        // int56 / uint32 = int24
-        int24 tick = int24(int256(tickCumulativesDelta) / int256(int32(secondsAgo)));
-        // Always round to negative infinity
-
-        if (tickCumulativesDelta < 0 && (int256(tickCumulativesDelta) % int256(int32(secondsAgo)) != 0)) {
-            tick--;
-        }
-
-        amountOut = OracleLibrary.getQuoteAtTick(tick, amountIn, tokenIn, tokenOut);
-    }
     
 }
