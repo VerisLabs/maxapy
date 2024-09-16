@@ -342,7 +342,6 @@ contract BaseBeefyStrategy is BaseStrategy {
 
         uint256 shares = _sharesForAmount(amount);
         beefyVault.deposit(amount);
-        
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -385,8 +384,6 @@ contract BaseBeefyStrategy is BaseStrategy {
             log2(0x00, 0x40, _DIVESTED_EVENT_SIGNATURE, address())
         }
     }
-
-    
 
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
     /// regardless of slippage. Any excess will be re-invested with `_adjustPosition()`.
@@ -434,7 +431,6 @@ contract BaseBeefyStrategy is BaseStrategy {
         _divest(_shareBalance());
         amountFreed = _underlyingBalance();
     }
-    
 
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL VIEW FUNCTIONS                  ///
@@ -443,8 +439,7 @@ contract BaseBeefyStrategy is BaseStrategy {
     /// @notice Determines the current value of `shares`.
     /// @return _assets the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view virtual returns (uint256 _assets) {
-
-        assembly{
+        assembly {
             //get beefyVault.balance()
             mstore(0x00, 0xb69ef8a8)
             if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
@@ -457,14 +452,12 @@ contract BaseBeefyStrategy is BaseStrategy {
 
             _assets := div(mul(shares, vaultBalance), vaultTotalSupply)
         }
-
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return shares the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view virtual returns (uint256 shares) {
-
-        assembly{
+        assembly {
             //get beefyVault.balance()
             mstore(0x00, 0xb69ef8a8)
             if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
@@ -476,12 +469,8 @@ contract BaseBeefyStrategy is BaseStrategy {
             let vaultTotalSupply := mload(0x00)
 
             switch vaultTotalSupply
-            case 0 {
-                shares := amount
-            }
-            default {
-                shares := div(mul(amount, vaultTotalSupply), pool)
-            }
+            case 0 { shares := amount }
+            default { shares := div(mul(amount, vaultTotalSupply), pool) }
         }
     }
 
@@ -502,5 +491,4 @@ contract BaseBeefyStrategy is BaseStrategy {
     function _estimatedTotalAssets() internal view override returns (uint256) {
         return _underlyingBalance() + _shareValue(_shareBalance());
     }
-
 }

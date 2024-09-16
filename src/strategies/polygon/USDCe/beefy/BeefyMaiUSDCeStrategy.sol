@@ -4,10 +4,7 @@ pragma solidity ^0.8.19;
 import { BaseBeefyStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
 import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
-import { USDCE_POLYGON, UNISWAP_V3_USDC_USDCE_POOL_POLYGON } from "src/helpers/AddressBook.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import { IUniswapV3Pool } from "src/interfaces/IUniswap.sol";
-import { OracleLibrary } from "src/lib/OracleLibrary.sol";
 
 /// @title BeefyMaiUSDCeStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -15,14 +12,6 @@ import { OracleLibrary } from "src/lib/OracleLibrary.sol";
 /// earning the Beefy Vault's yield
 contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
     using SafeTransferLib for address;
-
-    ////////////////////////////////////////////////////////////////
-    ///                        CONSTANTS                         ///
-    ////////////////////////////////////////////////////////////////
-    /// @notice USDT token in polygon
-    address public constant usdce = USDCE_POLYGON;
-    /// @notice Address of Uniswap V3 USDC-LUSD pool
-    address public constant pool = UNISWAP_V3_USDC_USDCE_POOL_POLYGON;
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -59,15 +48,15 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
         // Curve init
         curveLpPool = _curveLpPool;
 
-        usdce.safeApprove(address(curveLpPool), type(uint256).max);
+        underlyingAsset.safeApprove(address(curveLpPool), type(uint256).max);
+        address(curveLpPool).safeApprove(address(beefyVault), type(uint256).max);
     }
-
 
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
     /// @notice Invests `amount` of underlying into the Beefy vault
-    /// @dev 
+    /// @dev
     /// @param amount The amount of underlying to be deposited in the pool
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Curve LP tokens)
     /// @return The amount of tokens received, in terms of underlying
@@ -94,11 +83,24 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
             lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
         }
 
+        uint256 _before = beefyVault.balanceOf(address(this));
+
+        // Deposit Curve LP tokens to Beefy vault
         beefyVault.deposit(lpReceived);
-        return _sharesForAmount(amount);
 
-        // minOutputAfterInvestment  -  TODO
+        uint256 _after = beefyVault.balanceOf(address(this));
+        uint256 shares;
 
+        assembly ("memory-safe") {
+            shares := sub(_after, _before)
+            if lt(shares, minOutputAfterInvestment) {
+                // throw the `MinOutputAmountNotReached` error
+                mstore(0x00, 0xf7c67a48)
+                revert(0x1c, 0x04)
+            }
+        }
+
+        return shares;
     }
 
     /// @dev care should be taken, as the `amount` parameter is not in terms of underlying,
@@ -159,8 +161,6 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
         liquidatedAmount = requestedAmount - loss;
     }
 
-
-
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
@@ -168,13 +168,11 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
     /// @notice Determines the current value of `shares`.
     /// @return _assets the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view override returns (uint256 _assets) {
-
         uint256 lpTokenAmount = super._shareValue(shares);
+        uint256 lpPrice = _lpPrice();
+        
+        // lp price add get function _lpPrice()
         assembly {
-            //get _lpPrice()
-            mstore(0x00, 0xf81a3796)
-            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
-            let lpPrice := mload(0x00)
             _assets := mul(lpTokenAmount, lpPrice)
         }
     }
@@ -183,17 +181,13 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
     /// @return shares the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view override returns (uint256 shares) {
         uint256 lpTokenAmount;
+        uint256 lpPrice = _lpPrice();
         assembly {
-            //get _lpPrice()
-            mstore(0x00, 0xf81a3796)
-            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
-            let lpPrice := mload(0x00)
             let scale := 0xde0b6b3a7640000 // This is 1e18 in hexadecimal
             lpTokenAmount := div(mul(amount, scale), lpPrice)
         }
         shares = super._sharesForAmount(lpTokenAmount);
     }
-
 
     /// @notice Returns the estimated price for the strategy's curve's LP token
     /// @return returns the estimated lp token price
@@ -205,6 +199,4 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
             ) / 1 ether
         );
     }
-
-    
 }
