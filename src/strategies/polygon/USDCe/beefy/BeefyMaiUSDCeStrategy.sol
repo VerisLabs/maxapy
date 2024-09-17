@@ -77,7 +77,7 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
         uint256 lpReceived;
 
         if (amount > 0) {
-            uint256[] memory amounts = new uint256[](2);
+            uint256[2] memory amounts;
             amounts[1] = amount;
             // Add liquidity to the mai<>usdce pool in usdce [coin1 -> usdce]
             lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));

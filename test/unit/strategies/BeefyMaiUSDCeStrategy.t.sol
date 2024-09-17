@@ -199,17 +199,17 @@ contract BeefyMaiUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     }
 
     /*==================STRATEGY CORE LOGIC TESTS==================*/
-    // function testBeefyMaiUSDCE__InvestmentSlippage() public {
-    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+    function testBeefyMaiUSDCE__InvestmentSlippage() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-    //     vault.deposit(100 * _1_USDCE, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
-    //     vm.startPrank(users.keeper);
+        vm.startPrank(users.keeper);
 
-    //     // Expect revert if output amount is gt amount obtained
-    //     vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
-    //     strategy.harvest(0, type(uint256).max, address(0), block.timestamp);
-    // }
+        // Expect revert if output amount is gt amount obtained
+        vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
+        strategy.harvest(0, type(uint256).max, address(0), block.timestamp);
+    }
 
     function testBeefyMaiUSDCE__PrepareReturn() public {
         uint256 snapshotId = vm.snapshot();
@@ -230,7 +230,7 @@ contract BeefyMaiUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         snapshotId = vm.snapshot();
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 60 * _1_USDCE });
 
-        // strategy.adjustPosition();
+        strategy.adjustPosition();
 
         // vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
@@ -281,5 +281,6 @@ contract BeefyMaiUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         // assertEq(loss, 0);
         // assertEq(debtPayment, 0);
     }
+
     
 }
