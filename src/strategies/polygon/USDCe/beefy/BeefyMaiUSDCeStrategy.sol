@@ -100,6 +100,8 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
             }
         }
 
+        emit Invested(address(this), amount);
+
         return shares;
     }
 
@@ -173,7 +175,8 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
         
         // lp price add get function _lpPrice()
         assembly {
-            _assets := mul(lpTokenAmount, lpPrice)
+            let scale := 0xde0b6b3a7640000 // This is 1e18 in hexadecimal
+            _assets := div(mul(lpTokenAmount, lpPrice), scale)
         }
     }
 
