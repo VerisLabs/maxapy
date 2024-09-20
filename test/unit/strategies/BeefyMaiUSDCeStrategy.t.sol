@@ -64,10 +64,7 @@ contract BeefyMaiUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         strategy = IStrategyWrapper(address(_proxy));
         USDCE_POLYGON.safeApprove(address(vault), type(uint256).max);
 
-        // vm.label(USDT_POLYGON, "USDT_POLYGON");         // todo
-        // vm.label(USDCE_POLYGON, "USDCE_POLYGON");
-        // vm.label(CRV_POLYGON, "CRV_POLYGON");
-        // vm.label(CRV_USD_POLYGON, "CRV-USD_POLYGON");
+        vm.label(USDCE_POLYGON, "USDCE_POLYGON");
     }
 
     /*==================INITIALIZATION TESTS==================*/
@@ -167,15 +164,15 @@ contract BeefyMaiUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         assertEq(strategy.isActive(), true);
         vm.stopPrank();
 
-        // strategy.divest(IERC20(CURVE_MAI_USDCE_POOL_POLYGON).balanceOf(address(strategy)));
-        // vm.startPrank(address(strategy));
-        // IERC20(USDCE_POLYGON).transfer(makeAddr("random"), IERC20(USDCE_POLYGON).balanceOf(address(strategy)));
-        // assertEq(strategy.isActive(), false);
+        strategy.divest(IERC20(BEEFY_MAI_USDCE_POLYGON).balanceOf(address(strategy)));
+        vm.startPrank(address(strategy));
+        IERC20(USDCE_POLYGON).transfer(makeAddr("random"), IERC20(USDCE_POLYGON).balanceOf(address(strategy)));
+        assertEq(strategy.isActive(), false);
 
-        // deal(USDCE_POLYGON, address(strategy), 1 * _1_USDCE);
-        // vm.startPrank(users.keeper);
-        // strategy.harvest(0, 0, address(0), block.timestamp);
-        // assertEq(strategy.isActive(), true);
+        deal(USDCE_POLYGON, address(strategy), 1 * _1_USDCE);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+        assertEq(strategy.isActive(), true);
     }
 
     function testBeefyMaiUSDCE__SetStrategist() public {
