@@ -62,6 +62,7 @@ import { YearnCompoundUSDCeLenderStrategy } from
 import { YearnMaticUSDCStakingStrategy } from "src/strategies/polygon/USDCe/yearn/YearnMaticUSDCStakingStrategy.sol";
 import { YearnUSDCeLenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDCeLenderStrategy.sol";
 import { YearnUSDCeStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDCeStrategy.sol";
+import { YearnDAIStrategy} from "src/strategies/polygon/USDCe/yearn/YearnDAIStrategy.sol";
 
 //// Helpers(Factory , Router)f
 import { MaxApyRouter } from "src/MaxApyRouter.sol";
@@ -77,6 +78,7 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
     IStrategy public strategy3; // YearnMaticUSDCStraking
     IStrategy public strategy4; // YearnUSDCeLender
     IStrategy public strategy5; // YearnUSDCe
+    IStrategy public strategy6; // YearnDAI
 
     address[] strategyAddresses;
     address[] public keepers;
@@ -109,7 +111,7 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
     }
 
     function logStatusAllStrategies() internal {
-        for(uint256 i=0; i<5; ++i) logStatus(strategyAddresses[i]);
+        for(uint256 i=0; i<6; ++i) logStatus(strategyAddresses[i]);
         console2.log("*********************************************************************************");
     }
 
@@ -250,12 +252,34 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
         strategy5.grantRoles(users.alice, strategy5.EMERGENCY_ADMIN_ROLE());
         strategyAddresses.push(address(strategy5));
 
+        // Strategy6(YearnDAI)
+        YearnDAIStrategy implementation6 = new YearnDAIStrategy();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation6),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address)",
+                address(vaultUsdce),
+                keepers,
+                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                users.alice,
+                YEARN_DAI_POLYGON_VAULT_POLYGON
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        strategy6 = IStrategy(address(proxy));
+        strategy6.grantRoles(users.alice, strategy6.ADMIN_ROLE());
+        strategy6.grantRoles(users.alice, strategy6.EMERGENCY_ADMIN_ROLE());
+        strategyAddresses.push(address(strategy6));
+
          // Add 13 strategies to the vault
-        vaultUsdce.addStrategy(address(strategy1), 1900, type(uint72).max, 0, 0);  // -
-        vaultUsdce.addStrategy(address(strategy2), 1900, type(uint72).max, 0, 0);  // -
-        vaultUsdce.addStrategy(address(strategy3), 1900, type(uint72).max, 0, 0);  // -
-        vaultUsdce.addStrategy(address(strategy4), 1900, type(uint72).max, 0, 0);  // -
-        vaultUsdce.addStrategy(address(strategy5), 1900, type(uint72).max, 0, 0);  // -
+        vaultUsdce.addStrategy(address(strategy1), 1500, type(uint72).max, 0, 0);  // -
+        vaultUsdce.addStrategy(address(strategy2), 1500, type(uint72).max, 0, 0);  // -
+        vaultUsdce.addStrategy(address(strategy3), 1500, type(uint72).max, 0, 0);  // -
+        vaultUsdce.addStrategy(address(strategy4), 1500, type(uint72).max, 0, 0);  // -
+        vaultUsdce.addStrategy(address(strategy5), 1500, type(uint72).max, 0, 0);  // -
+        vaultUsdce.addStrategy(address(strategy6), 1500, type(uint72).max, 0, 0);  // -
+
 
         console2.log("***************************DEPLOYMENT ADDRESSES**********************************");
         console2.log("[MAXAPY] Router :", address(router));
@@ -266,6 +290,7 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
         console2.log("[YEARN] MaticUSDCStaking:", address(strategy3));
         console2.log("[YEARN] USDCeLender:", address(strategy4));
         console2.log("[YEARN] USDCe:", address(strategy5));
+        console2.log("[YEARN] YearnDAI:", address(strategy6));
         console2.log("[MAX_APY_HARVESTER]:", address(harvester));
         console2.log("*********************************************************************************");
 
@@ -273,22 +298,25 @@ contract MaxApyVaultPolygonIntegrationTest is BaseTest, StrategyEvents {
     }
 
     function testMaxApyVaultPolygon_firstTest() public {
-        vaultUsdce.deposit(100_000*_1_USDCE, users.alice);
+        vaultUsdce.setDepositLimit(100_000_000_000*_1_USDCE);
+        vaultUsdce.deposit(1_000_000*_1_USDCE, users.alice);
 
         // HARVESTER
-        MaxApyHarvester.HarvestData []memory harvestData = new MaxApyHarvester.HarvestData[](5);
-        harvestData[0] = MaxApyHarvester.HarvestData(address(strategy1), 0, 0, block.timestamp + 1000);
-        harvestData[1] = MaxApyHarvester.HarvestData(address(strategy2), 0, 0, block.timestamp + 1000);
-        harvestData[2] = MaxApyHarvester.HarvestData(address(strategy3), 0, 0, block.timestamp + 1000);
-        harvestData[3] = MaxApyHarvester.HarvestData(address(strategy4), 0, 0, block.timestamp + 1000);
-        harvestData[4] = MaxApyHarvester.HarvestData(address(strategy5), 0, 0, block.timestamp + 1000);
+        MaxApyHarvester.HarvestData []memory harvestData = new MaxApyHarvester.HarvestData[](1);
+        // harvestData[0] = MaxApyHarvester.HarvestData(address(strategy1), 0, 0, block.timestamp + 1000);
+        // harvestData[1] = MaxApyHarvester.HarvestData(address(strategy2), 0, 0, block.timestamp + 1000);
+        // harvestData[2] = MaxApyHarvester.HarvestData(address(strategy3), 0, 0, block.timestamp + 1000);
+        // harvestData[3] = MaxApyHarvester.HarvestData(address(strategy4), 0, 0, block.timestamp + 1000);
+        // harvestData[4] = MaxApyHarvester.HarvestData(address(strategy5), 0, 0, block.timestamp + 1000);
+        harvestData[0] = MaxApyHarvester.HarvestData(address(strategy6), 0, 0, block.timestamp + 1000);
+
         harvester.batchHarvests(harvestData);
         
         logStatusAllStrategies();
         console2.log(vaultUsdce.totalAssets());
         console2.log(vaultUsdce.totalDeposits());
 
-        skip(140 days);      
+        skip(30 days);      
         logStatusAllStrategies();     
         console2.log(vaultUsdce.totalAssets());
         console2.log(vaultUsdce.totalDeposits());                 

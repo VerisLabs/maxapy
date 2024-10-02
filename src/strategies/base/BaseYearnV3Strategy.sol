@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
+import { console2 } from "forge-std/console2.sol";
 import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 import { IYVaultV3 } from "src/interfaces/IYVaultV3.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
@@ -377,7 +378,10 @@ contract BaseYearnV3Strategy is BaseStrategy {
         uint256 maxDeposit = yVault.maxDeposit(address(this));
         amount = Math.min(amount, maxDeposit);
 
+        console2.log("expectedShares: ", _sharesForAmount(amount));
         uint256 shares = yVault.deposit(amount, address(this));
+        console2.log("shares: ", shares, " minOutputAfterInvestment",minOutputAfterInvestment);
+        console2.log("fulfilled percentage: ",10000*shares/_sharesForAmount(amount),"%");
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)

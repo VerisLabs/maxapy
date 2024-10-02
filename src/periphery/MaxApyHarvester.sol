@@ -7,7 +7,7 @@ import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 
 /// @dev preview module interface
 interface IPreviewModule {
-    function previewInvest(IStrategy strategy, uint256 amount) external view returns (uint256);
+    function previewInvest(IStrategy            strategy, uint256 amount) external view returns (uint256);
     function previewDivest(IStrategy strategy, uint256 amount) external view returns (uint256);
 }
 
@@ -19,7 +19,7 @@ contract MaxApyHarvester is OwnableRoles {
     ////////////////////////////////////////////////////////////////
     error HarvestFailed();
     error NotOwner();
-    error CantReceiveETH();
+    error CantReceiveETH();     
     error Fallback();
 
     ////////////////////////////////////////////////////////////////

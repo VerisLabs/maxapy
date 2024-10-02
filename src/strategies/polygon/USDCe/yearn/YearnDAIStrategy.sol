@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import { IYVaultV3 } from "src/interfaces/IYVaultV3.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import { BaseYearnV3Strategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseYearnV3Strategy.sol";
+import { BaseYearnV3Strategy, IMaxApyVault, SafeTransferLib, console2 } from "src/strategies/base/BaseYearnV3Strategy.sol";
 import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
 import { DAI_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON } from "src/helpers/AddressBook.sol";
 
@@ -152,11 +152,16 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
 
         uint256 balanceBefore = dai.balanceOf(address(this));
         // Swap the USDCe to base asset
+        uint256 initialAmount = amount;
+        console2.log("depositedAssets: ", amount);
         zapper.exchange_underlying(1, 0, amount, 0, address(this));
 
         // Deposit into the underlying vault
         amount = dai.balanceOf(address(this)) - balanceBefore;
+
         uint256 shares = yVault.deposit(amount, address(this));
+        console2.log("finalAssets: ", _shareValue(shares));
+        console2.log("fulfilled percentage: ", 10_000*_shareValue(shares)/ initialAmount);
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
