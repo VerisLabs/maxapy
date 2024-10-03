@@ -6,9 +6,9 @@ import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
-/// @title BeefyMaiUSDCeStrategy
+/// @title BaseBeefyCurveStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
-/// @notice `BeefyMaiUSDCeStrategy` supplies an underlying token into a generic Beefy Vault,
+/// @notice `BaseBeefyCurveStrategy` supplies an underlying token into a generic Beefy Vault,
 /// earning the Beefy Vault's yield
 contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
     using SafeTransferLib for address;
@@ -80,7 +80,7 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
             uint256[] memory amounts = new uint256[](2);
             amounts[1] = amount;
 
-            // Add liquidity to the mai<>usdce pool in usdce [coin1 -> usdce]
+            // Add liquidity to the curve pool in underlying token [coin1 -> usdce]
             lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
         }
 
