@@ -1,25 +1,30 @@
-// SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseBeefyStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
+import { BaseBeefyCurveStrategy } from "src/strategies/base/BaseBeefyCurveStrategy.sol";
+
+import { IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
 import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
-/// @title BaseBeefyCurveStrategy
+import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
+import { USDT_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON } from "src/helpers/AddressBook.sol";
+
+
+/// @title BeefyCrvUSDUSDTStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
-/// @notice `BaseBeefyCurveStrategy` supplies an underlying token into a generic Beefy Vault,
+/// @notice `BeefyCrvUSDUSDTStrategy` supplies an underlying token into a generic Beefy Vault,
 /// earning the Beefy Vault's yield
-contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
+contract BeefyCrvUSDUSDTStrategy is BaseBeefyCurveStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
-    ///            STRATEGY GLOBAL STATE VARIABLES               ///
+    ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
-
-    /*==================CURVE-RELATED STORAGE VARIABLES==================*/
-    /// @notice Main Curve pool for this Strategy
-    ICurveLpPool public curveLpPool;
+    /// @notice Curve AtriCrypto(DAI,USDCe,USDT,wBTC,WETH) pool zapper in polygon
+    ICurveAtriCryptoZapper constant zapper = ICurveAtriCryptoZapper(CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON);
+    /// @notice USDT token in polygon
+    address public constant usdt = USDT_POLYGON;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -40,16 +45,14 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
         IBeefyVault _beefyVault
     )
         public
-        virtual
+        override
         initializer
     {
-        super.initialize(_vault, _keepers, _strategyName, _strategist, _beefyVault);
-
-        // Curve init
-        curveLpPool = _curveLpPool;
-
-        underlyingAsset.safeApprove(address(curveLpPool), type(uint256).max);
-        address(curveLpPool).safeApprove(address(beefyVault), type(uint256).max);
+        super.initialize(_vault, _keepers, _strategyName, _strategist, _curveLpPool, _beefyVault);
+        usdt.safeApprove(address(_curveLpPool), type(uint256).max);
+        usdt.safeApprove(address(zapper), type(uint256).max);
+        usdt.safeApprove(address(_vault), type(uint256).max);
+        underlyingAsset.safeApprove(address(zapper), type(uint256).max);
     }
 
     ////////////////////////////////////////////////////////////////
@@ -74,11 +77,20 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
             }
         }
 
+        amount = Math.min(amount, maxSingleTrade);
+
+        uint256 balanceBefore = usdt.balanceOf(address(this));
+
+        // Swap the USDCe to USDT
+        zapper.exchange_underlying(1, 2, amount, 0, address(this));
+        // Get the amount of USDT received
+        uint256 amountUSDT = usdt.balanceOf(address(this)) - balanceBefore;
+
         uint256 lpReceived;
 
-        if (amount > 0) {
+        if (amountUSDT > 0) {
             uint256[] memory amounts = new uint256[](2);
-            amounts[1] = amount;
+            amounts[1] = amountUSDT;
 
             // Add liquidity to the curve pool in underlying token [coin1 -> usdce]
             lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
@@ -86,10 +98,13 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
 
         uint256 _before = beefyVault.balanceOf(address(this));
 
+        address want = address(beefyVault.want());
+
         // Deposit Curve LP tokens to Beefy vault
         beefyVault.deposit(lpReceived);
 
         uint256 _after = beefyVault.balanceOf(address(this));
+
         uint256 shares;
 
         assembly ("memory-safe") {
@@ -111,7 +126,7 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
     /// Note that if minimum withdrawal amount is not reached, funds will not be divested, and this
     /// will be accounted as a loss later.
     /// @return amountDivested the total amount divested, in terms of underlying asset
-    function _divest(uint256 amount) internal virtual override returns (uint256 amountDivested) {
+    function _divest(uint256 amount) internal override returns (uint256 amountDivested) {
         if (amount == 0) return 0;
 
         uint256 _before = beefyVault.want().balanceOf(address(this));
@@ -123,14 +138,19 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
 
         uint256 lptokens = _after - _before;
 
-        // Remove liquidity and obtain usdce
-        return curveLpPool.remove_liquidity_one_coin(
+        // Remove liquidity and obtain usdct
+        amountDivested = curveLpPool.remove_liquidity_one_coin(
             lptokens,
             1,
-            //usdce
+            //usdct
             0,
             address(this)
         );
+
+        uint256 balanceBefore = underlyingAsset.balanceOf(address(this));
+        // Swap base asset to USDCe
+        zapper.exchange_underlying(2, 1, amountDivested, 0, address(this));
+        amountDivested = underlyingAsset.balanceOf(address(this)) - balanceBefore;
     }
 
     /////////////////////////////////////////////////////////////////
@@ -159,9 +179,13 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
             }
             uint256 shares = _sharesForAmount(amountToWithdraw);
             uint256 withdrawn = _shareValue(shares);
+            // withdrawn = zapper.get_dy_underlying(2, 1, withdrawn) * 9995 / 10_000;
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
-        liquidatedAmount = requestedAmount - loss;
+
+        assembly {
+            liquidatedAmount := sub(requestedAmount, loss)
+        }
     }
 
     ////////////////////////////////////////////////////////////////
@@ -170,37 +194,32 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
 
     /// @notice Determines the current value of `shares`.
     /// @return _assets the estimated amount of underlying computed from shares `shares`
-    function _shareValue(uint256 shares) internal view virtual override returns (uint256 _assets) {
-        uint256 lpTokenAmount = super._shareValue(shares);
-        uint256 lpPrice = _lpPrice();
+    function _shareValue(uint256 shares) internal view override returns (uint256 _assets) {
+        _assets = super._shareValue(shares);
+        _assets = _convertUsdtToUsdce(_assets);
 
-        // lp price add get function _lpPrice()
-        assembly {
-            let scale := 0xde0b6b3a7640000 // This is 1e18 in hexadecimal
-            _assets := div(mul(lpTokenAmount, lpPrice), scale)
-        }
+        return _convertUsdtToUsdce(_assets);
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return shares the estimated amount of shares computed in exchange for underlying `amount`
-    function _sharesForAmount(uint256 amount) internal view virtual override returns (uint256 shares) {
-        uint256 lpTokenAmount;
-        uint256 lpPrice = _lpPrice();
-        assembly {
-            let scale := 0xde0b6b3a7640000 // This is 1e18 in hexadecimal
-            lpTokenAmount := div(mul(amount, scale), lpPrice)
-        }
-        shares = super._sharesForAmount(lpTokenAmount);
+    function _sharesForAmount(uint256 amount) internal view override returns (uint256 shares) {
+        shares = super._sharesForAmount(_convertUsdceToUsdt(amount));
+
+        return super._sharesForAmount(_convertUsdceToUsdt(amount));
     }
 
-    /// @notice Returns the estimated price for the strategy's curve's LP token
-    /// @return returns the estimated lp token price
-    function _lpPrice() internal view returns (uint256) {
-        return (
-            (
-                curveLpPool.get_virtual_price()
-                    * Math.min(curveLpPool.get_dy(1, 0, 1e6), curveLpPool.get_dy(0, 1, 1 ether))
-            ) / 1 ether
-        );
+    // @notice Converts USDT to USDCe
+    /// @param usdtAmount Amount of USDT
+    /// @return Equivalent amount in USDCe
+    function _convertUsdtToUsdce(uint256 usdtAmount) internal view returns (uint256) {
+        return zapper.get_dy_underlying(2, 1, usdtAmount);
+    }
+
+    /// @notice Converts USDCe to USDT
+    /// @param usdceAmount Amount of USDCe
+    /// @return Equivalent amount in USDT
+    function _convertUsdceToUsdt(uint256 usdceAmount) internal view returns (uint256) {
+        return zapper.get_dy_underlying(1, 2, usdceAmount);
     }
 }
