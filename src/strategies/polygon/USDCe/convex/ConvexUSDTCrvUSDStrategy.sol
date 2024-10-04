@@ -250,8 +250,8 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
                 _crv(),
                 uint24(3000), // CRV <> WMATIC 0.3%
                 wmatic,
-                uint24(500), // WMATIC <> USDCe 0.005%
-                underlyingAsset
+                uint24(500), // WMATIC <> USDT 0.005%
+                usdt
             );
             router.exactInput(
                 IRouter.ExactInputParams({
@@ -263,11 +263,10 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
                 })
             );
         }
-        // Exchange crvUSD <> USDCe
+        // Exchange crvUSD <> USDT
         uint256 crvUsdBalance = _crvUsdBalance();
         if (crvUsdBalance > minSwapCrv) {
-            uint256 amountUSDT = curveLpPool.exchange(1, 0, crvUsdBalance, 0);
-            zapper.exchange_underlying(2, 1, amountUSDT, 0, address(this));
+            uint256 amountUSDT = curveLpPool.exchange(0, 1, crvUsdBalance, 0);
         }
     }
 

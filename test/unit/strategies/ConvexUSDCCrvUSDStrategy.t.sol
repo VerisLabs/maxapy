@@ -37,7 +37,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
     function setUp() public {
         super._setUp("POLYGON");
-        vm.rollFork(57_099_032);
+        vm.rollFork(62_418_460);
 
         TREASURY = makeAddr("treasury");
 
@@ -463,7 +463,8 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         strategy.unwindRewards();
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), 0);
 
-        skip(30 days);
+        // skip(30 days);
+        deal({ token: CRVUSD_POLYGON, to: address(strategy), give: 100 ether });
 
         strategy.unwindRewards();
         assertEq(IERC20(CRVUSD_POLYGON).balanceOf(address(strategy)), 0);

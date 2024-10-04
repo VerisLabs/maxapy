@@ -172,7 +172,7 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
     function _shareValue(uint256 shares) internal view override returns (uint256 _assets) {
         uint256 lpTokenAmount = super._shareValue(shares);
         uint256 lpPrice = _lpPrice();
-        
+
         // lp price add get function _lpPrice()
         assembly {
             let scale := 0xde0b6b3a7640000 // This is 1e18 in hexadecimal

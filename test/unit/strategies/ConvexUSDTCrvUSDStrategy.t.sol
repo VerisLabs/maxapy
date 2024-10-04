@@ -219,35 +219,11 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         strategy.harvest(0, 0, address(0), block.timestamp);
 
-        deal({ token: address(CRV_POLYGON), to: users.keeper, give: 10 ether });
-        IERC20(CRV_POLYGON).approve(strategy.router(), type(uint256).max);
-
-        bytes memory path = abi.encodePacked(
-            CRV_POLYGON,
-            uint24(3000), // CRV <> WMATIC 0.3%
-            0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270,
-            uint24(500), // WMATIC <> USDT 0.005%
-            USDCE_POLYGON
-        );
-
-        uint256 expectedAmountCrv = IRouter(strategy.router()).exactInput(
-            IRouter.ExactInputParams({
-                path: path,
-                recipient: users.keeper,
-                deadline: block.timestamp,
-                amountIn: 10 ether,
-                amountOutMinimum: 0
-            })
-        );
-
         deal({ token: address(CRV_POLYGON), to: address(strategy), give: 10 ether });
-
-        // Apply 1% difference
-        uint256 minimumExpectedUSDCAmount = expectedAmountCrv * 999 / 10_000;
 
         // Expect revert if output amount is gt amount obtained
         vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
-        strategy.harvest(minimumExpectedUSDCAmount, type(uint256).max, address(0), block.timestamp);
+        strategy.harvest(0, type(uint256).max, address(0), block.timestamp);
     }
 
     function testConvexUSDTCrvUSD__PrepareReturn() public {
@@ -464,7 +440,7 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), 0);
 
         skip(30 days);
-
+        deal(CRV_USD_POLYGON, address(strategy), 100 ether);
         strategy.unwindRewards();
         assertEq(IERC20(CRVUSD_POLYGON).balanceOf(address(strategy)), 0);
         assertEq(IERC20(CRV_POLYGON).balanceOf(address(strategy)), 0);

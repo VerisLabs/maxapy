@@ -263,8 +263,9 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
             rewardPool.getReward(address(this), address(this));
         }
 
-        // Exchange CRV <> USDC
+        // Exchange CRV <> USDCe
         uint256 crvBalance = _crvBalance();
+
         if (crvBalance > minSwapCrv) {
             zapper.exchange(triCryptoPool, 0, 2, crvBalance, 0);
         }
@@ -275,7 +276,7 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         if (crvUsdBalance > 0) {
             bytes memory path = abi.encodePacked(
                 crvUsd,
-                uint24(3000), // CRV <> WMATIC 0.3%
+                uint24(3000), // crvUsd <> WMATIC 0.3%
                 wmatic,
                 uint24(500), // WMATIC <> USDCe 0.05%
                 underlyingAsset

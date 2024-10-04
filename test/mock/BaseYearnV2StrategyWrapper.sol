@@ -2,7 +2,6 @@
 pragma solidity ^0.8.19;
 
 import { BaseYearnV2Strategy, SafeTransferLib } from "src/strategies/base/BaseYearnV2Strategy.sol";
-import { console2 } from "forge-std/Test.sol";
 
 contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
     using SafeTransferLib for address;
@@ -15,9 +14,6 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
         uint256 amountToWithdraw = _sub0(amount, underlyingAsset.balanceOf(address(this)));
         if (amountToWithdraw > 0) {
             uint256 shares = _sharesForAmount(amount);
-            console2.log("sharesForAmount : ", shares);
-            console2.log("actual shares : ", yVault.balanceOf(address(this)));
-
             yVault.withdraw(shares);
         }
         underlyingAsset.safeTransfer(address(underlyingAsset), amount);
