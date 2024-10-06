@@ -119,7 +119,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
             IERC20(_strategy.curveLpPool()).allowance(address(_strategy), address(_strategy.convexBooster())),
             type(uint256).max
         );
-        assertEq(IERC20(CRVUSD_POLYGON).allowance(address(_strategy), address(_strategy.router())), type(uint256).max);
+        assertEq(IERC20(CRV_USD_POLYGON).allowance(address(_strategy), address(_strategy.router())), type(uint256).max);
 
         assertEq(_strategy.minSwapCrv(), 1e17);
 
@@ -464,10 +464,10 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), 0);
 
         // skip(30 days);
-        deal({ token: CRVUSD_POLYGON, to: address(strategy), give: 100 ether });
+        deal({ token: CRV_USD_POLYGON, to: address(strategy), give: 100 ether });
 
         strategy.unwindRewards();
-        assertEq(IERC20(CRVUSD_POLYGON).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(CRV_USD_POLYGON).balanceOf(address(strategy)), 0);
         assertEq(IERC20(CRV_POLYGON).balanceOf(address(strategy)), 0);
     }
 

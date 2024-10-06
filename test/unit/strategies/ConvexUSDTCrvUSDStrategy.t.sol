@@ -443,7 +443,7 @@ contract ConvexUSDTCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         skip(30 days);
         deal(CRV_USD_POLYGON, address(strategy), 100 ether);
         strategy.unwindRewards();
-        assertEq(IERC20(CRVUSD_POLYGON).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(CRV_USD_POLYGON).balanceOf(address(strategy)), 0);
         assertEq(IERC20(CRV_POLYGON).balanceOf(address(strategy)), 0);
     }
 

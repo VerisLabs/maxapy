@@ -7,7 +7,7 @@ import {IConvexRewardsPolygon} from "src/interfaces/IConvexRewards.sol";
 import {ICurveLpPool} from "src/interfaces/ICurve.sol";
 import {ICurveAtriCryptoZapper} from "src/interfaces/ICurve.sol";
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
-import {CRV_USD_POLYGON, USDT_POLYGON, WMATIC_POLYGON, CRV_POLYGON, CONVEX_BOOSTER_POLYGON, CRVUSD_USDT_CONVEX_POOL_ID_POLYGON, CURVE_CRVUSD_USDT_POOL_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON} from "src/helpers/AddressBook.sol";
+import {CRV_USD_POLYGON, USDT_POLYGON, WPOL_POLYGON, CRV_POLYGON, CONVEX_BOOSTER_POLYGON, CRVUSD_USDT_CONVEX_POOL_ID_POLYGON, CURVE_CRVUSD_USDT_POOL_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON} from "src/helpers/AddressBook.sol";
 import {IUniswapV3Router as IRouter} from "src/interfaces/IUniswap.sol";
 
 /// @title ConvexUSDTCrvUSDStrategy
@@ -20,10 +20,10 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
     ////////////////////////////////////////////////////////////////
     ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
-    /// @notice Polygon's WETH Token
+    /// @notice Polygon's CRVUSD Token
     address public constant crvUsd = CRV_USD_POLYGON;
     /// @notice Polygon's WETH Token
-    address public constant wmatic = WMATIC_POLYGON;
+    address public constant wpol = WPOL_POLYGON;
     /// @notice Polygon's CRV Token
     address public constant crv = CRV_POLYGON;
     /// @notice Main Convex's deposit contract for LP tokens
@@ -148,9 +148,6 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
     /// @notice Invests `amount` of underlying into the Convex pool
     /// @dev We don't perform any reward claim. All assets must have been
     /// previously converted to `underlyingAsset`.
-    /// Note that because of Curve's bonus/penalty approach, we check if it is best to
-    /// add liquidity with native ETH or with pegged ETH. It is then expected to always receive
-    /// at least `amount` if we perform an exchange from ETH to pegged ETH.
     /// @param amount The amount of underlying to be deposited in the pool
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Curve LP tokens)
     /// @return The amount of tokens received, in terms of underlying
@@ -172,7 +169,7 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
         }
 
         // Check if the amount to invest is greater than the max single trade
-        // amount = Math.min(amount, maxSingleTrade);
+        amount = Math.min(amount, maxSingleTrade);
 
         uint256 balanceBefore = usdt.balanceOf(address(this));
         // Swap the USDCe to USDT
@@ -260,8 +257,8 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
             bytes memory path = abi.encodePacked(
                 _crv(),
                 uint24(3000), // CRV <> WMATIC 0.3%
-                wmatic,
-                uint24(500), // WMATIC <> USDT 0.005%
+                wpol,
+                uint24(500), // WMATIC <> USDT 0.05%
                 usdt
             );
             router.exactInput(

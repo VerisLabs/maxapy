@@ -17,13 +17,14 @@ import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import {
     CRV_USD_POLYGON,
     USDC_POLYGON,
-    WMATIC_POLYGON,
+    WPOL_POLYGON,
     CRV_POLYGON,
     CONVEX_BOOSTER_POLYGON,
     CRVUSD_USDC_CONVEX_POOL_ID_POLYGON,
     CURVE_CRVUSD_USDC_POOL_POLYGON,
     CURVE_CRV_ATRICRYPTO_ZAPPER_POLYGON,
-    UNISWAP_V3_USDC_USDCE_POOL_POLYGON
+    UNISWAP_V3_USDC_USDCE_POOL_POLYGON,
+    TRI_CRYPTO_POOL_POLYGON
 } from "src/helpers/AddressBook.sol";
 
 /// @title ConvexUSDCCrvUSDStrategy
@@ -36,10 +37,10 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
     ////////////////////////////////////////////////////////////////
     ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
-    /// @notice Polygon's WETH Token
+    /// @notice Polygon's CRVUSD Token
     address public constant crvUsd = CRV_USD_POLYGON;
     /// @notice Polygon's WETH Token
-    address public constant wmatic = WMATIC_POLYGON;
+    address public constant wpol = WPOL_POLYGON;
     /// @notice Polygon's CRV Token
     address public constant crv = CRV_POLYGON;
     /// @notice Main Convex's deposit contract for LP tokens
@@ -55,7 +56,7 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
     /// @notice Curve CrvTricrypto zapper in polygon
     ICurveAtriCryptoZapper public constant zapper = ICurveAtriCryptoZapper(CURVE_CRV_ATRICRYPTO_ZAPPER_POLYGON);
     /// @notice CrvTricrypto pool address in polygon
-    address public constant triCryptoPool = 0xc7c939A474CB10EB837894D1ed1a77C61B268Fa7;
+    address public constant triCryptoPool = TRI_CRYPTO_POOL_POLYGON;
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -154,9 +155,6 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
     /// @notice Invests `amount` of underlying into the Convex pool
     /// @dev We don't perform any reward claim. All assets must have been
     /// previously converted to `underlyingAsset`.
-    /// Note that because of Curve's bonus/penalty approach, we check if it is best to
-    /// add liquidity with native ETH or with pegged ETH. It is then expected to always receive
-    /// at least `amount` if we perform an exchange from ETH to pegged ETH.
     /// @param amount The amount of underlying to be deposited in the pool
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Curve LP tokens)
     /// @return The amount of tokens received, in terms of underlying
@@ -173,6 +171,9 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
                 revert(0x1c, 0x04)
             }
         }
+        
+        // Invested amount will be a maximum of `maxSingleTrade`
+        amount = Math.min(maxSingleTrade, amount);
 
         uint256 lpReceived;
 
@@ -264,7 +265,6 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
             rewardPool.getReward(address(this), address(this));
         }
 
-        // Exchange CRV <> USDCe
         uint256 crvBalance = _crvBalance();
 
         if (crvBalance > minSwapCrv) {
@@ -278,7 +278,7 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
             bytes memory path = abi.encodePacked(
                 crvUsd,
                 uint24(3000), // crvUsd <> WMATIC 0.3%
-                wmatic,
+                wpol,
                 uint24(500), // WMATIC <> USDCe 0.05%
                 underlyingAsset
             );
@@ -349,7 +349,7 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         return _estimateAmountOut(underlyingAsset, USDC_POLYGON, uint128(amount), 1800) * 1e18 / _lpPrice();
     }
 
-    /// @notice Returns the estimated price for the strategy's Convex's LP token
+    /// @notice Returns the estimated price for the strategy's Curve's LP token
     /// @return returns the estimated lp token price
     function _lpPrice() internal view override returns (uint256) {
         return (
