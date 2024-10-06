@@ -130,13 +130,14 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
     function setRouter(address _newRouter) external checkRoles(ADMIN_ROLE) {
         // Remove previous router allowance
         crv.safeApprove(address(router), 0);
-        // Set new router allowance
-        crv.safeApprove(_newRouter, type(uint256).max);
-
         // Remove previous router allowance
         crv.safeApprove(address(router), 0);
+
         // Set new router allowance
-        crv.safeApprove(_newRouter, type(uint256).max);
+        usdc.safeApprove(address(_newRouter), type(uint256).max);
+        underlyingAsset.safeApprove(address(_newRouter), type(uint256).max);
+        crvUsd.safeApprove(address(_newRouter), type(uint256).max);
+        crv.safeApprove(_newRouter, type(uint256).max); // Validate
 
         assembly ("memory-safe") {
             sstore(router.slot, _newRouter) // set the new router in storage

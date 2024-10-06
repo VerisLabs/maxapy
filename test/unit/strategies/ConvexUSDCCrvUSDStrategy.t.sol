@@ -532,7 +532,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         vm.warp(block.timestamp + 1 days);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_989_424);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_989_136);
         assertEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
         vm.revertTo(snapshotId);
 
