@@ -88,9 +88,6 @@ contract BaseYearnV3Strategy is BaseStrategy {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         yVault = _yVault;
 
-        /// Perform needed approvals
-        underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
-
         /// Unlimited max single trade by default
         maxSingleTrade = type(uint256).max;
     }

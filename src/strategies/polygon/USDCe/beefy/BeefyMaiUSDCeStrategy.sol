@@ -77,6 +77,8 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
             }
         }
 
+        amount = Math.min(maxSingleTrade, amount);
+
         uint256 lpReceived;
 
         uint256[2] memory amounts;
