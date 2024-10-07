@@ -259,7 +259,7 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
                 uint24(3000), // CRV <> WMATIC 0.3%
                 wpol,
                 uint24(500), // WMATIC <> USDT 0.05%
-                usdt
+                underlyingAsset
             );
             router.exactInput(
                 IRouter.ExactInputParams({
@@ -275,6 +275,7 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
         uint256 crvUsdBalance = _crvUsdBalance();
         if (crvUsdBalance > minSwapCrv) {
             uint256 amountUSDT = curveLpPool.exchange(0, 1, crvUsdBalance, 0);
+            zapper.exchange_underlying(2, 1, amountUSDT, 0, address(this));
         }
     }
 
