@@ -88,7 +88,6 @@ contract BaseBeefyStrategy is BaseStrategy {
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         beefyVault = _beefyVault;
-        /// Approve beefy Vault to transfer underlying
         /// Unlimited max single trade by default
         maxSingleTrade = type(uint256).max;
     }

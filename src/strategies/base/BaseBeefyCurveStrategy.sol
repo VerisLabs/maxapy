@@ -52,6 +52,11 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
 
         underlyingAsset.safeApprove(address(curveLpPool), type(uint256).max);
         address(curveLpPool).safeApprove(address(beefyVault), type(uint256).max);
+
+        /// min single trade by default
+        minSingleTrade = 10e6;
+        /// Unlimited max single trade by default
+        maxSingleTrade = 100_000e6;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -76,15 +81,14 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
             }
         }
 
+        amount = Math.min(maxSingleTrade, amount);
+
         uint256 lpReceived;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[1] = amount;
 
-        if (amount > 0) {
-            uint256[] memory amounts = new uint256[](2);
-            amounts[1] = amount;
-
-            // Add liquidity to the curve pool in underlying token [coin1 -> usdce]
-            lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
-        }
+        // Add liquidity to the curve pool in underlying token [coin1 -> usdce]
+        lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
 
         uint256 _before = beefyVault.balanceOf(address(this));
 
