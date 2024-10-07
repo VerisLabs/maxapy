@@ -477,8 +477,8 @@ contract BeefyCrvUSDUSDTStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents
 
         StrategyData memory data = vault.strategies(address(strategy));
 
-        // assertEq(vault.debtRatio(), 3000);
-        // assertEq(data.strategyDebtRatio, 3000);
+        assertApproxEq(vault.debtRatio(), 3000, 1);
+        assertApproxEq(data.strategyDebtRatio, 3000, 1);
     }
 
     function testBeefyCrvUSDUSDCe__PreviewLiquidate() public {
