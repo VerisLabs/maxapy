@@ -37,7 +37,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
     function setUp() public {
         super._setUp("POLYGON");
-        vm.rollFork(57_099_032);
+        vm.rollFork(62_418_460);
 
         TREASURY = makeAddr("treasury");
 
@@ -119,7 +119,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
             IERC20(_strategy.curveLpPool()).allowance(address(_strategy), address(_strategy.convexBooster())),
             type(uint256).max
         );
-        assertEq(IERC20(CRVUSD_POLYGON).allowance(address(_strategy), address(_strategy.router())), type(uint256).max);
+        assertEq(IERC20(CRV_USD_POLYGON).allowance(address(_strategy), address(_strategy.router())), type(uint256).max);
 
         assertEq(_strategy.minSwapCrv(), 1e17);
 
@@ -463,10 +463,11 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         strategy.unwindRewards();
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), 0);
 
-        skip(30 days);
+        // skip(30 days);
+        deal({ token: CRV_USD_POLYGON, to: address(strategy), give: 100 ether });
 
         strategy.unwindRewards();
-        assertEq(IERC20(CRVUSD_POLYGON).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(CRV_USD_POLYGON).balanceOf(address(strategy)), 0);
         assertEq(IERC20(CRV_POLYGON).balanceOf(address(strategy)), 0);
     }
 
@@ -531,7 +532,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         vm.warp(block.timestamp + 1 days);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_989_424);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_989_136);
         assertEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
         vm.revertTo(snapshotId);
 

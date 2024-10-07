@@ -92,7 +92,6 @@ contract BaseYearnV2Strategy is BaseStrategy {
         yVault = _yVault;
 
         /// Approve Yearn Vault to transfer underlying
-        underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
 
         /// Mininmum single trade is 0.01 token units
         minSingleTrade = 10 ** IERC20Metadata(underlyingAsset).decimals() / 100;

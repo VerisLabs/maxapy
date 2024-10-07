@@ -50,6 +50,9 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
 
         underlyingAsset.safeApprove(address(curveLpPool), type(uint256).max);
         address(curveLpPool).safeApprove(address(beefyVault), type(uint256).max);
+
+        /// Unlimited max single trade by default
+        maxSingleTrade = 100_000e6; 
     }
 
     ////////////////////////////////////////////////////////////////
@@ -74,14 +77,14 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
             }
         }
 
+        amount = Math.min(maxSingleTrade, amount);
+
         uint256 lpReceived;
 
-        if (amount > 0) {
-            uint256[2] memory amounts;
-            amounts[1] = amount;
-            // Add liquidity to the mai<>usdce pool in usdce [coin1 -> usdce]
-            lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
-        }
+        uint256[2] memory amounts;
+        amounts[1] = amount;
+        // Add liquidity to the mai<>usdce pool in usdce [coin1 -> usdce]
+        lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
 
         uint256 _before = beefyVault.balanceOf(address(this));
 
@@ -172,7 +175,7 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
     function _shareValue(uint256 shares) internal view override returns (uint256 _assets) {
         uint256 lpTokenAmount = super._shareValue(shares);
         uint256 lpPrice = _lpPrice();
-        
+
         // lp price add get function _lpPrice()
         assembly {
             let scale := 0xde0b6b3a7640000 // This is 1e18 in hexadecimal
