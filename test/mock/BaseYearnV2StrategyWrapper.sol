@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {BaseYearnV2Strategy, SafeTransferLib} from "src/strategies/base/BaseYearnV2Strategy.sol";
-import {console2} from "forge-std/Test.sol";
+import { BaseYearnV2Strategy, SafeTransferLib } from "src/strategies/base/BaseYearnV2Strategy.sol";
 
 contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
     using SafeTransferLib for address;
@@ -12,26 +11,15 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
     }
 
     function triggerLoss(uint256 amount) external {
-        uint256 amountToWithdraw = _sub0(
-            amount,
-            underlyingAsset.balanceOf(address(this))
-        );
+        uint256 amountToWithdraw = _sub0(amount, underlyingAsset.balanceOf(address(this)));
         if (amountToWithdraw > 0) {
             uint256 shares = _sharesForAmount(amount);
-            console2.log("sharesForAmount : ", shares);
-            console2.log("actual shares : ", yVault.balanceOf(address(this)));
-
             yVault.withdraw(shares);
         }
         underlyingAsset.safeTransfer(address(underlyingAsset), amount);
     }
 
-    function mockReport(
-        uint128 gain,
-        uint128 loss,
-        uint128 debtPayment,
-        address treasury
-    ) external {
+    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment, address treasury) external {
         vault.report(gain, loss, debtPayment, treasury);
     }
 
@@ -42,10 +30,7 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
         external
         returns (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-        (unrealizedProfit, loss, debtPayment) = _prepareReturn(
-            debtOutstanding,
-            minExpectedBalance
-        );
+        (unrealizedProfit, loss, debtPayment) = _prepareReturn(debtOutstanding, minExpectedBalance);
     }
 
     function adjustPosition() external {
@@ -53,10 +38,7 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
         ///silence warning
     }
 
-    function invest(
-        uint256 amount,
-        uint256 minOutputAfterInvestment
-    ) external returns (uint256) {
+    function invest(uint256 amount, uint256 minOutputAfterInvestment) external returns (uint256) {
         return _invest(amount, minOutputAfterInvestment);
     }
 
@@ -64,9 +46,7 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
         return _divest(shares);
     }
 
-    function liquidatePosition(
-        uint256 amountNeeded
-    ) external returns (uint256, uint256) {
+    function liquidatePosition(uint256 amountNeeded) external returns (uint256, uint256) {
         return _liquidatePosition(amountNeeded);
     }
 

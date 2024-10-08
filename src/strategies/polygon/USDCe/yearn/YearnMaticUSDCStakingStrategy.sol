@@ -6,7 +6,7 @@ import {
 } from "src/strategies/base/BaseYearnV3Strategy.sol";
 import { IStakingRewardsMulti } from "src/interfaces/IStakingRewardsMulti.sol";
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
-import { WMATIC_POLYGON, UNISWAP_V3_ROUTER_POLYGON } from "src/helpers/AddressBook.sol";
+import { WPOL_POLYGON, UNISWAP_V3_ROUTER_POLYGON } from "src/helpers/AddressBook.sol";
 
 /// @title YearnMaticUSDCStakingStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -18,9 +18,8 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
     ////////////////////////////////////////////////////////////////
     ///                         CONSTANTS                        ///
     ////////////////////////////////////////////////////////////////
-
     /// @notice Ethereum mainnet's Matic Token
-    address public constant wmatic = WMATIC_POLYGON;
+    address public constant wpol = WPOL_POLYGON;
     /// @notice Router to perform WMATIC-USDC swaps
     IRouter public constant router = IRouter(UNISWAP_V3_ROUTER_POLYGON);
 
@@ -62,7 +61,7 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
 
         /// Perform needed approvals
         underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
-        wmatic.safeApprove(address(router), type(uint256).max);
+        wpol.safeApprove(address(router), type(uint256).max);
         address(_yVault).safeApprove(address(yearnStakingRewards), type(uint256).max);
 
         minSingleTrade = 1e4;
@@ -221,16 +220,16 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
         _yearnStakingRewards.getReward();
 
         // Exchange Matic <> USDC
-        uint256 wmaticBalance = _wmaticBalance();
-        if (wmaticBalance > minSwapMatic) {
+        uint256 wpolBalance = _wpolBalance();
+        if (wpolBalance > minSwapMatic) {
             router.exactInputSingle(
                 IRouter.ExactInputSingleParams({
-                    tokenIn: wmatic,
+                    tokenIn: wpol,
                     tokenOut: underlyingAsset,
                     fee: 10_000,
                     recipient: address(this),
                     deadline: block.timestamp,
-                    amountIn: wmaticBalance,
+                    amountIn: wpolBalance,
                     amountOutMinimum: 0,
                     sqrtPriceLimitX96: 0
                 })
@@ -244,8 +243,8 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
 
     /// @notice Returns the WMATIC token balane of the strategy
     /// @return The amount of WMATIC tokens held by the current contract
-    function _wmaticBalance() internal view returns (uint256) {
-        return wmatic.balanceOf(address(this));
+    function _wpolBalance() internal view returns (uint256) {
+        return wpol.balanceOf(address(this));
     }
 
     /// @notice Returns the current strategy's amount of yearn vault shares

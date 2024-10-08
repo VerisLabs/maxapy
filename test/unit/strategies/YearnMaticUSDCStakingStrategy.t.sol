@@ -60,7 +60,7 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         vm.label(address(proxy), "YearnMaticUSDCStakingStrategy");
         vm.label(address(USDCE_POLYGON), "USDC");
         vm.label(stakingRewards = address(implementation.yearnStakingRewards()), "YearnStakingRewardsMulti");
-        vm.label(WMATIC_POLYGON, "WMATIC");
+        vm.label(WPOL_POLYGON, "WMATIC");
 
         strategy = IStrategyWrapper(address(_proxy));
 
@@ -429,7 +429,7 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
 
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), 0);
         strategy.unwindRewards();
-        assertEq(IERC20(implementation.wmatic()).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(implementation.wpol()).balanceOf(address(strategy)), 0);
         assertGt(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), 0);
     }
 

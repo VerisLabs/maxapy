@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { YearnUSDTStrategy, SafeTransferLib } from "src/strategies/polygon/USDCe/yearn/YearnUSDTStrategy.sol";
+import { BeefyMaiUSDCeStrategy, SafeTransferLib } from "src/strategies/polygon/USDCe/beefy/BeefyMaiUSDCeStrategy.sol";
 
-contract YearnUSDTStrategyWrapper is YearnUSDTStrategy {
+contract BeefyMaiUSDCeStrategyWrapper is BeefyMaiUSDCeStrategy {
     using SafeTransferLib for address;
 
     function triggerLoss(uint256 amount) external {
@@ -26,7 +26,6 @@ contract YearnUSDTStrategyWrapper is YearnUSDTStrategy {
 
     function adjustPosition() external {
         _adjustPosition(0, 0);
-        ///silence warning
     }
 
     function invest(uint256 amount, uint256 minOutputAfterInvestment) external returns (uint256) {
@@ -55,5 +54,9 @@ contract YearnUSDTStrategyWrapper is YearnUSDTStrategy {
 
     function shareBalance() external view returns (uint256) {
         return _shareBalance();
+    }
+
+    function lpPrice() external view returns (uint256) {
+        return _lpPrice();
     }
 }

@@ -13,9 +13,13 @@ docs/
 
 # Dotenv file
 .env
+.env.*
 
 # Coverage file
 lcov.info
 
 # Soldeer dependencies
 dependencies/
+
+DS_Store
+.DS_Store

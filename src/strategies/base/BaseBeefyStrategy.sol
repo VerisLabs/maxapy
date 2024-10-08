@@ -2,21 +2,16 @@
 pragma solidity ^0.8.19;
 
 import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
-import { IYVault } from "src/interfaces/IYVault.sol";
+import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
-/// @title BaseYearnV2Strategy
+/// @title BaseBeefyStrategy
 /// @author MaxApy
-/// @notice `BaseYearnV2Strategy` sets the base functionality to be implemented by MaxApy YearnV3 strategies.
+/// @notice `BaseBeefyStrategy` sets the base functionality to be implemented by MaxApy Beefy strategies.
 /// @dev Some functions can be overriden if needed
-contract BaseYearnV2Strategy is BaseStrategy {
+contract BaseBeefyStrategy is BaseStrategy {
     using SafeTransferLib for address;
-
-    ////////////////////////////////////////////////////////////////
-    ///                        CONSTANTS                         ///
-    ////////////////////////////////////////////////////////////////
-    uint256 internal constant DEGRADATION_COEFFICIENT = 10 ** 18;
 
     ////////////////////////////////////////////////////////////////
     ///                         ERRORS                           ///
@@ -28,10 +23,10 @@ contract BaseYearnV2Strategy is BaseStrategy {
     ///                         EVENTS                           ///
     ////////////////////////////////////////////////////////////////
 
-    /// @notice Emitted when underlying asset is deposited into the Yearn Vault
+    /// @notice Emitted when underlying asset is deposited into the Beefy Vault
     event Invested(address indexed strategy, uint256 amountInvested);
 
-    /// @notice Emitted when the `requestedShares` are divested from the Yearn Vault
+    /// @notice Emitted when the `requestedShares` are divested from the Beefy Vault
     event Divested(address indexed strategy, uint256 requestedShares, uint256 amountDivested);
 
     /// @notice Emitted when the strategy's min single trade value is updated
@@ -48,54 +43,52 @@ contract BaseYearnV2Strategy is BaseStrategy {
     uint256 internal constant _DIVESTED_EVENT_SIGNATURE =
         0xf44b6ecb6421462dee6400bd4e3bb57864c0f428d0f7e7d49771f9fd7c30d4fa;
 
-    /// @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
-    uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
-        0x70bc59027d7d0bba6fbf38b995e26c84f6c1805fc3ead71ec1d7ebeb7d76399b;
-
     /// @dev `keccak256(bytes("MaxSingleTradeUpdated(uint256)"))`.
     uint256 internal constant _MAX_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
         0xe8b08f84dc067e4182670384e9556796d3a831058322b7e55f9ddb3ec48d7c10;
+
+    /// @dev `keccak256(bytes("MinSingleTradeUpdated(uint256)"))`.
+    uint256 internal constant _MIN_SINGLE_TRADE_UPDATED_EVENT_SIGNATURE =
+        0x70bc59027d7d0bba6fbf38b995e26c84f6c1805fc3ead71ec1d7ebeb7d76399b;
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
     ////////////////////////////////////////////////////////////////
 
-    /// @notice The Yearn Vault the strategy interacts with
-    IYVault public yVault;
+    /// @notice The Beefy Vault the strategy interacts with
+    IBeefyVault public beefyVault;
+
+    /// @notice The maximum single trade allowed in the strategy
+    uint256 public maxSingleTrade;
+
     /// @notice Minimun trade size within the strategy
     uint256 public minSingleTrade;
-    /// @notice Maximum trade size within the strategy
-    uint256 public maxSingleTrade;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
     constructor() initializer { }
 
+    /// @dev the initialization function must be defined in each strategy
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
-    /// @param _yVault The Yearn Finance vault this strategy will interact with
+    /// @param _beefyVault The address of the Beefy
     function initialize(
         IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
-        IYVault _yVault
+        IBeefyVault _beefyVault
     )
         public
         virtual
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        yVault = _yVault;
-
-        /// Approve Yearn Vault to transfer underlying
-
-        /// Mininmum single trade is 0.01 token units
-        minSingleTrade = 10 ** IERC20Metadata(underlyingAsset).decimals() / 100;
-
+        beefyVault = _beefyVault;
+        /// Approve beefy Vault to transfer underlying
         /// Unlimited max single trade by default
         maxSingleTrade = type(uint256).max;
     }
@@ -140,7 +133,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
         }
     }
 
-    ////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
 
@@ -158,19 +151,15 @@ contract BaseYearnV2Strategy is BaseStrategy {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
-        // the requested amount, we divest from the Yearn Vault
+        // the requested amount, we divest from the beefy Vault
         if (underlyingBalance < requestedAmount) {
             uint256 amountToWithdraw;
             unchecked {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
-
             uint256 shares = _sharesForAmount(amountToWithdraw);
             uint256 withdrawn = _shareValue(shares);
-            assembly {
-                // if withdrawn < amountToWithdraw
-                if lt(withdrawn, amountToWithdraw) { loss := sub(amountToWithdraw, withdrawn) }
-            }
+            if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
         liquidatedAmount = requestedAmount - loss;
     }
@@ -201,6 +190,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
         // make sure it doesnt revert when increaseing it 1% in the withdraw
         return previewLiquidate(estimatedTotalAssets()) * 99 / 100;
     }
+
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
@@ -330,7 +320,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
         }
     }
 
-    /// @notice Invests `amount` of underlying, depositing it in the Yearn Vault
+    /// @notice Invests `amount` of underlying, depositing it in the Beefy Vault
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
@@ -348,7 +338,8 @@ contract BaseYearnV2Strategy is BaseStrategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
-        uint256 shares = yVault.deposit(amount);
+        uint256 shares = _sharesForAmount(amount);
+        beefyVault.deposit(amount);
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -368,21 +359,21 @@ contract BaseYearnV2Strategy is BaseStrategy {
         }
     }
 
-    /// @notice Divests amount `shares` from Yearn Vault
-    /// Note that divesting from Yearn could potentially cause loss (set to 0.01% as default in
+    /// @notice Divests amount `shares` from Beefy Vault
+    /// Note that divesting from Beefy could potentially cause loss (set to 0.01% as default in
     /// the Vault implementation), so the divested amount might actually be different from
     /// the requested `shares` to divest
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
-    /// but in terms of yvault shares
+    /// but in terms of "yvault" shares ...........########## TODO
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal virtual returns (uint256 withdrawn) {
-        // return uint256 withdrawn = yVault.withdraw(shares);
+        // return uint256 withdrawn = beefyVault.withdraw(shares);
         assembly {
             // store selector and parameters in memory
             mstore(0x00, 0x2e1a7d4d)
             mstore(0x20, shares)
-            // call yVault.withdraw(shares)
-            if iszero(call(gas(), sload(yVault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            // call beefyVault.withdraw(shares)
+            if iszero(call(gas(), sload(beefyVault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             withdrawn := mload(0x00)
 
             // Emit the `Divested` event
@@ -411,7 +402,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
-        // the requested amount, we divest from the Yearn Vault
+        // the requested amount, we divest from the Beefy Vault
         if (underlyingBalance < amountNeeded) {
             uint256 amountToWithdraw;
             unchecked {
@@ -444,102 +435,51 @@ contract BaseYearnV2Strategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice Determines the current value of `shares`.
-    /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
-    /// @return returns the estimated amount of underlying computed from shares `shares`
-    function _shareValue(uint256 shares) internal view virtual returns (uint256) {
-        uint256 vaultTotalSupply;
+    /// @return _assets the estimated amount of underlying computed from shares `shares`
+    function _shareValue(uint256 shares) internal view virtual returns (uint256 _assets) {
         assembly {
-            // get yVault.totalSupply()
-            mstore(0x00, 0x18160ddd)
-            if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
-            vaultTotalSupply := mload(0x00)
-        }
-        if (vaultTotalSupply == 0) return shares;
+            //get beefyVault.balance()
+            mstore(0x00, 0xb69ef8a8)
+            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            let vaultBalance := mload(0x00)
 
-        return Math.mulDiv(shares, _freeFunds(), vaultTotalSupply);
+            //get beefyVault.totalSupply
+            mstore(0x00, 0x18160ddd)
+            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            let vaultTotalSupply := mload(0x00)
+
+            _assets := div(mul(shares, vaultBalance), vaultTotalSupply)
+        }
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
-    /// @return shares returns the estimated amount of shares computed in exchange for the underlying `amount`
+    /// @return shares the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view virtual returns (uint256 shares) {
-        uint256 freeFunds = _freeFunds();
         assembly {
-            // if freeFunds != 0 return amount
-            if gt(freeFunds, 0) {
-                // get yVault.totalSupply()
-                mstore(0x00, 0x18160ddd)
-                if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
-                let totalSupply := mload(0x00)
+            //get beefyVault.balance()
+            mstore(0x00, 0xb69ef8a8)
+            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            let pool := mload(0x00)
 
-                // Overflow check equivalent to require(totalSupply == 0 || amount <= type(uint256).max / totalSupply)
-                if iszero(iszero(mul(totalSupply, gt(amount, div(not(0), totalSupply))))) { revert(0, 0) }
+            //get beefyVault.totalSupply
+            mstore(0x00, 0x18160ddd)
+            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            let vaultTotalSupply := mload(0x00)
 
-                shares := div(mul(amount, totalSupply), freeFunds)
-            }
+            switch vaultTotalSupply
+            case 0 { shares := amount }
+            default { shares := div(mul(amount, vaultTotalSupply), pool) }
         }
     }
 
-    /// @notice Calculates the yearn vault free funds considering the locked profit
-    /// @return returns the computed yearn vault free funds
-    function _freeFunds() internal view returns (uint256) {
-        return yVault.totalAssets() - _calculateLockedProfit();
-    }
-
-    /// @notice Calculates the yearn vault locked profit i.e. how much profit is locked and cant be withdrawn
-    /// @return lockedProfit returns the computed locked profit value
-    function _calculateLockedProfit() internal view returns (uint256 lockedProfit) {
-        assembly {
-            let _yVault := sload(yVault.slot)
-
-            // get yVault.lastReport()
-            mstore(0x00, 0xc3535b52)
-            if iszero(staticcall(gas(), _yVault, 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
-            let lastReport := mload(0x00)
-            // get yVault.lockedProfitDegradation()
-            mstore(0x00, 0x42232716)
-            if iszero(staticcall(gas(), _yVault, 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
-            let lockedProfitDegradation := mload(0x00)
-
-            // Check overflow
-            if gt(lastReport, timestamp()) { revert(0, 0) }
-
-            //temporry value to save gas
-            let lockedFundsRatio := sub(timestamp(), lastReport)
-
-            // Overflow check equivalent to require(lockedProfitDegradation == 0 || lockedFundsRatio <=
-            // type(uint256).max / lockedProfitDegradation)
-            if iszero(iszero(mul(lockedProfitDegradation, gt(lockedFundsRatio, div(not(0), lockedProfitDegradation)))))
-            {
-                revert(0, 0)
-            }
-
-            lockedFundsRatio := mul(lockedFundsRatio, lockedProfitDegradation)
-
-            //if (lockedFundsRatio < DEGRADATION_COEFFICIENT)
-            if lt(lockedFundsRatio, DEGRADATION_COEFFICIENT) {
-                // get yVault.lockedProfit()
-                mstore(0x00, 0x44b81396)
-                if iszero(staticcall(gas(), _yVault, 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
-                lockedProfit := mload(0x00)
-
-                // Overflow check equivalent to require(lockedProfit == 0 || lockedFundsRatio <= type(uint256).max /
-                // lockedProfit)
-                if iszero(iszero(mul(lockedProfit, gt(lockedFundsRatio, div(not(0), lockedProfit))))) { revert(0, 0) }
-
-                //return lockedProfit - ((lockedFundsRatio * lockedProfit) / DEGRADATION_COEFFICIENT);
-                lockedProfit := sub(lockedProfit, div(mul(lockedFundsRatio, lockedProfit), DEGRADATION_COEFFICIENT))
-            }
-        }
-    }
-
-    /// @notice Returns the current strategy's amount of yearn vault shares
-    /// @return _balance balance the strategy's balance of yearn vault shares
+    /// @notice Returns the current strategy's amount of Beefy vault shares
+    /// @return _balance balance the strategy's balance of Beefy vault shares
     function _shareBalance() internal view returns (uint256 _balance) {
         assembly {
-            // return yVault.balanceOf(address(this));
+            // return beefyVault.balanceOf(address(this));
             mstore(0x00, 0x70a08231)
             mstore(0x20, address())
-            if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             _balance := mload(0x00)
         }
     }

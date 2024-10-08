@@ -208,7 +208,6 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     /// @return returns the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view override returns (uint256) {
         return _estimateAmountOut(lusd, underlyingAsset, uint128(super._shareValue(shares)), 1800); // use a 30 min TWAP
-            // interval
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.

@@ -10,18 +10,24 @@ import {
 import { IConvexBoosterPolygon } from "src/interfaces/IConvexBooster.sol";
 import { IConvexRewardsPolygon } from "src/interfaces/IConvexRewards.sol";
 import { ICurveLpPool } from "src/interfaces/ICurve.sol";
-import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
+import { IUniswapV3Router as IRouter, IUniswapV3Pool } from "src/interfaces/IUniswap.sol";
+import { OracleLibrary } from "src/lib/OracleLibrary.sol";
+import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import {
     CRV_USD_POLYGON,
-    WMATIC_POLYGON,
+    USDC_POLYGON,
+    WPOL_POLYGON,
     CRV_POLYGON,
     CONVEX_BOOSTER_POLYGON,
     CRVUSD_USDC_CONVEX_POOL_ID_POLYGON,
-    CURVE_CRVUSD_USDC_POOL_POLYGON
+    CURVE_CRVUSD_USDC_POOL_POLYGON,
+    CURVE_CRV_ATRICRYPTO_ZAPPER_POLYGON,
+    UNISWAP_V3_USDC_USDCE_POOL_POLYGON,
+    TRI_CRYPTO_POOL_POLYGON
 } from "src/helpers/AddressBook.sol";
 
-/// @title ConvexUSDCCrvUSDStrategy
+/// @title 
 /// @author MaxApy
 /// @notice `ConvexUSDCCrvUSDStrategy` supplies USDC into the crvUsd<>usdc pool in Curve, then stakes the curve LP
 /// in Convex in order to maximize yield.
@@ -31,10 +37,10 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
     ////////////////////////////////////////////////////////////////
     ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
-    /// @notice Polygon's WETH Token
+    /// @notice Polygon's CRVUSD Token
     address public constant crvUsd = CRV_USD_POLYGON;
     /// @notice Polygon's WETH Token
-    address public constant wmatic = WMATIC_POLYGON;
+    address public constant wpol = WPOL_POLYGON;
     /// @notice Polygon's CRV Token
     address public constant crv = CRV_POLYGON;
     /// @notice Main Convex's deposit contract for LP tokens
@@ -43,6 +49,14 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
     IRouter public router;
     /// @notice Identifier for the crvUsd<>usdc Convex pool
     uint256 public constant CRVUSD_USDC_CONVEX_POOL_ID = CRVUSD_USDC_CONVEX_POOL_ID_POLYGON;
+    /// @notice Address of Uniswap V3 USDC-LUSD pool
+    address public constant pool = UNISWAP_V3_USDC_USDCE_POOL_POLYGON;
+    /// @notice USDC token for polygon
+    address public constant usdc = USDC_POLYGON;
+    /// @notice Curve CrvTricrypto zapper in polygon
+    ICurveAtriCryptoZapper public constant zapper = ICurveAtriCryptoZapper(CURVE_CRV_ATRICRYPTO_ZAPPER_POLYGON);
+    /// @notice CrvTricrypto pool address in polygon
+    address public constant triCryptoPool = TRI_CRYPTO_POOL_POLYGON;
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -101,11 +115,14 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         router = _router;
 
         // Approve tokens
-        crv.safeApprove(address(_router), type(uint256).max);
-        crvUsd.safeApprove(address(curveLpPool), type(uint256).max);
-        underlyingAsset.safeApprove(address(curveLpPool), type(uint256).max);
+        usdc.safeApprove(address(_router), type(uint256).max);
+        underlyingAsset.safeApprove(address(_router), type(uint256).max);
+        crv.safeApprove(address(zapper), type(uint256).max);
+        crvUsd.safeApprove(address(_router), type(uint256).max);
+        usdc.safeApprove(address(curveLpPool), type(uint256).max);
 
         minSwapCrv = 1e17;
+        maxSingleTrade = 100_000e6;
     }
 
     /// @notice Sets the new router
@@ -113,14 +130,14 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
     /// @param _newRouter The new router address
     function setRouter(address _newRouter) external checkRoles(ADMIN_ROLE) {
         // Remove previous router allowance
-        crv.safeApprove(address(router), 0);
-        // Set new router allowance
-        crv.safeApprove(_newRouter, type(uint256).max);
+        usdc.safeApprove(address(router), 0);
+        underlyingAsset.safeApprove(address(router), 0);
+        crvUsd.safeApprove(address(router), 0);
 
-        // Remove previous router allowance
-        crv.safeApprove(address(router), 0);
         // Set new router allowance
-        crv.safeApprove(_newRouter, type(uint256).max);
+        usdc.safeApprove(address(_newRouter), type(uint256).max);
+        underlyingAsset.safeApprove(address(_newRouter), type(uint256).max);
+        crvUsd.safeApprove(address(_newRouter), type(uint256).max);
 
         assembly ("memory-safe") {
             sstore(router.slot, _newRouter) // set the new router in storage
@@ -137,9 +154,6 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
     /// @notice Invests `amount` of underlying into the Convex pool
     /// @dev We don't perform any reward claim. All assets must have been
     /// previously converted to `underlyingAsset`.
-    /// Note that because of Curve's bonus/penalty approach, we check if it is best to
-    /// add liquidity with native ETH or with pegged ETH. It is then expected to always receive
-    /// at least `amount` if we perform an exchange from ETH to pegged ETH.
     /// @param amount The amount of underlying to be deposited in the pool
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Curve LP tokens)
     /// @return The amount of tokens received, in terms of underlying
@@ -156,13 +170,28 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
                 revert(0x1c, 0x04)
             }
         }
+        
+        // Invested amount will be a maximum of `maxSingleTrade`
+        amount = Math.min(maxSingleTrade, amount);
 
         uint256 lpReceived;
 
         if (amount > 0) {
-            uint256 price = curveLpPool.get_virtual_price();
+            // Swap the base asset to USDC
+            uint256 usdcAmount = router.exactInputSingle(
+                IRouter.ExactInputSingleParams({
+                    tokenIn: underlyingAsset,
+                    tokenOut: usdc,
+                    fee: 100, // 0.01% fee
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: amount,
+                    amountOutMinimum: 0,
+                    sqrtPriceLimitX96: 0
+                })
+            );
             uint256[] memory amounts = new uint256[](2);
-            amounts[1] = amount;
+            amounts[1] = usdcAmount;
             // Add liquidity to the crvUsd<>usdc pool in usdc [coin1 -> usdc]
             lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
 
@@ -202,12 +231,26 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         convexRewardPool.withdraw(amount, false);
 
         // Remove liquidity and obtain usdc
-        return curveLpPool.remove_liquidity_one_coin(
+        uint256 amountIn = curveLpPool.remove_liquidity_one_coin(
             amount,
             1,
             //usdc
             0,
             address(this)
+        );
+
+        // Swap USDC to base asset
+        return router.exactInputSingle(
+            IRouter.ExactInputSingleParams({
+                tokenIn: usdc,
+                tokenOut: underlyingAsset,
+                fee: 100, // 0.01% fee
+                recipient: address(this),
+                deadline: block.timestamp,
+                amountIn: amountIn,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 0
+            })
         );
     }
 
@@ -221,14 +264,21 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
             rewardPool.getReward(address(this), address(this));
         }
 
-        // Exchange CRV <> USDC
         uint256 crvBalance = _crvBalance();
+
         if (crvBalance > minSwapCrv) {
+            zapper.exchange(triCryptoPool, 0, 2, crvBalance, 0);
+        }
+
+        // Exchange crvUSD <> USDCe
+        uint256 crvUsdBalance = _crvUsdBalance();
+
+        if (crvUsdBalance > 0) {
             bytes memory path = abi.encodePacked(
-                _crv(),
-                uint24(3000), // CRV <> WMATIC 0.3%
-                wmatic,
-                uint24(500), // WMATIC <> USDC 0.005%
+                crvUsd,
+                uint24(3000), // crvUsd <> WMATIC 0.3%
+                wpol,
+                uint24(500), // WMATIC <> USDCe 0.05%
                 underlyingAsset
             );
             router.exactInput(
@@ -236,16 +286,10 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
                     path: path,
                     recipient: address(this),
                     deadline: block.timestamp,
-                    amountIn: crvBalance,
+                    amountIn: crvUsdBalance,
                     amountOutMinimum: 0
                 })
             );
-        }
-
-        // Exchange crvUSD <> USDC
-        uint256 crvUsdBalance = _crvUsdBalance();
-        if (crvUsdBalance > minSwapCrv) {
-            curveLpPool.exchange(1, 0, crvUsdBalance, 0);
         }
     }
 
@@ -290,7 +334,21 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
-    /// @notice Returns the estimated price for the strategy's Convex's LP token
+    /// @notice Determines how many lp tokens depositor of `amount` of underlying would receive.
+    /// @dev Some loss of precision is occured, but it is not critical as this is only an underestimation of
+    /// the actual assets, and profit will be later accounted for.
+    /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
+    function _lpValue(uint256 lp) internal view override returns (uint256) {
+        return _estimateAmountOut(USDC_POLYGON, underlyingAsset, uint128(super._lpValue(lp)), 1800); // use a 30 min
+    }
+
+    /// @notice Determines how many lp tokens depositor of `amount` of underlying would receive.
+    /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
+    function _lpForAmount(uint256 amount) internal view override returns (uint256) {
+        return _estimateAmountOut(underlyingAsset, USDC_POLYGON, uint128(amount), 1800) * 1e18 / _lpPrice();
+    }
+
+    /// @notice Returns the estimated price for the strategy's Curve's LP token
     /// @return returns the estimated lp token price
     function _lpPrice() internal view override returns (uint256) {
         return (
@@ -309,5 +367,39 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
     /// @dev returns the crvUsd balance
     function _crvUsdBalance() internal view returns (uint256) {
         return crvUsd.balanceOf(address(this));
+    }
+
+    /// @notice returns the estimated result of a Uniswap V3 swap
+    /// @dev use TWAP oracle for more safety
+    function _estimateAmountOut(
+        address tokenIn,
+        address tokenOut,
+        uint128 amountIn,
+        uint32 secondsAgo
+    )
+        internal
+        view
+        returns (uint256 amountOut)
+    {
+        // Code copied from OracleLibrary.sol, consult()
+        uint32[] memory secondsAgos = new uint32[](2);
+        secondsAgos[0] = secondsAgo;
+        secondsAgos[1] = 0;
+
+        // int56 since tick * time = int24 * uint32
+        // 56 = 24 + 32
+        (int56[] memory tickCumulatives,) = IUniswapV3Pool(pool).observe(secondsAgos);
+
+        int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
+
+        // int56 / uint32 = int24
+        int24 tick = int24(int256(tickCumulativesDelta) / int256(int32(secondsAgo)));
+        // Always round to negative infinity
+
+        if (tickCumulativesDelta < 0 && (int256(tickCumulativesDelta) % int256(int32(secondsAgo)) != 0)) {
+            tick--;
+        }
+
+        amountOut = OracleLibrary.getQuoteAtTick(tick, amountIn, tokenIn, tokenOut);
     }
 }
