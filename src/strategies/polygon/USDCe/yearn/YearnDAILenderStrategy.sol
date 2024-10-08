@@ -13,6 +13,7 @@ import { DAI_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON } from "src/helpers/A
 /// earning the Yearn Vault's yield
 contract YearnDAILenderStrategy is BaseYearnV3Strategy {
     using SafeTransferLib for address;
+    using Math for uint256;
 
     ////////////////////////////////////////////////////////////////
     ///                        CONSTANTS                         ///
@@ -146,9 +147,17 @@ contract YearnDAILenderStrategy is BaseYearnV3Strategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
-        // Check max deposit just in case
         uint256 maxDeposit = yVault.maxDeposit(address(this));
-        amount = Math.min(Math.min(amount, maxDeposit), maxSingleTrade);
+        
+        // Scale up to 18 decimals
+        uint256 scaledAmount = amount.mulWad(1e12);
+        uint256 scaledMaxSingleTrade = maxSingleTrade.mulWad(1e12);
+        uint256 minAmount = Math.min(
+            Math.min(scaledAmount, maxDeposit),
+            scaledMaxSingleTrade
+        ); 
+        // Scale back down to 6 decimals
+        amount = minAmount.divWad(1e12);
 
         uint256 balanceBefore = DAI_POLYGON.balanceOf(address(this));
         // Swap the USDCe to base asset
@@ -156,6 +165,7 @@ contract YearnDAILenderStrategy is BaseYearnV3Strategy {
 
         // Deposit into the underlying vault
         amount = DAI_POLYGON.balanceOf(address(this)) - balanceBefore;
+        
         uint256 shares = yVault.deposit(amount, address(this));
 
         assembly ("memory-safe") {

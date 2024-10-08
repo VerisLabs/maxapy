@@ -1,21 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseYearnV2Strategy, SafeTransferLib } from "src/strategies/base/BaseYearnV2Strategy.sol";
+import { BeefyCrvUSDUSDCeStrategy, SafeTransferLib } from "src/strategies/polygon/USDCe/beefy/BeefyCrvUSDUSDCeStrategy.sol";
 
-contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
+contract BeefyCrvUSDUSDCeStrategyWrapper is BeefyCrvUSDUSDCeStrategy {
     using SafeTransferLib for address;
 
-    function investYearn(uint256 amount) external returns (uint256) {
-        return yVault.deposit(amount);
-    }
-
     function triggerLoss(uint256 amount) external {
-        uint256 amountToWithdraw = _sub0(amount, underlyingAsset.balanceOf(address(this)));
-        if (amountToWithdraw > 0) {
-            uint256 shares = _sharesForAmount(amount);
-            yVault.withdraw(shares);
-        }
         underlyingAsset.safeTransfer(address(underlyingAsset), amount);
     }
 
@@ -35,7 +26,6 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
 
     function adjustPosition() external {
         _adjustPosition(0, 0);
-        ///silence warning
     }
 
     function invest(uint256 amount, uint256 minOutputAfterInvestment) external returns (uint256) {
@@ -64,5 +54,9 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
 
     function shareBalance() external view returns (uint256) {
         return _shareBalance();
+    }
+
+    function lpPrice() external view returns (uint256) {
+        return _lpPrice();
     }
 }
