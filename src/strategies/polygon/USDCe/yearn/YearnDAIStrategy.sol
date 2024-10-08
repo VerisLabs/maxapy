@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { IYVaultV3 } from "src/interfaces/IYVaultV3.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import { BaseYearnV3Strategy, IMaxApyVault, SafeTransferLib, console2 } from "src/strategies/base/BaseYearnV3Strategy.sol";
+import { IYVaultV3, BaseYearnV3Strategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseYearnV3Strategy.sol";
 import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
 import { DAI_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON } from "src/helpers/AddressBook.sol";
 
@@ -13,6 +12,7 @@ import { DAI_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON } from "src/helpers/A
 /// earning the Yearn Vault's yield
 contract YearnDAIStrategy is BaseYearnV3Strategy {
     using SafeTransferLib for address;
+    using Math for uint256;
 
     ////////////////////////////////////////////////////////////////
     ///                        CONSTANTS                         ///
@@ -145,10 +145,20 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
 
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
-
-        // Check max deposit just in case
+        
         uint256 maxDeposit = yVault.maxDeposit(address(this));
-        amount = Math.min(Math.min(amount, maxDeposit), maxSingleTrade);
+
+        // Scale up to 18 decimals
+
+        uint256 scaledAmount = amount.mulWad(1e12); 
+
+        uint256 scaledMaxSingleTrade = maxSingleTrade.mulWad(1e12); 
+
+        uint256 minAmount = Math.min(Math.min(scaledAmount, maxDeposit), scaledMaxSingleTrade);
+
+        // Scale back down to 6 decimals
+
+        amount = minAmount.divWad(1e12);
 
         uint256 balanceBefore = dai.balanceOf(address(this));
         // Swap the USDCe to base asset
