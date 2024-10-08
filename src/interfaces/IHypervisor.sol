@@ -5,132 +5,99 @@ import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import "./IAlgebraPool.sol";
 
 interface IHypervisor {
+    function deposit(uint256, uint256, address, address, uint256[4] memory minIn) external returns (uint256);
 
-  function deposit(
-      uint256,
-      uint256,
-      address,
-      address,
-      uint256[4] memory minIn
-  ) external returns (uint256);
+    function withdraw(uint256, address, address, uint256[4] memory) external returns (uint256, uint256);
 
-  function withdraw(
-    uint256,
-    address,
-    address,
-    uint256[4] memory
-  ) external returns (uint256, uint256);
+    function compound()
+        external
+        returns (uint128 baseToken0Owed, uint128 baseToken1Owed, uint128 limitToken0Owed, uint128 limitToken1Owed);
 
-  function compound() external returns (
+    function compound(uint256[4] memory inMin)
+        external
+        returns (uint128 baseToken0Owed, uint128 baseToken1Owed, uint128 limitToken0Owed, uint128 limitToken1Owed);
 
-    uint128 baseToken0Owed,
-    uint128 baseToken1Owed,
-    uint128 limitToken0Owed,
-    uint128 limitToken1Owed
-  );
+    function rebalance(
+        int24 _baseLower,
+        int24 _baseUpper,
+        int24 _limitLower,
+        int24 _limitUpper,
+        address _feeRecipient,
+        uint256[4] memory minIn,
+        uint256[4] memory outMin
+    )
+        external;
 
-  function compound(uint256[4] memory inMin) external returns (
+    function addBaseLiquidity(uint256 amount0, uint256 amount1, uint256[2] memory minIn) external;
 
-    uint128 baseToken0Owed,
-    uint128 baseToken1Owed,
-    uint128 limitToken0Owed,
-    uint128 limitToken1Owed
-  );
+    function addLimitLiquidity(uint256 amount0, uint256 amount1, uint256[2] memory minIn) external;
 
+    function pullLiquidity(
+        int24 tickLower,
+        int24 tickUpper,
+        uint128 shares,
+        uint256[2] memory amountMin
+    )
+        external
+        returns (uint256 base0, uint256 base1);
 
-  function rebalance(
-    int24 _baseLower,
-    int24 _baseUpper,
-    int24 _limitLower,
-    int24 _limitUpper,
-    address _feeRecipient,
-    uint256[4] memory minIn, 
-    uint256[4] memory outMin
-    ) external;
+    function pullLiquidity(
+        uint256 shares,
+        uint256[4] memory minAmounts
+    )
+        external
+        returns (uint256 base0, uint256 base1, uint256 limit0, uint256 limit1);
 
-  function addBaseLiquidity(
-    uint256 amount0, 
-    uint256 amount1,
-    uint256[2] memory minIn
-  ) external;
+    function addLiquidity(
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 amount0,
+        uint256 amount1,
+        uint256[2] memory inMin
+    )
+        external;
 
-  function addLimitLiquidity(
-    uint256 amount0, 
-    uint256 amount1,
-    uint256[2] memory minIn
-  ) external;   
+    function pool() external view returns (IAlgebraPool);
 
-  function pullLiquidity(
-    int24 tickLower,
-    int24 tickUpper,
-    uint128 shares,
-    uint256[2] memory amountMin
-  ) external returns (
-    uint256 base0,
-    uint256 base1
-  );
+    function currentTick() external view returns (int24 tick);
 
-  function pullLiquidity(
-    uint256 shares,
-    uint256[4] memory minAmounts 
-  ) external returns(
-      uint256 base0,
-      uint256 base1,
-      uint256 limit0,
-      uint256 limit1
-  );
+    function tickSpacing() external view returns (int24 spacing);
 
-  function addLiquidity(
-      int24 tickLower,
-      int24 tickUpper,
-      uint256 amount0,
-      uint256 amount1,
-      uint256[2] memory inMin
-  ) external;
+    function baseLower() external view returns (int24 tick);
 
+    function baseUpper() external view returns (int24 tick);
 
-  function pool() external view returns (IAlgebraPool);
+    function limitLower() external view returns (int24 tick);
 
-  function currentTick() external view returns (int24 tick);
-  
-  function tickSpacing() external view returns (int24 spacing);
+    function limitUpper() external view returns (int24 tick);
 
-  function baseLower() external view returns (int24 tick);
+    function token0() external view returns (IERC20);
 
-  function baseUpper() external view returns (int24 tick);
+    function token1() external view returns (IERC20);
 
-  function limitLower() external view returns (int24 tick);
+    function deposit0Max() external view returns (uint256);
 
-  function limitUpper() external view returns (int24 tick);
+    function deposit1Max() external view returns (uint256);
 
-  function token0() external view returns (IERC20);
+    function balanceOf(address) external view returns (uint256);
 
-  function token1() external view returns (IERC20);
+    function approve(address, uint256) external returns (bool);
 
-  function deposit0Max() external view returns (uint256);
+    function transferFrom(address, address, uint256) external returns (bool);
 
-  function deposit1Max() external view returns (uint256);
+    function transfer(address, uint256) external returns (bool);
 
-  function balanceOf(address) external view returns (uint256);
+    function getTotalAmounts() external view returns (uint256 total0, uint256 total1);
 
-  function approve(address, uint256) external returns (bool);
+    function getBasePosition() external view returns (uint256 liquidity, uint256 total0, uint256 total1);
 
-  function transferFrom(address, address, uint256) external returns (bool);
+    function totalSupply() external view returns (uint256);
 
-  function transfer(address, uint256) external returns (bool);
+    function setWhitelist(address _address) external;
 
-  function getTotalAmounts() external view returns (uint256 total0, uint256 total1);
-  
-  function getBasePosition() external view returns (uint256 liquidity, uint256 total0, uint256 total1);
+    function setFee(uint8 newFee) external;
 
-  function totalSupply() external view returns (uint256 );
+    function removeWhitelisted() external;
 
-  function setWhitelist(address _address) external;
-  
-  function setFee(uint8 newFee) external;
-  
-  function removeWhitelisted() external;
-
-  function transferOwnership(address newOwner) external;
-
+    function transferOwnership(address newOwner) external;
 }

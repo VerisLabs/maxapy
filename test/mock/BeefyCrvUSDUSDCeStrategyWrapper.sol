@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BeefyCrvUSDUSDCeStrategy, SafeTransferLib } from "src/strategies/polygon/USDCe/beefy/BeefyCrvUSDUSDCeStrategy.sol";
+import {
+    BeefyCrvUSDUSDCeStrategy, SafeTransferLib
+} from "src/strategies/polygon/USDCe/beefy/BeefyCrvUSDUSDCeStrategy.sol";
 
 contract BeefyCrvUSDUSDCeStrategyWrapper is BeefyCrvUSDUSDCeStrategy {
     using SafeTransferLib for address;

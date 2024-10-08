@@ -20,7 +20,6 @@ import { BeefyCrvUSDUSDCeStrategyWrapper } from "../../mock/BeefyCrvUSDUSDCeStra
 import { _1_USDCE } from "test/helpers/Tokens.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-
 contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     using SafeTransferLib for address;
 

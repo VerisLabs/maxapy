@@ -11,4 +11,4 @@ import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `BeefyCrvUSDUSDCeStrategy` supplies an underlying token into a generic Beefy Vault,
 /// earning the Beefy Vault's yield
-contract BeefyCrvUSDUSDCeStrategy is BaseBeefyCurveStrategy {}
+contract BeefyCrvUSDUSDCeStrategy is BaseBeefyCurveStrategy { }
