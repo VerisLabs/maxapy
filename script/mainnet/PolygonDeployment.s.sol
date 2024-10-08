@@ -19,15 +19,29 @@ import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 
-//// Strategiess
+// +------------+
+// | STRATEGIES |
+// +------------+
+// Yearn
 import { YearnAjnaUSDCStrategy } from "src/strategies/polygon/USDCe/yearn/YearnAjnaUSDCStrategy.sol";
-import { YearnCompoundUSDCeLenderStrategy } from
-    "src/strategies/polygon/USDCe/yearn/YearnCompoundUSDCeLenderStrategy.sol";
+import { YearnCompoundUSDCeLenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnCompoundUSDCeLenderStrategy.sol";
 import { YearnMaticUSDCStakingStrategy } from "src/strategies/polygon/USDCe/yearn/YearnMaticUSDCStakingStrategy.sol";
 import { YearnUSDCeLenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDCeLenderStrategy.sol";
 import { YearnUSDCeStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDCeStrategy.sol";
+import { YearnUSDTStrategy }  from "src/strategies/polygon/USDCe/yearn/YearnUSDTStrategy.sol";
+import { YearnDAIStrategy } from "src/strategies/polygon/USDCe/yearn/YearnDAIStrategy.sol";
+import { YearnDAILenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnDAILenderStrategy.sol";
 
-//// Helpers(Factory , Router)f
+// Convex
+import { ConvexUSDCCrvUSDStrategy } from "src/strategies/polygon/USDCe/convex/ConvexUSDCCrvUSDStrategy.sol";
+import { ConvexUSDTCrvUSDStrategy } from "src/strategies/polygon/USDCe/convex/ConvexUSDTCrvUSDStrategy.sol";
+
+// Beefy
+import { BeefyMaiUSDCeStrategy } from "src/strategies/polygon/USDCe/beefy/BeefyMaiUSDCeStrategy.sol";
+
+// +---------------------------+
+// | HELPERS(FACTORY , ROUTER) |
+// +---------------------------+
 import { MaxApyRouter } from "src/MaxApyRouter.sol";
 import { MaxApyVaultFactory } from "src/MaxApyVaultFactory.sol";
 
@@ -41,11 +55,18 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
     ////////////////////////////////////////////////////////////////
     // **********STRATS******************
     // USDCE
-    IStrategy public strategy1; // YeearnAjnaUSDC
-    IStrategy public strategy2; // YearnCompoundUSDCeLender
-    IStrategy public strategy3; // YearnMaticUSDCStraking
-    IStrategy public strategy4; // YearnUSDCeLender
-    IStrategy public strategy5; // YearnUSDCe
+    IStrategy public strategy1; // Yearn-Ajna USDC               | YearnAjnaUSDC 
+    IStrategy public strategy2; // Compound V3 USDC.e Lender     | YearnCompoundUSDCeLender 
+    IStrategy public strategy3; // Extra APR USDC (USDC.e)       | YearnMaticUSDCStaking 
+    IStrategy public strategy4; // Aave V3 USDC.e Lender         | YearnUSDCeLender 
+    IStrategy public strategy5; // USDC.e                        | YearnUSDCe 
+    
+    IStrategy public strategy6; // Beefy - MAI/USDC.e            | BeefyMaiUSDCeStrategy 
+    IStrategy public strategy7; // Convex - crvUSD+USDC.e        | ConvexUSDCCrvUSDStrategy 
+    IStrategy public strategy8; // Convex - crvUSD+USDT          | ConvexUSDTCrvUSDStrategy 
+    IStrategy public strategy9; // YearnV3 - USDT                | YearnUSDTStrategy 
+    IStrategy public strategy10; // YearnV3 - DAI                | YearnDAIStrategy 
+    IStrategy public strategy11; // YearnV3 - Aave V3 DAI Lender | YearnDAILenderStrategy   
 
     // **********ROLES*******************
     address[] keepers;
@@ -179,7 +200,7 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         strategy3.grantRoles(strategyAdmin, strategy3.ADMIN_ROLE());
         strategy3.grantRoles(strategyEmergencyAdmin, strategy3.EMERGENCY_ADMIN_ROLE());
 
-        // Strategy4(YeaarnUSDCeStrategy)
+        // Strategy4(YearnUSDCeStrategy)
         YearnUSDCeStrategy implementation4 = new YearnUSDCeStrategy();
         _proxy = new TransparentUpgradeableProxy(
             address(implementation4),
@@ -216,23 +237,154 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         strategy5 = IStrategy(address(proxy));
         strategy5.grantRoles(strategyAdmin, strategy5.ADMIN_ROLE());
         strategy5.grantRoles(strategyEmergencyAdmin, strategy5.EMERGENCY_ADMIN_ROLE());
+        
+        // Strategy6(BeefyMaiUSDCeStrategy)
+        BeefyMaiUSDCeStrategy implementation6 = new BeefyMaiUSDCeStrategy();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation6),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address,address)",
+                address(vaultUsdce),
+                keepers,
+                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                strategyAdmin,
+                CURVE_MAI_USDCE_POOL_POLYGON,
+                BEEFY_MAI_USDCE_POLYGON
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        strategy6 = IStrategy(address(proxy));
+        strategy6.grantRoles(strategyAdmin, strategy6.ADMIN_ROLE());
+        strategy6.grantRoles(strategyEmergencyAdmin, strategy6.EMERGENCY_ADMIN_ROLE());
 
-         // Add 13 strategies to the vault
-        vaultUsdce.addStrategy(address(strategy1), 1900, type(uint72).max, 0, 0);  // -
-        vaultUsdce.addStrategy(address(strategy2), 1900, type(uint72).max, 0, 0);  // -
-        vaultUsdce.addStrategy(address(strategy3), 1900, type(uint72).max, 0, 0);  // -
-        vaultUsdce.addStrategy(address(strategy4), 1900, type(uint72).max, 0, 0);  // -
-        vaultUsdce.addStrategy(address(strategy5), 1900, type(uint72).max, 0, 0);  // -
+        // Strategy7(crvUSD+USDC.e)
+        ConvexUSDCCrvUSDStrategy implementation7 = new ConvexUSDCCrvUSDStrategy();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation7),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address,address)",
+                address(vaultUsdce),
+                keepers,
+                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                strategyAdmin,
+                CURVE_CRVUSD_USDC_POOL_POLYGON,
+                UNISWAP_V3_ROUTER_POLYGON
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        strategy7 = IStrategy(address(proxy));
+        strategy7.grantRoles(strategyAdmin, strategy7.ADMIN_ROLE());
+        strategy7.grantRoles(strategyEmergencyAdmin, strategy7.EMERGENCY_ADMIN_ROLE());
+
+        // Strategy8(crvUSD+USDT)
+        ConvexUSDTCrvUSDStrategy implementation8 = new ConvexUSDTCrvUSDStrategy();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation8),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address,address)",
+                address(vaultUsdce),
+                keepers,
+                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                strategyAdmin,
+                CURVE_CRVUSD_USDT_POOL_POLYGON,
+                UNISWAP_V3_ROUTER_POLYGON
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        strategy8 = IStrategy(address(proxy));
+        strategy8.grantRoles(strategyAdmin, strategy8.ADMIN_ROLE());
+        strategy8.grantRoles(strategyEmergencyAdmin, strategy8.EMERGENCY_ADMIN_ROLE());
+
+        // Strategy9(YearnV3 USDT)
+        YearnUSDTStrategy implementation9 = new YearnUSDTStrategy();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation9),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address)",
+                address(vaultUsdce),
+                keepers,
+                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                strategyAdmin,
+                YEARN_USDT_MAINNET_YVAULT_POLYGON
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        strategy9 = IStrategy(address(proxy));
+        strategy9.grantRoles(strategyAdmin, strategy9.ADMIN_ROLE());
+        strategy9.grantRoles(strategyEmergencyAdmin, strategy9.EMERGENCY_ADMIN_ROLE());
+
+        // Strategy10(YearnV3 - DAI)
+        YearnDAIStrategy implementation10 = new YearnDAIStrategy();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation10),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address)",
+                address(vaultUsdce),
+                keepers,
+                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                strategyAdmin,
+                YEARN_DAI_POLYGON_VAULT_POLYGON
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        strategy10 = IStrategy(address(proxy));
+        strategy10.grantRoles(strategyAdmin, strategy10.ADMIN_ROLE());
+        strategy10.grantRoles(strategyEmergencyAdmin, strategy10.EMERGENCY_ADMIN_ROLE());
+
+        // Strategy11(YearnV3 - Aave V3 DAI Lender)
+        YearnDAILenderStrategy implementation11 = new YearnDAILenderStrategy();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation11),  
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address)",
+                address(vaultUsdce),
+                keepers,
+                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                strategyAdmin,
+                YEARN_DAI_LENDER_YVAULT_POLYGON
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        strategy11 = IStrategy(address(proxy));
+        strategy11.grantRoles(strategyAdmin, strategy11.ADMIN_ROLE());
+        strategy11.grantRoles(strategyEmergencyAdmin, strategy11.EMERGENCY_ADMIN_ROLE());
+
+        // Add 13 strategies to the vault
+        vaultUsdce.addStrategy(address(strategy1), 818, type(uint72).max, 0, 0);  
+        vaultUsdce.addStrategy(address(strategy2), 818, type(uint72).max, 0, 0);  
+        vaultUsdce.addStrategy(address(strategy3), 818, type(uint72).max, 0, 0);  
+        vaultUsdce.addStrategy(address(strategy4), 818, type(uint72).max, 0, 0);  
+        vaultUsdce.addStrategy(address(strategy5), 818, type(uint72).max, 0, 0);  
+        vaultUsdce.addStrategy(address(strategy6), 818, type(uint72).max, 0, 0);  
+        vaultUsdce.addStrategy(address(strategy7), 818, type(uint72).max, 0, 0);  
+        vaultUsdce.addStrategy(address(strategy8), 818, type(uint72).max, 0, 0);  
+        vaultUsdce.addStrategy(address(strategy9), 818, type(uint72).max, 0, 0);  
+        vaultUsdce.addStrategy(address(strategy10), 818, type(uint72).max, 0, 0);  
+        vaultUsdce.addStrategy(address(strategy11), 818, type(uint72).max, 0, 0);  
 
         console2.log("***************************DEPLOYMENT ADDRESSES**********************************");
         console2.log("[MAXAPY] Router :", address(router));
         console2.log("[MAXAPY] Factory :", address(vaultFactory));
+
         console2.log("[MAXAPY] USDCE Vault :", address(vaultUsdce));
         console2.log("[YEARN] AjnaUSDC:", address(strategy1));
         console2.log("[YEARN] CompoundUSDCeLender:", address(strategy2));
         console2.log("[YEARN] MaticUSDCStaking:", address(strategy3));
         console2.log("[YEARN] USDCeLender:", address(strategy4));
         console2.log("[YEARN] USDCe:", address(strategy5));
+        console2.log("[BEEFY] BeefyMaiUSDCeStrategy:", address(strategy6));
+        console2.log("[CONVEX] ConvexUSDCCrvUSDStrategy:", address(strategy7));
+        console2.log("[CONVEX] ConvexUSDTCrvUSDStrategy:", address(strategy8));
+        console2.log("[YEARN] YearnUSDTStrategy:", address(strategy9));
+        console2.log("[YEARN] YearnDAIStrategy:", address(strategy10));
+        console2.log("[YEARN] YearnDAILenderStrategy:", address(strategy11));
+
         console2.log("[MAX_APY_HARVESTER]:", address(harvester));
 
         // Simulate setup
@@ -269,12 +421,17 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
             0xa0Ee7A142d267C1f36714E4a8F75612F20a79720
         ];
 
+        console2.log("BANANINA_0", deployerAddress.balance/10**18, address(this).balance/10**18);
+
+
         for(uint i = 0; i < pks.length-1; i++) {
             console2.log("Transfering: ", accs[i].balance/10**18, "WMATIC to deployer");
             vm.stopBroadcast(); 
             vm.startBroadcast(pks[i]);
             payable(deployerAddress).transfer(accs[i].balance - 1 ether);
         }
+
+        console2.log("BANANINA_1", deployerAddress.balance/10**18, address(this).balance/10**18);
 
         vm.stopBroadcast(); 
         vm.startBroadcast(vm.envUint("DEPLOYER_PRIVATE_KEY"));
@@ -288,7 +445,7 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
 
         unirouter.exactInputSingle{value: amount}(
             IUniswapV3Router.ExactInputSingleParams({
-                tokenIn: WMATIC_POLYGON,
+                tokenIn: WPOL_POLYGON,
                 tokenOut: USDCE_POLYGON,
                 fee: 500,
                 recipient: deployerAddress,
@@ -299,31 +456,37 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
             })
         );
 
+        console2.log("BANANINA_2", deployerAddress.balance/10**18, address(this).balance/10**18);
+
         uint256 balanceUsdce = IERC20(USDCE_POLYGON).balanceOf(deployerAddress);
         console2.log("[balanceOf] deployer USDC.e",balanceUsdce/10**6);
 
         IERC20(USDCE_POLYGON).approve(address(vaultUsdce), type(uint256).max);
         vaultUsdce.deposit(balanceUsdce/2, address(1));
 
+        console2.log("BANANINA_3", deployerAddress.balance/10**18, address(this).balance/10**18);
+
         vm.stopBroadcast();
 
         uint256 keeperPrivateKey = vm.envUint("KEEPER1_PRIVATE_KEY");
         vm.startBroadcast(keeperPrivateKey);
 
-        // strategy1.harvest(0,0,address(vaultUsdce), type(uint256).max);
-        // strategy2.harvest(0,0,address(vaultUsdce), type(uint256).max);
-        // strategy3.harvest(0,0,address(vaultUsdce), type(uint256).max);
-        // strategy4.harvest(0,0,address(vaultUsdce), type(uint256).max);
-        // strategy5.harvest(0,0,address(vaultUsdce), type(uint256).max);
-
-        // HARVESTER TEST
-        MaxApyHarvester.HarvestData []memory harvestData = new MaxApyHarvester.HarvestData[](5);
+        // MAXHARVESTER TEST
+        MaxApyHarvester.HarvestData []memory harvestData = new MaxApyHarvester.HarvestData[](11);
         harvestData[0] = MaxApyHarvester.HarvestData(address(strategy1), 0, 0, block.timestamp + 1000);
         harvestData[1] = MaxApyHarvester.HarvestData(address(strategy2), 0, 0, block.timestamp + 1000);
         harvestData[2] = MaxApyHarvester.HarvestData(address(strategy3), 0, 0, block.timestamp + 1000);
         harvestData[3] = MaxApyHarvester.HarvestData(address(strategy4), 0, 0, block.timestamp + 1000);
         harvestData[4] = MaxApyHarvester.HarvestData(address(strategy5), 0, 0, block.timestamp + 1000);
+        harvestData[5] = MaxApyHarvester.HarvestData(address(strategy6), 0, 0, block.timestamp + 1000);
+        harvestData[6] = MaxApyHarvester.HarvestData(address(strategy7), 0, 0, block.timestamp + 1000);
+        harvestData[7] = MaxApyHarvester.HarvestData(address(strategy8), 0, 0, block.timestamp + 1000);
+        harvestData[8] = MaxApyHarvester.HarvestData(address(strategy9), 0, 0, block.timestamp + 1000);
+        harvestData[9] = MaxApyHarvester.HarvestData(address(strategy10), 0, 0, block.timestamp + 1000);
+        harvestData[10] = MaxApyHarvester.HarvestData(address(strategy11), 0, 0, block.timestamp + 1000);
 
         harvester.batchHarvests(harvestData);
+
+        console2.log("BANANINA_FINAL", deployerAddress.balance/10**18, address(this).balance/10**18);
     }
 }

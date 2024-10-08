@@ -163,15 +163,12 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
         uint256 balanceBefore = dai.balanceOf(address(this));
         // Swap the USDCe to base asset
         uint256 initialAmount = amount;
-        console2.log("depositedAssets: ", amount);
         zapper.exchange_underlying(1, 0, amount, 0, address(this));
 
         // Deposit into the underlying vault
         amount = dai.balanceOf(address(this)) - balanceBefore;
 
         uint256 shares = yVault.deposit(amount, address(this));
-        console2.log("finalAssets: ", _shareValue(shares));
-        console2.log("fulfilled percentage: ", 10_000*_shareValue(shares)/ initialAmount);
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
