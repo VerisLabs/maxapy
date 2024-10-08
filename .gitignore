@@ -20,3 +20,6 @@ lcov.info
 
 # Soldeer dependencies
 dependencies/
+
+DS_Store
+.DS_Store

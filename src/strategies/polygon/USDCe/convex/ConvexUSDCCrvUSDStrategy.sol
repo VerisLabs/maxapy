@@ -27,7 +27,7 @@ import {
     TRI_CRYPTO_POOL_POLYGON
 } from "src/helpers/AddressBook.sol";
 
-/// @title ConvexUSDCCrvUSDStrategy
+/// @title 
 /// @author MaxApy
 /// @notice `ConvexUSDCCrvUSDStrategy` supplies USDC into the crvUsd<>usdc pool in Curve, then stakes the curve LP
 /// in Convex in order to maximize yield.
