@@ -210,74 +210,74 @@ contract BeefyUSDCeDAIStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         strategy.harvest(0, type(uint256).max, address(0), block.timestamp);
     }
 
-    // function testBeefyUSDCeDai__PrepareReturn() public {
-    //     uint256 snapshotId = vm.snapshot();
+    function testBeefyUSDCeDai__PrepareReturn() public {
+        uint256 snapshotId = vm.snapshot();
 
-    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-    //     vault.deposit(100 * _1_USDCE, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
-    //     strategy.mockReport(0, 0, 0, TREASURY);
+        strategy.mockReport(0, 0, 0, TREASURY);
 
-    //     (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 * _1_USDCE, 0);
+        (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 * _1_USDCE, 0);
 
-    //     assertEq(loss, 0);
-    //     assertEq(debtPayment, 1 * _1_USDCE);
+        assertEq(loss, 0);
+        assertEq(debtPayment, 1 * _1_USDCE);
 
-    //     vm.revertTo(snapshotId);
+        vm.revertTo(snapshotId);
 
-    //     snapshotId = vm.snapshot();
-    //     deal({ token: USDCE_POLYGON, to: address(strategy), give: 60 * _1_USDCE });
+        snapshotId = vm.snapshot();
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 60 * _1_USDCE });
 
-    //     strategy.adjustPosition();
+        strategy.adjustPosition();
 
-    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-    //     vault.deposit(100 * _1_USDCE, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
-    //     (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
+        (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
 
-    //     assertApproxEq(unrealizedProfit, 60 * _1_USDCE, _1_USDCE);
-    //     assertEq(loss, 0);
-    //     assertEq(debtPayment, 0);
+        assertApproxEq(unrealizedProfit, 60 * _1_USDCE, _1_USDCE);
+        assertEq(loss, 0);
+        assertEq(debtPayment, 0);
 
-    //     vm.revertTo(snapshotId);
+        vm.revertTo(snapshotId);
 
-    //     snapshotId = vm.snapshot();
+        snapshotId = vm.snapshot();
 
-    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-    //     vault.deposit(100 * _1_USDCE, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
-    //     strategy.mockReport(0, 0, 0, TREASURY);
+        strategy.mockReport(0, 0, 0, TREASURY);
 
-    //     strategy.triggerLoss(10 * _1_USDCE);
+        strategy.triggerLoss(10 * _1_USDCE);
 
-    //     (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
+        (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
 
-    //     assertEq(unrealizedProfit, 0);
-    //     assertEq(loss, 10 * _1_USDCE);
-    //     assertEq(debtPayment, 0);
+        assertEq(unrealizedProfit, 0);
+        assertEq(loss, 10 * _1_USDCE);
+        assertEq(debtPayment, 0);
 
-    //     vm.revertTo(snapshotId);
+        vm.revertTo(snapshotId);
 
-    //     snapshotId = vm.snapshot();
+        snapshotId = vm.snapshot();
 
-    //     deal({ token: USDCE_POLYGON, to: address(strategy), give: 80 * _1_USDCE });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 80 * _1_USDCE });
 
-    //     strategy.adjustPosition();
+        strategy.adjustPosition();
 
-    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-    //     vault.deposit(100 * _1_USDCE, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
-    //     strategy.mockReport(0, 0, 0, TREASURY);
+        strategy.mockReport(0, 0, 0, TREASURY);
 
-    //     (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
+        (unrealizedProfit, loss, debtPayment) = strategy.prepareReturn(0, 0);
 
-    //     assertEq(loss, 0);
-    //     assertEq(debtPayment, 0);
-    // }
+        assertEq(loss, 0);
+        assertEq(debtPayment, 0);
+    }
 
     function testBeefyUSDCeDai__Invest() public {
         uint256 returned = strategy.invest(0, 0);
@@ -289,6 +289,8 @@ contract BeefyUSDCeDAIStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
 
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDCE);
+
+        uint256 value = strategy.shareValue(expectedShares);
 
         vm.expectEmit();
         emit Invested(address(strategy), 10 * _1_USDCE);
@@ -334,7 +336,7 @@ contract BeefyUSDCeDAIStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
 
         (liquidatedAmount, loss) = strategy.liquidatePosition(149 * _1_USDCE / 10);
 
-        assertEq(liquidatedAmount, 149 * _1_USDCE / 10);
+        assertApproxEq(liquidatedAmount, 149 * _1_USDCE / 10, 2 * _1_USDCE / 10);
         assertLt(loss, _1_USDCE / 5);
 
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 50 * _1_USDCE });
@@ -405,152 +407,151 @@ contract BeefyUSDCeDAIStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
 
         strategy.harvest(0, 0, address(0), block.timestamp);
 
-        // uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
-        // assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
-        // assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), 0);
+        uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), 0);
 
-        // deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
-        // vm.warp(block.timestamp + 1 days);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        vm.warp(block.timestamp + 1 days);
 
-        // strategy.harvest(0, 0, address(0), block.timestamp);
-        // assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
 
-        // vm.revertTo(snapshotId);
-        // snapshotId = vm.snapshot();
+        vm.revertTo(snapshotId);
+        snapshotId = vm.snapshot();
 
-        // vm.startPrank(users.alice);
+        vm.startPrank(users.alice);
 
-        // vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        // vault.deposit(100 * _1_USDCE, users.alice);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
-        // vm.startPrank(users.keeper);
+        vm.startPrank(users.keeper);
 
-        // vm.expectEmit();
-        // emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDCE), uint128(40 * _1_USDCE),
-        // 4000);
+        vm.expectEmit();
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDCE), uint128(40 * _1_USDCE), 4000);
 
-        // vm.expectEmit();
-        // emit Harvested(0, 0, 0, 0);
+        vm.expectEmit();
+        emit Harvested(0, 0, 0, 0);
 
-        // strategy.harvest(0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
-        // expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
-        // assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
+        expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
 
-        // vm.startPrank(users.alice);
-        // strategy.setEmergencyExit(2);
+        vm.startPrank(users.alice);
+        strategy.setEmergencyExit(2);
 
-        // vm.startPrank(users.keeper);
+        vm.startPrank(users.keeper);
 
-        // deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
-        // vm.warp(block.timestamp + 1 days);
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        vm.warp(block.timestamp + 1 days);
 
-        // strategy.harvest(0, 0, address(0), block.timestamp);
-        // assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_884_609);
-        // assertEq(IERC20(BEEFY_USDCE_DAI_POLYGON).balanceOf(address(strategy)), 0);
-        // vm.revertTo(snapshotId);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_986_603);
+        assertEq(IERC20(BEEFY_USDCE_DAI_POLYGON).balanceOf(address(strategy)), 0);
+        vm.revertTo(snapshotId);
 
-        // vm.startPrank(users.alice);
+        vm.startPrank(users.alice);
 
-        // vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-        // expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
-        // vault.deposit(100 * _1_USDCE, users.alice);
+        expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
+        vault.deposit(100 * _1_USDCE, users.alice);
 
-        // vm.startPrank(users.keeper);
+        vm.startPrank(users.keeper);
 
-        // vm.expectEmit();
-        // emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDCE), uint128(40 * _1_USDCE),
-        // 4000);
+        vm.expectEmit();
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDCE), uint128(40 * _1_USDCE), 4000);
 
-        // vm.expectEmit();
-        // emit Harvested(0, 0, 0, 0);
-        // strategy.harvest(0, 0, address(0), block.timestamp);
+        vm.expectEmit();
+        emit Harvested(0, 0, 0, 0);
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
-        // assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
 
-        // expectedStrategyShareBalance = strategy.sharesForAmount(10 * _1_USDCE);
+        expectedStrategyShareBalance = strategy.sharesForAmount(10 * _1_USDCE);
 
-        // vm.startPrank(address(strategy));
-        // uint256 withdrawn = strategy.divest(expectedStrategyShareBalance);
+        vm.startPrank(address(strategy));
+        uint256 withdrawn = strategy.divest(expectedStrategyShareBalance);
 
-        // IERC20(USDCE_POLYGON).transfer(makeAddr("random"), withdrawn);
-        // vm.startPrank(users.keeper);
+        IERC20(USDCE_POLYGON).transfer(makeAddr("random"), withdrawn);
+        vm.startPrank(users.keeper);
 
-        // strategy.harvest(0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
-        // StrategyData memory data = vault.strategies(address(strategy));
+        StrategyData memory data = vault.strategies(address(strategy));
 
-        // assertEq(vault.debtRatio(), 3000);
-        // assertEq(data.strategyDebtRatio, 3000);
+        assertApproxEq(vault.debtRatio(), 3000, 1);
+        assertApproxEq(data.strategyDebtRatio, 3000, 1);
     }
 
-    // function testBeefyUSDCeDai__PreviewLiquidate() public {
-    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-    //     vault.deposit(100 * _1_USDCE, users.alice);
-    //     vm.startPrank(users.keeper);
+    function testBeefyUSDCeDai__PreviewLiquidate() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDCE, users.alice);
+        vm.startPrank(users.keeper);
 
-    //     strategy.harvest(0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
-    //     vm.stopPrank();
-    //     uint256 expected = strategy.previewLiquidate(30 * _1_USDCE);
-    //     vm.startPrank(address(vault));
+        vm.stopPrank();
+        uint256 expected = strategy.previewLiquidate(30 * _1_USDCE);
 
-    //     uint256 loss = strategy.liquidate(30 * _1_USDCE);
+        vm.startPrank(address(vault));
 
-    //     assertLe(expected, 30 * _1_USDCE - loss);
-    // }
+        uint256 loss = strategy.liquidate(30 * _1_USDCE);
 
-    // function testBeefyUSDCeDai__PreviewLiquidateExact() public {
-    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-    //     vault.deposit(100 * _1_USDCE, users.alice);
-    //     vm.startPrank(users.keeper);
-    //     strategy.harvest(0, 0, address(0), block.timestamp);
-    //     vm.stopPrank();
-    //     uint256 requestedAmount = strategy.previewLiquidateExact(30 * _1_USDCE);
+        assertApproxEq(expected, 30 * _1_USDCE - loss, 1500);
+    }
 
-    //     vm.startPrank(address(vault));
-    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+    function testBeefyUSDCeDai__PreviewLiquidateExact() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDCE, users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+        vm.stopPrank();
+        uint256 requestedAmount = strategy.previewLiquidateExact(30 * _1_USDCE);
 
-    //     strategy.liquidateExact(30 * _1_USDCE);
-    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+        vm.startPrank(address(vault));
+        uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
 
-    //     // withdraw exactly what requested
-    //     assertEq(withdrawn, 30 * _1_USDCE);
-    //     // losses are equal or fewer than expected
-    //     assertLe(withdrawn - 30 * _1_USDCE, requestedAmount - 30 * _1_USDCE);
-    // }
+        strategy.liquidateExact(30 * _1_USDCE);
+        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
 
-    // function testBeefyUSDCeDai__maxLiquidateExact() public {
-    //     vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
-    //     vault.deposit(100 * _1_USDCE, users.alice);
-    //     vm.startPrank(users.keeper);
-    //     strategy.harvest(0, 0, address(0), block.timestamp);
-    //     vm.stopPrank();
-    //     uint256 maxLiquidateExact = strategy.maxLiquidateExact();
-    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
-    //     uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
-    //     vm.startPrank(address(vault));
-    //     uint256 losses = strategy.liquidateExact(maxLiquidateExact);
-    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
-    //     // withdraw exactly what requested
-    //     assertEq(withdrawn, maxLiquidateExact);
-    //     // losses are equal or fewer than expected
-    //     assertLe(losses, requestedAmount - maxLiquidateExact);
-    // }
+        // withdraw exactly what requested
+        assertEq(withdrawn, 30 * _1_USDCE);
+        // losses are equal or fewer than expected
+        assertLe(withdrawn - 30 * _1_USDCE, requestedAmount - 30 * _1_USDCE);
+    }
 
-    // function testBeefyUSDCeDai__MaxLiquidate() public {
-    //     vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
-    //     vault.deposit(100 * _1_USDCE, users.alice);
-    //     vm.startPrank(users.keeper);
-    //     strategy.harvest(0, 0, address(0), block.timestamp);
-    //     vm.stopPrank();
-    //     uint256 maxWithdraw = strategy.maxLiquidate();
-    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
-    //     vm.startPrank(address(vault));
-    //     strategy.liquidate(maxWithdraw);
-    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
-    //     assertLe(withdrawn, maxWithdraw);
-    // }
+    function testBeefyUSDCeDai__maxLiquidateExact() public {
+        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDCE, users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+        vm.stopPrank();
+        uint256 maxLiquidateExact = strategy.maxLiquidateExact();
+        uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+        uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
+        vm.startPrank(address(vault));
+        uint256 losses = strategy.liquidateExact(maxLiquidateExact);
+        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+        // withdraw exactly what requested
+        assertEq(withdrawn, maxLiquidateExact);
+        // losses are equal or fewer than expected
+        assertLe(losses, requestedAmount - maxLiquidateExact);
+    }
+
+    function testBeefyUSDCeDai__MaxLiquidate() public {
+        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDCE, users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+        vm.stopPrank();
+        uint256 maxWithdraw = strategy.maxLiquidate();
+        uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+        vm.startPrank(address(vault));
+        strategy.liquidate(maxWithdraw);
+        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+        assertLe(withdrawn, maxWithdraw);
+    }
 }

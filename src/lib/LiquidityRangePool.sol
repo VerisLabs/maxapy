@@ -1,11 +1,11 @@
-// SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8;
+// SPDX-License-Identifier: AGPL-3.0
+pragma solidity ^0.8.19;
 
-import { TokenDeltaMath } from "./TokenDeltaMath.sol";
 import { OracleLibrary } from "./OracleLibrary.sol";
+import { LiquidityTokenMath } from "./LiquidityTokenMath.sol";
 
-library AlgebraPool {
-    function _getAmountsForLiquidity(
+library LiquidityRangePool {
+    function computeTokenAmountsForLiquidity(
         int24 bottomTick,
         int24 topTick,
         int128 liquidityDelta,
@@ -18,14 +18,15 @@ library AlgebraPool {
     {
         // If current tick is less than the provided bottom one then only the token0 has to be provided
         if (currentTick < bottomTick) {
-            amount0 = TokenDeltaMath.getToken0Delta(
+            amount0 = LiquidityTokenMath.calculateToken0Delta(
                 OracleLibrary.getSqrtRatioAtTick(bottomTick), OracleLibrary.getSqrtRatioAtTick(topTick), liquidityDelta
             );
         } else if (currentTick < topTick) {
-            amount0 =
-                TokenDeltaMath.getToken0Delta(currentPrice, OracleLibrary.getSqrtRatioAtTick(topTick), liquidityDelta);
+            amount0 = LiquidityTokenMath.calculateToken0Delta(
+                currentPrice, OracleLibrary.getSqrtRatioAtTick(topTick), liquidityDelta
+            );
 
-            amount1 = TokenDeltaMath.getToken1Delta(
+            amount1 = LiquidityTokenMath.calculateToken1Delta(
                 OracleLibrary.getSqrtRatioAtTick(bottomTick), currentPrice, liquidityDelta
             );
 
@@ -33,7 +34,7 @@ library AlgebraPool {
         }
         // If current tick is greater than the provided top one then only the token1 has to be provided
         else {
-            amount1 = TokenDeltaMath.getToken1Delta(
+            amount1 = LiquidityTokenMath.calculateToken1Delta(
                 OracleLibrary.getSqrtRatioAtTick(bottomTick), OracleLibrary.getSqrtRatioAtTick(topTick), liquidityDelta
             );
         }

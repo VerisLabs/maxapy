@@ -1,29 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseBeefyStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
-import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IUniProxy } from "src/interfaces/IUniProxy.sol";
+import { OracleLibrary } from "src/lib/OracleLibrary.sol";
+import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
 import { IHypervisor } from "src/interfaces/IHypervisor.sol";
 import { IAlgebraPool } from "src/interfaces/IAlgebraPool.sol";
-import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
-import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import "src/helpers/AddressBook.sol";
 import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
-import { IUniswapV3Pool } from "src/interfaces/IUniswap.sol";
-import { OracleLibrary } from "src/lib/OracleLibrary.sol";
-
-import { AlgebraPool } from "src/lib/AlgebraPool.sol";
-import { SafeCast } from "src/lib/SafeCast.sol";
-
+import { LiquidityRangePool } from "src/lib/LiquidityRangePool.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { BaseBeefyStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
+import {
+    USDCE_POLYGON,
+    DAI_POLYGON,
+    CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON,
+    GAMMA_USDCE_DAI_HYPERVISOR_POLYGON,
+    ALGEBRA_POOL
+} from "src/helpers/AddressBook.sol";
 
 /// @title BeefyUSDCeDAIStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `BeefyUSDCeDAIStrategy` supplies an underlying token into a generic Beefy Vault,
 /// earning the Beefy Vault's yield
 contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
-    using SafeCast for uint128;
-
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
@@ -51,7 +50,9 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
-    /// @param _uniProxy The address of the strategy's main Curve pool, crvUsd<>usdt pool
+    /// @param _uniProxy The address of the gamma's main proxy contract used for depositing tokens
+    /// @param _hypervisor The address of gamma's hypervisor contract  used for withdrawing
+    /// @param _beefyVault The address of the underlying Beefy vault
     function initialize(
         IMaxApyVault _vault,
         address[] calldata _keepers,
@@ -78,7 +79,6 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
         dai.safeApprove(address(zapper), type(uint256).max);
 
         underlyingAsset.safeApprove(address(uniProxy), type(uint256).max);
-        dai.safeApprove(address(uniProxy), type(uint256).max);
 
         underlyingAsset.safeApprove(address(hypervisor), type(uint256).max);
         dai.safeApprove(address(hypervisor), type(uint256).max);
@@ -108,7 +108,7 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
     /// @notice Invests `amount` of underlying into the Beefy vault
     /// @dev
     /// @param amount The amount of underlying to be deposited in the pool
-    /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Curve LP tokens)
+    /// @param minOutputAfterInvestment minimum expected output after `_invest()`
     /// @return The amount of tokens received, in terms of underlying
     function _invest(uint256 amount, uint256 minOutputAfterInvestment) internal override returns (uint256) {
         // Don't do anything if amount to invest is 0
@@ -132,20 +132,14 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
         // Calculate how much USDCe should be swapped into DAI
         uint256 usdceToSwap = calculateUSDCeToSwap(amount, (amountStart + amountEnd) / 2);
 
-        //  6967206660395375756
-
         // step2 swap a part of usdce into dai
-
         zapper.exchange_underlying(1, 0, usdceToSwap, 0, address(this));
 
         //step3 deposit usdce and dai into gamma vault
-
         uint256[4] memory minOut = [uint256(0), uint256(0), uint256(0), uint256(0)];
         uint256 lpReceived;
 
         if (dai.balanceOf(address(this)) > 0 && underlyingAsset.balanceOf(address(this)) > 0) {
-            // uint256 LPs = uniProxy.deposit(underlyingAsset.balanceOf(address(this)), dai.balanceOf(address(this)),
-            // address(this), GAMMA_USDCE_DAI_HYPERVISOR_POLYGON, minOut);
             lpReceived = uniProxy.deposit(
                 underlyingAsset.balanceOf(address(this)),
                 dai.balanceOf(address(this)),
@@ -156,7 +150,6 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
         }
 
         //step4 deposit LP token into Beefy
-
         uint256 _before = beefyVault.balanceOf(address(this));
 
         // Deposit Curve LP tokens to Beefy vault
@@ -254,9 +247,9 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
         int24 limitLower = hypervisor.limitLower();
         int24 limitUpper = hypervisor.limitUpper();
 
-        uint128 L1 = _liquidityForShares(baseLower, baseUpper, lpTokenAmount);
+        uint128 L1 = computeLiquidityFromShares(baseLower, baseUpper, lpTokenAmount);
 
-        uint128 L2 = _liquidityForShares(limitLower, limitUpper, lpTokenAmount);
+        uint128 L2 = computeLiquidityFromShares(limitLower, limitUpper, lpTokenAmount);
 
         (uint256 base0, uint256 base1) = _CalcBurnLiquidity(baseLower, baseUpper, L1);
         (uint256 limit0, uint256 limit1) = _CalcBurnLiquidity(limitLower, limitUpper, L2);
@@ -273,7 +266,6 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
         uint256 amount1 = base1 + limit1 + unusedAmount1;
 
         _assets = zapper.get_dy_underlying(0, 1, amount1) + amount0;
-       
     }
 
     function _CalcBurnLiquidity(
@@ -287,8 +279,9 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
     {
         // Pool.burn
         (uint160 sqrtRatioX96, int24 globalTick,,,,,) = IAlgebraPool(ALGEBRA_POOL).globalState();
-        (int256 amount0Int, int256 amount1Int,) =
-            AlgebraPool._getAmountsForLiquidity(tickLower, tickUpper, int128(liquidity), globalTick, sqrtRatioX96);
+        (int256 amount0Int, int256 amount1Int,) = LiquidityRangePool.computeTokenAmountsForLiquidity(
+            tickLower, tickUpper, int128(liquidity), globalTick, sqrtRatioX96
+        );
 
         amount0 = uint256(amount0Int);
 
@@ -299,7 +292,7 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
         amount1 = _uint128Safe(amount1);
 
         //Pool.collect
-        (, uint128 positionFees0, uint128 positionFees1) = _position(tickLower, tickUpper);
+        (, uint128 positionFees0, uint128 positionFees1) = getPositionInfo(tickLower, tickUpper);
 
         if (positionFees0 > 0 && amount0 > positionFees0) {
             amount0 = positionFees0;
@@ -358,13 +351,6 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
         return zapper.get_dy_underlying(1, 0, usdceAmount);
     }
 
-    /// @notice Converts USDCe to USDT
-    /// @param daiAmount Amount of USDCe
-    /// @return Equivalent amount in USDT
-    function _convertDAIToUsdce(uint256 daiAmount) internal view returns (uint256) {
-        return zapper.get_dy_underlying(0, 1, daiAmount);
-    }
-
     // Gamma hypervisor internal functions
 
     /// @notice Get the liquidity amount for given liquidity tokens
@@ -372,10 +358,16 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
     /// @param tickUpper The upper tick of the position
     /// @param shares Shares of position
     /// @return The amount of liquidity toekn for shares
-    function _liquidityForShares(int24 tickLower, int24 tickUpper, uint256 shares) internal view returns (uint128) {
-        (uint128 position,,) = _position(tickLower, tickUpper);
-
-        uint128 tots = uint128(uint256(position) * shares / hypervisor.totalSupply());
+    function computeLiquidityFromShares(
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 shares
+    )
+        internal
+        view
+        returns (uint128)
+    {
+        (uint128 position,,) = getPositionInfo(tickLower, tickUpper);
 
         return uint128(uint256(position) * shares / hypervisor.totalSupply());
     }
@@ -386,7 +378,7 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
     // @return liquidity The amount of liquidity of the position
     // @return tokensOwed0 Amount of token0 owed
     // @return tokensOwed1 Amount of token1 owed
-    function _position(
+    function getPositionInfo(
         int24 tickLower,
         int24 tickUpper
     )
