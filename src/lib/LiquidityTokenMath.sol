@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import "./SafeCast.sol";
 import "./Constants.sol";
-import "./LowGasSafeMath.sol";
+import "solady-0.0.201/utils/SafeCastLib.sol";
 import "solady-0.0.201/utils/FixedPointMathLib.sol";
 
 /// @title Functions based on Q64.96 sqrt price and liquidity
 /// @notice Contains the math that uses square root of price as a Q64.96 and liquidity to compute deltas
 library LiquidityTokenMath {
-    using LowGasSafeMath for uint256;
-    using SafeCast for uint256;
+    using SafeCastLib for uint256;
 
     /// @notice Gets the token0 delta between two prices
     /// @dev Calculates liquidity / sqrt(lower) - liquidity / sqrt(upper)
@@ -34,21 +32,6 @@ library LiquidityTokenMath {
 
         require(priceDelta < priceUpper); // forbids underflow and 0 priceLower
         uint256 liquidityShifted = uint256(liquidity) << Constants.RESOLUTION;
-
-        //
-
-        // FixedPointMathLib.mulDivRoundingUp(priceDelta, liquidityShifted, priceUpper);
-
-        //
-
-        // FixedPointMathLib.divRoundingUp(FixedPointMathLib.mulDivRoundingUp(priceDelta, liquidityShifted, priceUpper),
-        // priceLower);
-
-        //
-
-        // FixedPointMathLib.mulDiv(priceDelta, liquidityShifted, priceUpper) / priceLower;
-
-        //
 
         token0Delta = roundUp
             ? FixedPointMathLib.divUp(FixedPointMathLib.fullMulDivUp(priceDelta, liquidityShifted, priceUpper), priceLower)
