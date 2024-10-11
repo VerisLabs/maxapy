@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseBeefyStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
 import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-
-import {console2} from "forge-std/console2.sol";
+import { BaseBeefyStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
 
 /// @title BaseBeefyCurveStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -202,11 +200,6 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
     /// @notice Returns the estimated price for the strategy's curve's LP token
     /// @return returns the estimated lp token price
     function _lpPrice() internal view returns (uint256) {
-        return (
-            (
-                curveLpPool.get_virtual_price()
-                    * curveLpPool.get_dy(0, 1, 1 ether)
-            ) / 1 ether
-        );
+        return ((curveLpPool.get_virtual_price() * curveLpPool.get_dy(0, 1, 1 ether)) / 1 ether);
     }
 }

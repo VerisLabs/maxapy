@@ -16,16 +16,16 @@ import { MaxApyVault } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { ConvexdETHFrxETHStrategyEvents } from "../../helpers/ConvexdETHFrxETHStrategyEvents.sol";
 import "src/helpers/AddressBook.sol";
-import { BeefyCrvUSDUSDCeStrategyWrapper } from "../../mock/BeefyCrvUSDUSDCeStrategyWrapper.sol";
-import { _1_USDCE } from "test/helpers/Tokens.sol";
+import { BeefyUSDCeDAIStrategyWrapper } from "../../mock/BeefyUSDCeDAIStrategyWrapper.sol";
+import { _1_USDCE, _1_DAI } from "test/helpers/Tokens.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
+contract BeefyUSDCeDAIStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     using SafeTransferLib for address;
 
     address public TREASURY;
     IStrategyWrapper public strategy;
-    BeefyCrvUSDUSDCeStrategyWrapper public implementation;
+    BeefyUSDCeDAIStrategyWrapper public implementation;
     MaxApyVault public vaultDeployment;
     IMaxApyVault public vault;
     ITransparentUpgradeableProxy public proxy;
@@ -42,7 +42,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         vault = IMaxApyVault(address(vaultDeployment));
 
         proxyAdmin = new ProxyAdmin(users.alice);
-        implementation = new BeefyCrvUSDUSDCeStrategyWrapper();
+        implementation = new BeefyUSDCeDAIStrategyWrapper();
 
         address[] memory keepers = new address[](1);
         keepers[0] = users.keeper;
@@ -50,13 +50,14 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
             address(implementation),
             address(proxyAdmin),
             abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address,address)",
+                "initialize(address,address[],bytes32,address,address,address,address)",
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy CrvUSD<>USDCe Strategy")),
+                bytes32(abi.encode("MaxApy USDCe<>DAI Strategy")),
                 users.alice,
-                CURVE_CRVUSD_USDCE_POOL_POLYGON,
-                BEEFY_CRVUSD_USDCE_POLYGON
+                GAMMA_USDCE_DAI_UNIPROXY_POLYGON,
+                GAMMA_USDCE_DAI_HYPERVISOR_POLYGON,
+                BEEFY_USDCE_DAI_POLYGON
             )
         );
         proxy = ITransparentUpgradeableProxy(address(_proxy));
@@ -69,11 +70,11 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
 
     /*==================INITIALIZATION TESTS==================*/
 
-    function testBeefyCrvUSDUSDCe__Initialization() public {
+    function testBeefyUSDCeDai__Initialization() public {
         MaxApyVault _vault = new MaxApyVault(users.alice, USDCE_POLYGON, "MaxApyUSDCEVault", "maxUSDCE", TREASURY);
 
         ProxyAdmin _proxyAdmin = new ProxyAdmin(users.alice);
-        BeefyCrvUSDUSDCeStrategyWrapper _implementation = new BeefyCrvUSDUSDCeStrategyWrapper();
+        BeefyUSDCeDAIStrategyWrapper _implementation = new BeefyUSDCeDAIStrategyWrapper();
 
         address[] memory keepers = new address[](1);
         keepers[0] = users.keeper;
@@ -82,13 +83,14 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
             address(_implementation),
             address(_proxyAdmin),
             abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address,address)",
+                "initialize(address,address[],bytes32,address,address,address,address)",
                 address(_vault),
                 keepers,
-                bytes32(abi.encode("MaxApy CrvUSD<>USDCe Strategy")),
+                bytes32(abi.encode("MaxApy USDCe<>DAI Strategy")),
                 users.alice,
-                CURVE_CRVUSD_USDCE_POOL_POLYGON,
-                BEEFY_CRVUSD_USDCE_POLYGON
+                GAMMA_USDCE_DAI_UNIPROXY_POLYGON,
+                GAMMA_USDCE_DAI_HYPERVISOR_POLYGON,
+                BEEFY_USDCE_DAI_POLYGON
             )
         );
 
@@ -102,11 +104,11 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
 
         assertEq(_strategy.owner(), users.alice);
-        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy CrvUSD<>USDCe Strategy")));
+        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy USDCe<>DAI Strategy")));
 
-        assertEq(_strategy.curveLpPool(), CURVE_CRVUSD_USDCE_POOL_POLYGON, "hereee");
+        assertEq(_strategy.uniProxy(), GAMMA_USDCE_DAI_UNIPROXY_POLYGON, "hereee");
         assertEq(
-            IERC20(USDCE_POLYGON).allowance(address(_strategy), CURVE_CRVUSD_USDCE_POOL_POLYGON), type(uint256).max
+            IERC20(USDCE_POLYGON).allowance(address(_strategy), GAMMA_USDCE_DAI_UNIPROXY_POLYGON), type(uint256).max
         );
 
         assertEq(_proxyAdmin.owner(), users.alice);
@@ -118,7 +120,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
 
     /*==================STRATEGY CONFIGURATION TESTS==================*/
 
-    function testBeefyCrvUSDUSDCe__SetEmergencyExit() public {
+    function testBeefyUSDCeDai__SetEmergencyExit() public {
         vm.stopPrank();
         vm.startPrank(users.bob);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -135,7 +137,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         strategy.setEmergencyExit(2);
     }
 
-    function testBeefyCrvUSDUSDCe__SetMinSingleTrade() public {
+    function testBeefyUSDCeDai__SetMinSingleTrade() public {
         vm.stopPrank();
         vm.startPrank(users.bob);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -154,7 +156,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertEq(strategy.minSingleTrade(), 1 * _1_USDCE);
     }
 
-    function testBeefyCrvUSDUSDCe__IsActive() public {
+    function testBeefyUSDCeDai__IsActive() public {
         vault.addStrategy(address(strategy), 10_000, 0, 0, 0);
         assertEq(strategy.isActive(), false);
 
@@ -166,7 +168,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertEq(strategy.isActive(), true);
         vm.stopPrank();
 
-        strategy.divest(IERC20(BEEFY_CRVUSD_USDCE_POLYGON).balanceOf(address(strategy)));
+        strategy.divest(IERC20(BEEFY_USDCE_DAI_POLYGON).balanceOf(address(strategy)));
         vm.startPrank(address(strategy));
         IERC20(USDCE_POLYGON).transfer(makeAddr("random"), IERC20(USDCE_POLYGON).balanceOf(address(strategy)));
         assertEq(strategy.isActive(), false);
@@ -177,7 +179,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertEq(strategy.isActive(), true);
     }
 
-    function testBeefyCrvUSDUSDCe__SetStrategist() public {
+    function testBeefyUSDCeDai__SetStrategist() public {
         // Negatives
         vm.startPrank(users.bob);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -196,7 +198,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
     }
 
     /*==================STRATEGY CORE LOGIC TESTS==================*/
-    function testBeefyCrvUSDUSDCe__InvestmentSlippage() public {
+    function testBeefyUSDCeDai__InvestmentSlippage() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
         vault.deposit(100 * _1_USDCE, users.alice);
@@ -208,7 +210,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         strategy.harvest(0, type(uint256).max, address(0), block.timestamp);
     }
 
-    function testBeefyCrvUSDUSDCe__PrepareReturn() public {
+    function testBeefyUSDCeDai__PrepareReturn() public {
         uint256 snapshotId = vm.snapshot();
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
@@ -277,10 +279,10 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertEq(debtPayment, 0);
     }
 
-    function testBeefyCrvUSDUSDCe__Invest() public {
+    function testBeefyUSDCeDai__Invest() public {
         uint256 returned = strategy.invest(0, 0);
         assertEq(returned, 0);
-        assertEq(IERC20(BEEFY_CRVUSD_USDCE_POLYGON).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(BEEFY_USDCE_DAI_POLYGON).balanceOf(address(strategy)), 0);
 
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFundsToInvest()"));
         returned = strategy.invest(1, 0);
@@ -288,16 +290,18 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDCE);
 
+        uint256 value = strategy.shareValue(expectedShares);
+
         vm.expectEmit();
         emit Invested(address(strategy), 10 * _1_USDCE);
         strategy.invest(10 * _1_USDCE, 0);
 
         assertApproxEq(
-            expectedShares, IERC20(BEEFY_CRVUSD_USDCE_POLYGON).balanceOf(address(strategy)), expectedShares / 100
+            expectedShares, IERC20(BEEFY_USDCE_DAI_POLYGON).balanceOf(address(strategy)), expectedShares / 100
         );
     }
 
-    function testBeefyCrvUSDUSDCe__Divest() public {
+    function testBeefyUSDCEDai__Divest() public {
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDCE);
 
@@ -306,16 +310,16 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         strategy.invest(10 * _1_USDCE, 0);
 
         assertApproxEq(
-            expectedShares, IERC20(BEEFY_CRVUSD_USDCE_POLYGON).balanceOf(address(strategy)), expectedShares / 100
+            expectedShares, IERC20(BEEFY_USDCE_DAI_POLYGON).balanceOf(address(strategy)), expectedShares / 100
         );
 
         uint256 strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
-        uint256 amountDivested = strategy.divest(IERC20(BEEFY_CRVUSD_USDCE_POLYGON).balanceOf(address(strategy)));
+        uint256 amountDivested = strategy.divest(IERC20(BEEFY_USDCE_DAI_POLYGON).balanceOf(address(strategy)));
 
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
     }
 
-    function testBeefyCrvUSDUSDCe__LiquidatePosition() public {
+    function testBeefyUSDCeDai__LiquidatePosition() public {
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(1 * _1_USDCE);
         assertEq(liquidatedAmount, 1 * _1_USDCE);
@@ -332,19 +336,19 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
 
         (liquidatedAmount, loss) = strategy.liquidatePosition(149 * _1_USDCE / 10);
 
-        assertEq(liquidatedAmount, 149 * _1_USDCE / 10);
+        assertApproxEq(liquidatedAmount, 149 * _1_USDCE / 10, 2 * _1_USDCE / 10);
         assertLt(loss, _1_USDCE / 5);
 
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 50 * _1_USDCE });
         invested = strategy.invest(50 * _1_USDCE, 0);
 
-        (liquidatedAmount, loss) = strategy.liquidatePosition(498 * _1_USDCE / 10);
+        (liquidatedAmount, loss) = strategy.liquidatePosition(50 * _1_USDCE);
 
-        assertEq(liquidatedAmount, 498 * _1_USDCE / 10);
+        assertApproxEq(liquidatedAmount, 50 * _1_USDCE, 15 * _1_USDCE / 1000);
         assertLt(loss, _1_USDCE / 5);
     }
 
-    function testBeefyCrvUSDUSDCe__LiquidateAllPositions() public {
+    function testBeefyUSDCeDai__LiquidateAllPositions() public {
         uint256 snapshotId = vm.snapshot();
 
         deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
@@ -353,7 +357,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         emit Invested(address(strategy), 10 * _1_USDCE);
         strategy.invest(10 * _1_USDCE, 0);
 
-        assertApproxEq(IERC20(BEEFY_CRVUSD_USDCE_POLYGON).balanceOf(address(strategy)), shares, shares / 100);
+        assertApproxEq(IERC20(BEEFY_USDCE_DAI_POLYGON).balanceOf(address(strategy)), shares, shares / 100);
 
         uint256 strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         uint256 amountFreed = strategy.liquidateAllPositions();
@@ -361,7 +365,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertApproxEq(amountFreed, 10 * _1_USDCE, 3 * _1_USDCE / 100);
 
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + amountFreed);
-        assertEq(IERC20(BEEFY_CRVUSD_USDCE_POLYGON).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(BEEFY_USDCE_DAI_POLYGON).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
 
@@ -372,7 +376,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         emit Invested(address(strategy), 500 * _1_USDCE);
         strategy.invest(500 * _1_USDCE, 0);
 
-        assertApproxEq(IERC20(BEEFY_CRVUSD_USDCE_POLYGON).balanceOf(address(strategy)), shares, 1.5 ether);
+        assertApproxEq(IERC20(BEEFY_USDCE_DAI_POLYGON).balanceOf(address(strategy)), shares, 1.5 ether);
 
         strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         amountFreed = strategy.liquidateAllPositions();
@@ -380,10 +384,10 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertApproxEq(amountFreed, 500 * _1_USDCE, 2 * _1_USDCE);
 
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + amountFreed);
-        assertEq(IERC20(BEEFY_CRVUSD_USDCE_POLYGON).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(BEEFY_USDCE_DAI_POLYGON).balanceOf(address(strategy)), 0);
     }
 
-    function testBeefyCrvUSDUSDCe__Harvest() public {
+    function testBeefyUSDCeDai__Harvest() public {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.harvest(0, 0, address(0), block.timestamp);
 
@@ -444,8 +448,8 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         vm.warp(block.timestamp + 1 days);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_997_161);
-        assertEq(IERC20(BEEFY_CRVUSD_USDCE_POLYGON).balanceOf(address(strategy)), 0);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_986_603);
+        assertEq(IERC20(BEEFY_USDCE_DAI_POLYGON).balanceOf(address(strategy)), 0);
         vm.revertTo(snapshotId);
 
         vm.startPrank(users.alice);
@@ -478,11 +482,11 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
 
         StrategyData memory data = vault.strategies(address(strategy));
 
-        assertEq(vault.debtRatio(), 3000);
-        assertEq(data.strategyDebtRatio, 3000);
+        assertApproxEq(vault.debtRatio(), 3000, 1);
+        assertApproxEq(data.strategyDebtRatio, 3000, 1);
     }
 
-    function testBeefyCrvUSDUSDCe__PreviewLiquidate() public {
+    function testBeefyUSDCeDai__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDCE, users.alice);
         vm.startPrank(users.keeper);
@@ -491,14 +495,15 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
 
         vm.stopPrank();
         uint256 expected = strategy.previewLiquidate(30 * _1_USDCE);
+
         vm.startPrank(address(vault));
 
         uint256 loss = strategy.liquidate(30 * _1_USDCE);
 
-        assertLe(expected, 30 * _1_USDCE - loss);
+        assertApproxEq(expected, 30 * _1_USDCE - loss, 1500);
     }
 
-    function testBeefyCrvUSDUSDCe__PreviewLiquidateExact() public {
+    function testBeefyUSDCeDai__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDCE, users.alice);
         vm.startPrank(users.keeper);
@@ -518,7 +523,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertLe(withdrawn - 30 * _1_USDCE, requestedAmount - 30 * _1_USDCE);
     }
 
-    function testBeefyCrvUSDUSDCe__maxLiquidateExact() public {
+    function testBeefyUSDCeDai__maxLiquidateExact() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDCE, users.alice);
         vm.startPrank(users.keeper);
@@ -536,7 +541,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertLe(losses, requestedAmount - maxLiquidateExact);
     }
 
-    function testBeefyCrvUSDUSDCe__MaxLiquidate() public {
+    function testBeefyUSDCeDai__MaxLiquidate() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDCE, users.alice);
         vm.startPrank(users.keeper);

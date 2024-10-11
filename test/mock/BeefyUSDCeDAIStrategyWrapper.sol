@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    BeefyCrvUSDUSDCeStrategy, SafeTransferLib
-} from "src/strategies/polygon/USDCe/beefy/BeefyCrvUSDUSDCeStrategy.sol";
+import { BeefyUSDCeDAIStrategy, SafeTransferLib } from "src/strategies/polygon/USDCe/beefy/BeefyUSDCeDAIStrategy.sol";
 
-contract BeefyCrvUSDUSDCeStrategyWrapper is BeefyCrvUSDUSDCeStrategy {
+contract BeefyUSDCeDAIStrategyWrapper is BeefyUSDCeDAIStrategy {
     using SafeTransferLib for address;
 
     function triggerLoss(uint256 amount) external {
@@ -58,7 +56,7 @@ contract BeefyCrvUSDUSDCeStrategyWrapper is BeefyCrvUSDUSDCeStrategy {
         return _shareBalance();
     }
 
-    function lpPrice() external view returns (uint256) {
-        return _lpPrice();
-    }
+    // function lpPrice() external view returns (uint256) {
+    //     return _lpPrice();
+    // }
 }
