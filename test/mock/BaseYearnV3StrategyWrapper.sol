@@ -1,10 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseYearnV3Strategy, SafeTransferLib } from "src/strategies/base/BaseYearnV3Strategy.sol";
+import { IMaxApyVault, IYVaultV3, BaseYearnV3Strategy, SafeTransferLib } from "src/strategies/base/BaseYearnV3Strategy.sol";
 
 contract BaseYearnV3StrategyWrapper is BaseYearnV3Strategy {
     using SafeTransferLib for address;
+    
+    function initialize(
+        IMaxApyVault _vault,
+        address[] calldata _keepers,
+        bytes32 _strategyName,
+        address _strategist,
+        IYVaultV3 _yVault
+    )
+        public
+        virtual
+        override
+        initializer
+    {
+        __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
+        yVault = _yVault;
+
+        underlyingAsset.safeApprove(address(yVault), type(uint256).max);
+            
+        /// Unlimited max single trade by default
+        maxSingleTrade = type(uint256).max;
+    }
 
     function investYearn(uint256 amount) external returns (uint256) {
         return yVault.deposit(amount, address(this));

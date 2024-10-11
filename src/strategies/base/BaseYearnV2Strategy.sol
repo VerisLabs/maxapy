@@ -91,8 +91,6 @@ contract BaseYearnV2Strategy is BaseStrategy {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         yVault = _yVault;
 
-        /// Approve Yearn Vault to transfer underlying
-
         /// Mininmum single trade is 0.01 token units
         minSingleTrade = 10 ** IERC20Metadata(underlyingAsset).decimals() / 100;
 
