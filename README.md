@@ -74,6 +74,7 @@ src/
                 ├── YearnUSDCeLenderStrategy.sol
                 ├── YearnUSDCeStrategy.sol
                 └── YearnUSDTStrategy.sol```
+```
 
 ## Installation
 
