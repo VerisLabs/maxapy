@@ -81,7 +81,7 @@ contract MaxApyHarvester is OwnableRoles {
 
         // Iterate through each keeper in the array in order to grant roles.
         for (uint256 i = 0; i < length;) {
-            _grantRoles(keepers[i], KEEPER_ROLE);
+                (keepers[i], KEEPER_ROLE);
 
             unchecked {
                 ++i;
