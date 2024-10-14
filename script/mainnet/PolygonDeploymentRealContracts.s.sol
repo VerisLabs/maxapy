@@ -5,6 +5,7 @@ import { MaxApyHarvester } from "src/periphery/MaxApyHarvester.sol";
 import "src/interfaces/IUniswap.sol";
 
 import "forge-std/Script.sol";
+import "forge-std/Test.sol";
 import {
     TransparentUpgradeableProxy,
     ITransparentUpgradeableProxy
@@ -17,26 +18,6 @@ import { MaxApyVault, OwnableRoles } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
-
-// +------------+
-// | STRATEGIES |
-// +------------+
-// Yearn
-import { YearnAjnaUSDCStrategy } from "src/strategies/polygon/USDCe/yearn/YearnAjnaUSDCStrategy.sol";
-import { YearnCompoundUSDCeLenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnCompoundUSDCeLenderStrategy.sol";
-import { YearnMaticUSDCStakingStrategy } from "src/strategies/polygon/USDCe/yearn/YearnMaticUSDCStakingStrategy.sol";
-import { YearnUSDCeLenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDCeLenderStrategy.sol";
-import { YearnUSDCeStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDCeStrategy.sol";
-import { YearnUSDTStrategy }  from "src/strategies/polygon/USDCe/yearn/YearnUSDTStrategy.sol";
-import { YearnDAIStrategy } from "src/strategies/polygon/USDCe/yearn/YearnDAIStrategy.sol";
-import { YearnDAILenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnDAILenderStrategy.sol";
-
-// Convex
-import { ConvexUSDCCrvUSDStrategy } from "src/strategies/polygon/USDCe/convex/ConvexUSDCCrvUSDStrategy.sol";
-import { ConvexUSDTCrvUSDStrategy } from "src/strategies/polygon/USDCe/convex/ConvexUSDTCrvUSDStrategy.sol";
-
-// Beefy
-import { BeefyMaiUSDCeStrategy } from "src/strategies/polygon/USDCe/beefy/BeefyMaiUSDCeStrategy.sol";
 
 // +---------------------------+
 // | HELPERS(FACTORY , ROUTER) |
@@ -70,11 +51,6 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
     // **********LOCAL VARIABLES*****************
     // use storage variables to avoid stack too deep
     MaxApyVault vaultUsdce = MaxApyVault(0xbc45ee5275fC1FaEB129b755C67fc6Fc992109DE);
-    MaxApyHarvester harvester = MaxApyHarvester(payable(0x22B2a952Db13b9B326437a7AAc05345b071f179f));
-    ITransparentUpgradeableProxy proxy;
-    address factoryAdmin;
-    address factoryDeployer;
-
 
     ////////////////////////////////////////////////////////////////
     ///                      SETUP                               ///
@@ -83,46 +59,34 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
     function run() public {
         // use another private key here, dont use a keeper account for deployment
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployerAddress = vm.envAddress("DEPLOYER_ADDRESS");          
+        address payable deployerAddress = payable(vm.envAddress("DEPLOYER_ADDRESS"));
+        uint256 adminPrivateKey = vm.envUint("ADMIN_PRIVATE_KEY");
+        address payable adminAddress = payable(vm.envAddress("ADMIN_ADDRESS"));
         bool isFork = vm.envBool("FORK");
 
         if (isFork) {
             revert("fork setup, set isFork to FALSE!");
         }
 
-        vm.startBroadcast(deployerPrivateKey);
-
-        /// Deploy router
-        console2.log("***************************DEPLOYMENT ADDRESSES**********************************");
-
-        console2.log("[MAXAPY] USDCE Vault :", address(vaultUsdce));
-        console2.log("[YEARN] AjnaUSDC:", address(strategy1));
-        console2.log("[YEARN] CompoundUSDCeLender:", address(strategy2));
-        console2.log("[YEARN] MaticUSDCStaking:", address(strategy3));
-        console2.log("[YEARN] USDCeLender:", address(strategy4));
-        console2.log("[YEARN] USDCe:", address(strategy5));
-        console2.log("[BEEFY] BeefyMaiUSDCeStrategy:", address(strategy6));
-        console2.log("[CONVEX] ConvexUSDCCrvUSDStrategy:", address(strategy7));
-        console2.log("[CONVEX] ConvexUSDTCrvUSDStrategy:", address(strategy8));
-        console2.log("[YEARN] YearnUSDTStrategy:", address(strategy9));
-        console2.log("[YEARN] YearnDAIStrategy:", address(strategy10));
-        console2.log("[YEARN] YearnDAILenderStrategy:", address(strategy11));
-
-        console2.log("[MAX_APY_HARVESTER]:", address(harvester));
-
         // Setup Protocol                                               
         IUniswapV3Router unirouter = IUniswapV3Router(0xE592427A0AEce92De3Edee1F18E0157C05861564);
-        IWrappedToken wrapped_matic = IWrappedToken(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
+        IWrappedToken wrapped_pol = IWrappedToken(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
 
-        vm.stopBroadcast();                  
-        vm.startBroadcast(vm.envUint("DEPLOYER_PRIVATE_KEY"));
-        uint256 amount = 500_000 ether; //matic
+        vm.startBroadcast(deployerPrivateKey);
+        uint256 tAmount = 500_000 ether; //matic
+        uint256 amount = 150_000 ether; //matic
 
         console2.log("balance:", deployerAddress.balance/10**18);
         console2.log("amount:", amount/10**18);
-
-        wrapped_matic.deposit{value: amount}();
-        wrapped_matic.approve(address(unirouter), amount);
+         
+        vm.deal(deployerAddress, tAmount);
+        console2.log("balance:", deployerAddress.balance/10**18);
+        
+        // transfer 1 eth to admin for gas
+        adminAddress.transfer(1 ether);
+        
+        wrapped_pol.deposit{value: amount}();
+        wrapped_pol.approve(address(unirouter), amount);
 
         unirouter.exactInputSingle{value: amount}(
             IUniswapV3Router.ExactInputSingleParams({
@@ -141,27 +105,21 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         console2.log("[balanceOf] deployer USDCE", balanceUsdce/10**6);
 
         IERC20(USDCE_POLYGON).approve(address(vaultUsdce), type(uint256).max);
-        vaultUsdce.deposit(balanceUsdce/2, address(1));
-
-        vm.stopBroadcast();
-
-        // ADD STRATEGIES TO VAULT
-        vm.deal(vm.envAddress("ADMIN_ADDRESS"), 100_000 ether);
+        vaultUsdce.deposit(balanceUsdce, deployerAddress);
         
-        vm.startBroadcast(vm.envUint("ADMIN_PRIVATE_KEY")); 
-
+        vm.stopBroadcast();
+        vm.startBroadcast(adminPrivateKey);
+        vm.deal(adminAddress, tAmount);
         vaultUsdce.addStrategy(address(strategy1), 818, type(uint256).max, 0, 0);   
         vaultUsdce.addStrategy(address(strategy2), 818, type(uint256).max, 0, 0);
         vaultUsdce.addStrategy(address(strategy3), 818, type(uint256).max, 0, 0);
         vaultUsdce.addStrategy(address(strategy4), 818, type(uint256).max, 0, 0);
         vaultUsdce.addStrategy(address(strategy5), 818, type(uint256).max, 0, 0);
         vaultUsdce.addStrategy(address(strategy6), 818, type(uint256).max, 0, 0);
-        vaultUsdce.addStrategy(address(strategy7), 818, type(uint256).max, 0, 0);
         vaultUsdce.addStrategy(address(strategy8), 818, type(uint256).max, 0, 0);
         vaultUsdce.addStrategy(address(strategy9), 818, type(uint256).max, 0, 0);
         vaultUsdce.addStrategy(address(strategy10), 818, type(uint256).max, 0, 0);
         vaultUsdce.addStrategy(address(strategy11), 818, type(uint256).max, 0, 0);
-        
         vm.stopBroadcast();                            
     }
 }

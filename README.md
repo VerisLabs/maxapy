@@ -178,7 +178,7 @@ source .env
 Run the local fork:
 
 ```sh
-anvil --fork-url $RPC_POLYGON --fork-block-number 63021705 --accounts 10 --balance 10000000000000000
+anvil --fork-url $RPC_POLYGON --fork-block-number 63038403 --accounts 10 --balance 10000000000000000000
 ```
 
 **Note:** It's recommended using one of the private keys provided by anvil for testing
