@@ -41,8 +41,6 @@ import { BeefyMaiUSDCeStrategy } from "src/strategies/polygon/USDCe/beefy/BeefyM
 // +---------------------------+
 // | HELPERS(FACTORY , ROUTER) |
 // +---------------------------+
-import { MaxApyRouter } from "src/MaxApyRouter.sol";
-
 import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
 import "src/helpers/AddressBook.sol";
 
@@ -53,14 +51,14 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
     ////////////////////////////////////////////////////////////////
     // **********STRATS******************
     // USDCE
-    address constant strategy1 = 0x17365C38aDf84d3195B3470ce87493BFA75f28a9; // Yearn-Ajna USDC | YearnAjnaUSDC 
+    address constant strategy1 = 0x17365C38aDf84d3195B3470ce87493BFA75f28a9; // Yearn-Ajna USDC               | YearnAjnaUSDC
     address constant strategy2 = 0x2719aeb131Ba2Fb7F8d35c5C684CD14fABF1F1f5; // Compound V3 USDC.e Lender     | YearnCompoundUSDCeLender 
     address constant strategy3 = 0x3243C319376696b61F1998C969e9d96529988C27; // Extra APR USDC (USDC.e)       | YearnMaticUSDCStaking 
     address constant strategy4 = 0xfEf651Fea0a20420dB94B86f9459e161320250C9; // Aave V3 USDC.e Lender         | YearnUSDCeLender 
     address constant strategy5 = 0x6Cf9d942185FEeE8608860859B5982CA4895Aa0b; // USDC.e                        | YearnUSDCe 
     
     address constant strategy6 = 0x3A2D48a58504333AA1021085F23cA38f85A7C43e; // Beefy - MAI/USDC.e            | BeefyMaiUSDCeStrategy 
-    address constant strategy7 = 0xE2eB586C9ECA6C9838887Bd059449567b9E40C4e; // Convex - crvUSD+USDC.e        | ConvexUSDCCrvUSDStrategy 
+    address constant strategy7 = 0xE2eB586C9ECA6C9838887Bd059449567b9E40C4e; // Convex - crvUSD+USDC          | ConvexUSDCCrvUSDStrategy 
     address constant strategy8 = 0x3fbC5a7dF84464997Bf7e92a970Ae324E8a07218; // Convex - crvUSD+USDT          | ConvexUSDTCrvUSDStrategy 
     address constant strategy9 = 0x6aC1B938401a0F41AbA07cB6bE8a3fadB6D280D8; // YearnV3 - USDT                | YearnUSDTStrategy 
     address constant strategy10 = 0xF21F0101c786C08e243c7aC216d0Dd57D1a27531; // YearnV3 - DAI                | YearnDAIStrategy
@@ -74,12 +72,6 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
     MaxApyVault vaultUsdce = MaxApyVault(0xbc45ee5275fC1FaEB129b755C67fc6Fc992109DE);
     MaxApyHarvester harvester = MaxApyHarvester(payable(0x22B2a952Db13b9B326437a7AAc05345b071f179f));
     ITransparentUpgradeableProxy proxy;
-    address vaultAdmin;
-    address vaultEmergencyAdmin;
-    address strategyAdmin;
-    address strategyEmergencyAdmin;
-    address treasury;
-    MaxApyRouter router;
     address factoryAdmin;
     address factoryDeployer;
 
@@ -91,16 +83,7 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
     function run() public {
         // use another private key here, dont use a keeper account for deployment
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployerAddress = vm.envAddress("DEPLOYER_ADDRESS");                    
-
-        vaultAdmin = vm.envAddress("VAULT_ADMIN_ADDRESS");
-
-        vaultEmergencyAdmin = vm.envAddress("VAULT_EMERGENCY_ADMIN_ADDRESS");
-        strategyAdmin = vm.envAddress("STRATEGY_ADMIN_ADDRESS");
-        strategyEmergencyAdmin = vm.envAddress("STRATEGY_EMERGENCY_ADMIN_ADDRESS");
-        factoryAdmin = vm.envAddress("FACTORY_ADMIN");
-        factoryDeployer = vm.envAddress("FACTORY_DEPLOYER");
-        treasury = vm.envAddress("TREASURY_ADDRESS_POLYGON");
+        address deployerAddress = vm.envAddress("DEPLOYER_ADDRESS");          
         bool isFork = vm.envBool("FORK");
 
         if (isFork) {
@@ -110,10 +93,7 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         vm.startBroadcast(deployerPrivateKey);
 
         /// Deploy router
-        router = new MaxApyRouter(IWrappedToken(USDCE_POLYGON));
-
         console2.log("***************************DEPLOYMENT ADDRESSES**********************************");
-        console2.log("[MAXAPY] Router :", address(router));
 
         console2.log("[MAXAPY] USDCE Vault :", address(vaultUsdce));
         console2.log("[YEARN] AjnaUSDC:", address(strategy1));
@@ -165,9 +145,11 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
 
         vm.stopBroadcast();
 
-        // MAXHARVESTER TEST
-        vm.startBroadcast(vm.envUInt("ADMIN_PRIVATE_KEY"));             
+        // ADD STRATEGIES TO VAULT
+        vm.deal(vm.envAddress("ADMIN_ADDRESS"), 100_000 ether);
         
+        vm.startBroadcast(vm.envUint("ADMIN_PRIVATE_KEY")); 
+
         vaultUsdce.addStrategy(address(strategy1), 818, type(uint256).max, 0, 0);   
         vaultUsdce.addStrategy(address(strategy2), 818, type(uint256).max, 0, 0);
         vaultUsdce.addStrategy(address(strategy3), 818, type(uint256).max, 0, 0);
@@ -180,26 +162,6 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         vaultUsdce.addStrategy(address(strategy10), 818, type(uint256).max, 0, 0);
         vaultUsdce.addStrategy(address(strategy11), 818, type(uint256).max, 0, 0);
         
-        vm.stopBroadcast();
-
-        // > RUN FROM BACKEND!!!
-        // WE DO NOT RUN THIS AS WE DO NOT HAVE THE PRIVATE KEY FOR KEEPER
-        // vm.startBroadcast(0xfdf5B1aA4587fC02689d09A730fd80A72fdd940c);   
-
-        // MaxApyHarvester.HarvestData []memory harvestData = new MaxApyHarvester.HarvestData[](11);                   
-        // harvestData[0] = MaxApyHarvester.HarvestData(address(strategy1), 0, 0, block.timestamp + 1000);
-        // harvestData[1] = MaxApyHarvester.HarvestData(address(strategy2), 0, 0, block.timestamp + 1000);
-        // harvestData[2] = MaxApyHarvester.HarvestData(address(strategy3), 0, 0, block.timestamp + 1000);
-        // harvestData[3] = MaxApyHarvester.HarvestData(address(strategy4), 0, 0, block.timestamp + 1000);
-        // harvestData[4] = MaxApyHarvester.HarvestData(address(strategy5), 0, 0, block.timestamp + 1000);
-        // harvestData[5] = MaxApyHarvester.HarvestData(address(strategy6), 0, 0, block.timestamp + 1000);
-        // harvestData[6] = MaxApyHarvester.HarvestData(address(strategy7), 0, 0, block.timestamp + 1000);
-        // harvestData[7] = MaxApyHarvester.HarvestData(address(strategy8), 0, 0, block.timestamp + 1000);
-        // harvestData[8] = MaxApyHarvester.HarvestData(address(strategy9), 0, 0, block.timestamp + 1000);
-        // harvestData[9] = MaxApyHarvester.HarvestData(address(strategy10), 0, 0, block.timestamp + 1000);
-        // harvestData[10] = MaxApyHarvester.HarvestData(address(strategy11), 0, 0, block.timestamp + 1000);
-
-        // harvester.batchHarvests(harvestData);
-        // vm.stopBroadcast();                               
+        vm.stopBroadcast();                            
     }
 }

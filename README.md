@@ -178,13 +178,13 @@ source .env
 Run the local fork:
 
 ```sh
-anvil --fork-url $RPC_MAINNET  --fork-block-number $FORK_BLOCK_NUMBER --accounts 10
+anvil --fork-url $RPC_POLYGON --fork-block-number 63021705 --accounts 10 --balance 10000000000000000
 ```
 
 **Note:** It's recommended using one of the private keys provided by anvil for testing
 
 ```sh
-forge script script/local/MaxApy.s.sol:DeploymentScript --fork-url http://localhost:8545 --etherscan-api-key $ETHERSCAN_API_KEY --broadcast -vvv --legacy
+forge script script/mainnet/PolygonDeploymentRealContracts.s.sol:PolygonDeploymentScript --fork-url http://localhost:8545 --etherscan-api-key $ETHERSCAN_API_KEY --broadcast -vv
 ```
 
 ### Interacting with the local fork
