@@ -45,9 +45,6 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
     address constant strategy10 = 0xF21F0101c786C08e243c7aC216d0Dd57D1a27531; // YearnV3 - DAI                | YearnDAIStrategy
     address constant strategy11 = 0xc30829f8Cc96114220194a2D29b9D44AB2c14285; // YearnV3 - Aave V3 DAI Lender | YearnDAILenderStrategy   
 
-    // **********ROLES*******************
-    address[] keepers;
-
     // **********LOCAL VARIABLES*****************
     // use storage variables to avoid stack too deep
     MaxApyVault vaultUsdce = MaxApyVault(0xbc45ee5275fC1FaEB129b755C67fc6Fc992109DE);
@@ -73,17 +70,13 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         IWrappedToken wrapped_pol = IWrappedToken(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
 
         vm.startBroadcast(deployerPrivateKey);
-        uint256 tAmount = 500_000 ether; //matic
-        uint256 amount = 150_000 ether; //matic
+        uint256 amount = 1_500_000 ether; //matic
 
         console2.log("balance:", deployerAddress.balance/10**18);
         console2.log("amount:", amount/10**18);
          
-        vm.deal(deployerAddress, tAmount);
-        console2.log("balance:", deployerAddress.balance/10**18);
-        
-        // transfer 1 eth to admin for gas
-        adminAddress.transfer(1 ether);
+        // transfer 10 eth to admin for gas
+        adminAddress.transfer(10 ether);
         
         wrapped_pol.deposit{value: amount}();
         wrapped_pol.approve(address(unirouter), amount);
@@ -109,7 +102,6 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         
         vm.stopBroadcast();
         vm.startBroadcast(adminPrivateKey);
-        vm.deal(adminAddress, tAmount);
         vaultUsdce.addStrategy(address(strategy1), 818, type(uint256).max, 0, 0);   
         vaultUsdce.addStrategy(address(strategy2), 818, type(uint256).max, 0, 0);
         vaultUsdce.addStrategy(address(strategy3), 818, type(uint256).max, 0, 0);
