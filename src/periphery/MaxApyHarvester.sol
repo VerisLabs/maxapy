@@ -41,7 +41,6 @@ contract MaxApyHarvester is OwnableRoles {
     ////////////////////////////////////////////////////////////////
     uint256 public constant ADMIN_ROLE = _ROLE_0;
     uint256 public constant KEEPER_ROLE = _ROLE_1;
-    uint256 public constant ALLOCATOR_ROLE = _ROLE_2;
     address public constant DEFAULT_HARVESTER = address(0);
 
     ////////////////////////////////////////////////////////////////
@@ -59,7 +58,7 @@ contract MaxApyHarvester is OwnableRoles {
     /// @dev Constructor to set the initial state of the contract.
     /// @param admin Contract admin
     /// @param keepers The addresses that will be added to a keeper role
-    constructor(address admin, address[] memory keepers, address[] memory allocators) {
+    constructor(address admin, address[] memory keepers) {
         // loop to add the keepers to a mapping
         _initializeOwner(admin);
         _grantRoles(admin, ADMIN_ROLE);
@@ -69,17 +68,6 @@ contract MaxApyHarvester is OwnableRoles {
         // Iterate through each keeper in the array in order to grant roles.
         for (uint256 i = 0; i < length;) {
             _grantRoles(keepers[i], KEEPER_ROLE);
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        length = allocators.length;
-
-        // Iterate through each allocator in the array in order to grant roles.
-        for (uint256 i = 0; i < length;) {
-            _grantRoles(allocators[i], ALLOCATOR_ROLE);
 
             unchecked {
                 ++i;
@@ -133,7 +121,7 @@ contract MaxApyHarvester is OwnableRoles {
         AllocationData[] calldata allocations
     )
         public
-        checkRoles(ALLOCATOR_ROLE)
+        checkRoles(KEEPER_ROLE)
     {
         uint256 length = allocations.length;
 

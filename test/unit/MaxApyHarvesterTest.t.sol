@@ -41,12 +41,11 @@ contract MaxApyHarvesterTest is BaseVaultTest {
 
         vault.grantRoles(users.alice, vault.EMERGENCY_ADMIN_ROLE());
 
-        address[] memory keepers = new address[](1);
+        address[] memory keepers = new address[](2);
         keepers[0] = users.keeper;
+        keepers[1] = users.allocator;
 
-        address[] memory allocators = new address[](1);
-        allocators[0] = users.allocator;
-        harvester = new MaxApyHarvester(users.alice, keepers, allocators);
+        harvester = new MaxApyHarvester(users.alice, keepers);
 
         ProxyAdmin proxyAdmin = new ProxyAdmin(users.alice);
         YearnWETHStrategyWrapper implementation1 = new YearnWETHStrategyWrapper();
