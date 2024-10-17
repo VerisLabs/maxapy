@@ -689,6 +689,16 @@ contract YearnAjnaWETHStakingStrategyTest is BaseTest, StrategyEvents {
         assertLe(withdrawn, maxWithdraw);
     }
 
+    function testYearnAjnaWETH_Staking__SimulateHarvest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 ether, users.alice);
+
+        vm.startPrank(users.keeper);
+        (uint256 expectedBalance, uint256 outputAfterInvestment) = strategy.simulateHarvest();
+
+        strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
+    }
+
     /*     function testYearnAjnaWETH_Staking__MaxLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount > 1e16 && amount <= 1000 ether);
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);

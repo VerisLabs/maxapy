@@ -82,5 +82,7 @@ interface IStrategy {
 
     function setMinSingleTrade(uint256) external;
 
+    function unharvestedAmount() external view returns (int256);
+
     function simulateHarvest() external returns (uint256, uint256);
 }
