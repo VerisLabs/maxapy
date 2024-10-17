@@ -541,7 +541,7 @@ contract YearnUSDCeLenderStrategyTest is BaseTest, StrategyEvents {
     }
 
     function testYearnUSDCeLender__Harvest_Invest_Divest() public {
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized()")); 
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         uint256 snapshotId = vm.snapshot();

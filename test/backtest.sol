@@ -2,8 +2,8 @@
 pragma solidity ^0.8.19;
 
 import "src/helpers/AddressBook.sol";
-import {IBeefyVault} from "src/interfaces/IBeefyVault.sol";
-import {BaseTest, IERC20, Vm, console2} from "./base/BaseTest.t.sol";
+import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
+import { BaseTest, IERC20, Vm, console2 } from "./base/BaseTest.t.sol";
 
 // 1. Get our strategy
 // 2. Know what value (share price) we need from strategy
@@ -29,5 +29,3 @@ contract Backtester is BaseTest {
         }
     }
 }
-
-

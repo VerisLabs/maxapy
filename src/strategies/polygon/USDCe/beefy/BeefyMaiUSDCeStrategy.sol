@@ -52,7 +52,7 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyStrategy {
         address(curveLpPool).safeApprove(address(beefyVault), type(uint256).max);
 
         /// Unlimited max single trade by default
-        maxSingleTrade = 100_000e6; 
+        maxSingleTrade = 100_000e6;
     }
 
     ////////////////////////////////////////////////////////////////

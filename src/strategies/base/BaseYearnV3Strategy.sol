@@ -186,7 +186,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
             uint256 shares = _sharesForAmount(amountToWithdraw);
-            uint256 withdrawn = _shareValue(shares);            
+            uint256 withdrawn = _shareValue(shares);
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
         liquidatedAmount = requestedAmount - loss;
@@ -377,8 +377,8 @@ contract BaseYearnV3Strategy is BaseStrategy {
 
         console2.log("expectedShares: ", _sharesForAmount(amount));
         uint256 shares = yVault.deposit(amount, address(this));
-        console2.log("shares: ", shares, " minOutputAfterInvestment",minOutputAfterInvestment);
-        console2.log("fulfilled percentage: ",10000*shares/_sharesForAmount(amount),"%");
+        console2.log("shares: ", shares, " minOutputAfterInvestment", minOutputAfterInvestment);
+        console2.log("fulfilled percentage: ", 10_000 * shares / _sharesForAmount(amount), "%");
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -509,7 +509,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
     ///                      SIMULATION                          ///
     ////////////////////////////////////////////////////////////////
 
-     function _simulateHarvest() public {
+    function _simulateHarvest() public override {
         address harvester = address(0);
         uint256 minOutputAfterInvestment = 0;
         uint256 minExpectedBalance = 0;
@@ -586,7 +586,7 @@ contract BaseYearnV3Strategy is BaseStrategy {
             expectedBalance = _underlyingBalance();
         }
 
-          assembly ("memory-safe") {
+        assembly ("memory-safe") {
             let m := mload(0x40) // Store free memory pointer
             // Store `vault`'s `report()` function selector:
             // `bytes4(keccak256("report(uint128,uint128,uint128,address)"))`

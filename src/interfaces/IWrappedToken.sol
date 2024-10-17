@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 interface IWrappedToken {
-    function approve(address, uint256) external ;
+    function approve(address, uint256) external;
 
     function deposit() external payable;
 

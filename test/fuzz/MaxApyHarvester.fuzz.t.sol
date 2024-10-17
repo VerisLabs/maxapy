@@ -416,11 +416,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
         }
     }
 
-    function testMaxApyHarvester__PreviewInvest(
-        uint256 strategySeed
-    )
-        public
-    {
+    function testMaxApyHarvester__PreviewInvest(uint256 strategySeed) public {
         LibPRNG.PRNG memory strategyRNG;
 
         strategyRNG.seed(strategySeed);
@@ -433,6 +429,5 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
         assertApproxEq(invested, investPreview, investPreview / 100);
     }
 
-    function testMaxApyHarvester__PreviewLiquidate(uint256 strategySeed) public {
-    }
+    function testMaxApyHarvester__PreviewLiquidate(uint256 strategySeed) public { }
 }

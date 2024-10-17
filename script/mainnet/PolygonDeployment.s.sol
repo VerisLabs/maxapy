@@ -24,15 +24,16 @@ import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 // +------------+
 // Yearn
 import { YearnAjnaUSDCStrategy } from "src/strategies/polygon/USDCe/yearn/YearnAjnaUSDCStrategy.sol";
-import { YearnCompoundUSDCeLenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnCompoundUSDCeLenderStrategy.sol";
+import { YearnCompoundUSDCeLenderStrategy } from
+    "src/strategies/polygon/USDCe/yearn/YearnCompoundUSDCeLenderStrategy.sol";
 import { YearnMaticUSDCStakingStrategy } from "src/strategies/polygon/USDCe/yearn/YearnMaticUSDCStakingStrategy.sol";
 import { YearnUSDCeLenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDCeLenderStrategy.sol";
 import { YearnUSDCeStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDCeStrategy.sol";
-import { YearnUSDTStrategy }  from "src/strategies/polygon/USDCe/yearn/YearnUSDTStrategy.sol";
+import { YearnUSDTStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDTStrategy.sol";
 import { YearnDAIStrategy } from "src/strategies/polygon/USDCe/yearn/YearnDAIStrategy.sol";
 import { YearnDAILenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnDAILenderStrategy.sol";
 
-// Convex   
+// Convex
 import { ConvexUSDCCrvUSDStrategy } from "src/strategies/polygon/USDCe/convex/ConvexUSDCCrvUSDStrategy.sol";
 import { ConvexUSDTCrvUSDStrategy } from "src/strategies/polygon/USDCe/convex/ConvexUSDTCrvUSDStrategy.sol";
 
@@ -55,18 +56,18 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
     ////////////////////////////////////////////////////////////////
     // **********STRATS******************
     // USDCE
-    IStrategy public strategy1; // Yearn-Ajna USDC               | YearnAjnaUSDC 
-    IStrategy public strategy2; // Compound V3 USDC.e Lender     | YearnCompoundUSDCeLender 
-    IStrategy public strategy3; // Extra APR USDC (USDC.e)       | YearnMaticUSDCStaking 
-    IStrategy public strategy4; // Aave V3 USDC.e Lender         | YearnUSDCeLender 
-    IStrategy public strategy5; // USDC.e                        | YearnUSDCe 
-    
-    // IStrategy public strategy6;  // YearnV3 - USDT                | YearnUSDTStrategy 
-    // IStrategy public strategy7;  // YearnV3 - DAI                 | YearnDAIStrategy 
-    // IStrategy public strategy8;  // YearnV3 - Aave V3 DAI Lender  | YearnDAILenderStrategy   
-    // IStrategy public strategy9;  // Beefy - MAI/USDC.e            | BeefyMaiUSDCeStrategy 
-    // IStrategy public strategy10; // Convex - crvUSD+USDC.e        | ConvexUSDCCrvUSDStrategy 
-    // IStrategy public strategy11; // Convex - crvUSD+USDT          | ConvexUSDTCrvUSDStrategy 
+    IStrategy public strategy1; // Yearn-Ajna USDC               | YearnAjnaUSDC
+    IStrategy public strategy2; // Compound V3 USDC.e Lender     | YearnCompoundUSDCeLender
+    IStrategy public strategy3; // Extra APR USDC (USDC.e)       | YearnMaticUSDCStaking
+    IStrategy public strategy4; // Aave V3 USDC.e Lender         | YearnUSDCeLender
+    IStrategy public strategy5; // USDC.e                        | YearnUSDCe
+
+    // IStrategy public strategy6;  // YearnV3 - USDT                | YearnUSDTStrategy
+    // IStrategy public strategy7;  // YearnV3 - DAI                 | YearnDAIStrategy
+    // IStrategy public strategy8;  // YearnV3 - Aave V3 DAI Lender  | YearnDAILenderStrategy
+    // IStrategy public strategy9;  // Beefy - MAI/USDC.e            | BeefyMaiUSDCeStrategy
+    // IStrategy public strategy10; // Convex - crvUSD+USDC.e        | ConvexUSDCCrvUSDStrategy
+    // IStrategy public strategy11; // Convex - crvUSD+USDT          | ConvexUSDTCrvUSDStrategy
 
     // **********ROLES*******************
     address[] keepers;
@@ -237,8 +238,7 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         strategy5 = IStrategy(address(proxy));
         strategy5.grantRoles(strategyAdmin, strategy5.ADMIN_ROLE());
         strategy5.grantRoles(strategyEmergencyAdmin, strategy5.EMERGENCY_ADMIN_ROLE());
-        
-       
+
         // // Strategy6(YearnV3 USDT)
         // YearnUSDTStrategy implementation6 = new YearnUSDTStrategy();
         // _proxy = new TransparentUpgradeableProxy(
@@ -280,7 +280,7 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         // // Strategy8(YearnV3 - Aave V3 DAI Lender)
         // YearnDAILenderStrategy implementation8 = new YearnDAILenderStrategy();
         // _proxy = new TransparentUpgradeableProxy(
-        //     address(implementation8),  
+        //     address(implementation8),
         //     address(proxyAdmin),
         //     abi.encodeWithSignature(
         //         "initialize(address,address[],bytes32,address,address)",
@@ -357,17 +357,17 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         // strategy11.grantRoles(strategyEmergencyAdmin, strategy11.EMERGENCY_ADMIN_ROLE());
 
         // Add 13 strategies to the vault
-        vaultUsdce.addStrategy(address(strategy1), 818, type(uint72).max, 0, 0);  
-        vaultUsdce.addStrategy(address(strategy2), 818, type(uint72).max, 0, 0);  
-        vaultUsdce.addStrategy(address(strategy3), 818, type(uint72).max, 0, 0);  
-        vaultUsdce.addStrategy(address(strategy4), 818, type(uint72).max, 0, 0);  
-        vaultUsdce.addStrategy(address(strategy5), 818, type(uint72).max, 0, 0);  
-        // vaultUsdce.addStrategy(address(strategy6), 818, type(uint72).max, 0, 0);  
-        // vaultUsdce.addStrategy(address(strategy7), 818, type(uint72).max, 0, 0);  
-        // vaultUsdce.addStrategy(address(strategy8), 818, type(uint72).max, 0, 0);  
-        // vaultUsdce.addStrategy(address(strategy9), 818, type(uint72).max, 0, 0);  
-        // vaultUsdce.addStrategy(address(strategy10), 818, type(uint72).max, 0, 0);  
-        // vaultUsdce.addStrategy(address(strategy11), 818, type(uint72).max, 0, 0);  
+        vaultUsdce.addStrategy(address(strategy1), 818, type(uint72).max, 0, 0);
+        vaultUsdce.addStrategy(address(strategy2), 818, type(uint72).max, 0, 0);
+        vaultUsdce.addStrategy(address(strategy3), 818, type(uint72).max, 0, 0);
+        vaultUsdce.addStrategy(address(strategy4), 818, type(uint72).max, 0, 0);
+        vaultUsdce.addStrategy(address(strategy5), 818, type(uint72).max, 0, 0);
+        // vaultUsdce.addStrategy(address(strategy6), 818, type(uint72).max, 0, 0);
+        // vaultUsdce.addStrategy(address(strategy7), 818, type(uint72).max, 0, 0);
+        // vaultUsdce.addStrategy(address(strategy8), 818, type(uint72).max, 0, 0);
+        // vaultUsdce.addStrategy(address(strategy9), 818, type(uint72).max, 0, 0);
+        // vaultUsdce.addStrategy(address(strategy10), 818, type(uint72).max, 0, 0);
+        // vaultUsdce.addStrategy(address(strategy11), 818, type(uint72).max, 0, 0);
 
         console2.log("***************************DEPLOYMENT ADDRESSES**********************************");
         console2.log("[MAXAPY] Router :", address(router));
@@ -397,7 +397,7 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         IWrappedToken wrapper = IWrappedToken(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
 
         uint256[10] memory pks = [
-            0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80, 
+            0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80,
             0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d,
             0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a,
             0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6,
@@ -409,7 +409,7 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
             0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6
         ];
 
-        address[10] memory accs = [ 
+        address[10] memory accs = [
             0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266,
             0x70997970C51812dc3A010C7d01b50e0d17dc79C8,
             0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC,
@@ -422,23 +422,23 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
             0xa0Ee7A142d267C1f36714E4a8F75612F20a79720
         ];
 
-        for(uint i = 0; i < pks.length-1; i++) {
-            console2.log("Transfering: ", accs[i].balance/10**18, "WMATIC to deployer");
-            vm.stopBroadcast(); 
+        for (uint256 i = 0; i < pks.length - 1; i++) {
+            console2.log("Transfering: ", accs[i].balance / 10 ** 18, "WMATIC to deployer");
+            vm.stopBroadcast();
             vm.startBroadcast(pks[i]);
             payable(deployerAddress).transfer(accs[i].balance - 1 ether);
         }
 
-        vm.stopBroadcast(); 
+        vm.stopBroadcast();
         vm.startBroadcast(vm.envUint("DEPLOYER_PRIVATE_KEY"));
-        uint256 amount =  500_000 ether; //matic                
+        uint256 amount = 500_000 ether; //matic
 
-        console2.log("amount:", amount/10**18, "WMATIC");
+        console2.log("amount:", amount / 10 ** 18, "WMATIC");
 
-        wrapper.deposit{value: amount}();
+        wrapper.deposit{ value: amount }();
         wrapper.approve(address(unirouter), amount);
 
-        unirouter.exactInputSingle{value: amount}(
+        unirouter.exactInputSingle{ value: amount }(
             IUniswapV3Router.ExactInputSingleParams({
                 tokenIn: WPOL_POLYGON,
                 tokenOut: USDCE_POLYGON,
@@ -451,20 +451,19 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
             })
         );
 
-
         uint256 balanceUsdce = IERC20(USDCE_POLYGON).balanceOf(deployerAddress);
-        console2.log("[balanceOf] deployer USDC.e",balanceUsdce/10**6);
+        console2.log("[balanceOf] deployer USDC.e", balanceUsdce / 10 ** 6);
 
         IERC20(USDCE_POLYGON).approve(address(vaultUsdce), type(uint256).max);
-        vaultUsdce.deposit(balanceUsdce/2, address(1));
+        vaultUsdce.deposit(balanceUsdce / 2, address(1));
 
         vm.stopBroadcast();
-    
+
         uint256 keeperPrivateKey = vm.envUint("KEEPER1_PRIVATE_KEY");
         vm.startBroadcast(keeperPrivateKey);
 
         // MAXHARVESTER TEST
-        MaxApyHarvester.HarvestData []memory harvestData = new MaxApyHarvester.HarvestData[](5);
+        MaxApyHarvester.HarvestData[] memory harvestData = new MaxApyHarvester.HarvestData[](5);
         harvestData[0] = MaxApyHarvester.HarvestData(address(strategy1), 0, 0, block.timestamp + 1000);
         harvestData[1] = MaxApyHarvester.HarvestData(address(strategy2), 0, 0, block.timestamp + 1000);
         harvestData[2] = MaxApyHarvester.HarvestData(address(strategy3), 0, 0, block.timestamp + 1000);
@@ -477,6 +476,6 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         // harvestData[9] = MaxApyHarvester.HarvestData(address(strategy10), 0, 0, block.timestamp + 1000);
         // harvestData[10] = MaxApyHarvester.HarvestData(address(strategy11), 0, 0, block.timestamp + 1000);
 
-        harvester.batchHarvests(harvestData);       
-   }
+        harvester.batchHarvests(harvestData);
+    }
 }

@@ -8,7 +8,6 @@ import { IYVault } from "src/interfaces/IYVault.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { ICurveLpPool, ICurveLendingPool } from "src/interfaces/ICurve.sol";
 
-
 /// @title PreviewModule
 /// @notice helper contract that implements the logic to preview all the money flow
 /// in strategy harvests
@@ -52,8 +51,9 @@ contract PreviewModule {
         else if (strategyType == 2) {
             if (amount > minSingleTrade) {
                 IYVaultV3 yVault = IYVaultV3(strategy.yVault());
-                return
-                    yVault.convertToAssets(yVault.previewDeposit(Math.min(amount, yVault.maxDeposit(address(strategy)))));
+                return yVault.convertToAssets(
+                    yVault.previewDeposit(Math.min(amount, yVault.maxDeposit(address(strategy))))
+                );
             }
         }
         /// Sommelier

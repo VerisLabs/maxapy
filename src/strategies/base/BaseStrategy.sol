@@ -72,7 +72,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     /// @notice Name of the strategy
     bytes32 public strategyName;
     /// @notice Strategist's address
-    address public strategist;                      
+    address public strategist;
     /// @notice Strategy's last recorded estimated total assets
     uint256 public lastEstimatedTotalAssets;
     /// @notice Gap for upgradeability
@@ -533,10 +533,10 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
 
     function _simulateHarvest() public virtual;
 
-    function simulateHarvest() public returns(uint256 expectedBalance, uint256 outputAfterInvestment){
-        try this._simulateHarvest() {
-        }catch(bytes memory e) {
-           ( expectedBalance,  outputAfterInvestment) = abi.decode(e, (uint256, uint256));
+    function simulateHarvest() public returns (uint256 expectedBalance, uint256 outputAfterInvestment) {
+        try this._simulateHarvest() { }
+        catch (bytes memory e) {
+            (expectedBalance, outputAfterInvestment) = abi.decode(e, (uint256, uint256));
         }
     }
 }

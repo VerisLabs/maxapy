@@ -2,7 +2,9 @@
 pragma solidity ^0.8.19;
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import { IYVaultV3, BaseYearnV3Strategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseYearnV3Strategy.sol";
+import {
+    IYVaultV3, BaseYearnV3Strategy, IMaxApyVault, SafeTransferLib
+} from "src/strategies/base/BaseYearnV3Strategy.sol";
 import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
 import { DAI_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON } from "src/helpers/AddressBook.sol";
 
@@ -145,14 +147,14 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
 
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
-        
+
         uint256 maxDeposit = yVault.maxDeposit(address(this));
 
         // Scale up to 18 decimals
 
-        uint256 scaledAmount = amount.mulWad(1e12); 
+        uint256 scaledAmount = amount.mulWad(1e12);
 
-        uint256 scaledMaxSingleTrade = maxSingleTrade.mulWad(1e12); 
+        uint256 scaledMaxSingleTrade = maxSingleTrade.mulWad(1e12);
 
         uint256 minAmount = Math.min(Math.min(scaledAmount, maxDeposit), scaledMaxSingleTrade);
 

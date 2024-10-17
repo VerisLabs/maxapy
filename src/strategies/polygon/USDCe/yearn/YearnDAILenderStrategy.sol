@@ -148,14 +148,11 @@ contract YearnDAILenderStrategy is BaseYearnV3Strategy {
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
         uint256 maxDeposit = yVault.maxDeposit(address(this));
-        
+
         // Scale up to 18 decimals
         uint256 scaledAmount = amount.mulWad(1e12);
         uint256 scaledMaxSingleTrade = maxSingleTrade.mulWad(1e12);
-        uint256 minAmount = Math.min(
-            Math.min(scaledAmount, maxDeposit),
-            scaledMaxSingleTrade
-        ); 
+        uint256 minAmount = Math.min(Math.min(scaledAmount, maxDeposit), scaledMaxSingleTrade);
         // Scale back down to 6 decimals
         amount = minAmount.divWad(1e12);
 
@@ -165,7 +162,7 @@ contract YearnDAILenderStrategy is BaseYearnV3Strategy {
 
         // Deposit into the underlying vault
         amount = DAI_POLYGON.balanceOf(address(this)) - balanceBefore;
-        
+
         uint256 shares = yVault.deposit(amount, address(this));
 
         assembly ("memory-safe") {

@@ -793,9 +793,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
     }
 
     /// @dev Override to return a non-zero value to make the inflation attack even more unfeasible.
-    function _decimalsOffset() internal pure override returns (uint8) {
-            
-    }
+    function _decimalsOffset() internal pure override returns (uint8) { }
 
     /// @notice Returns the estimate amount of assets held by the vault and strategy positions,
     /// including unrealised profit or losses
@@ -1930,11 +1928,10 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         address strategy,
         uint256 newDebtRatio,
         uint256 newMaxDebtPerHarvest,
-        uint256 newMinDebtPerHarvest,   
+        uint256 newMinDebtPerHarvest,
         uint256 newPerformanceFee
     )
         external
-            
     {
         uint256 slot; // Slot where strategies[strategy] slot will be stored
         uint256 slotContent; // Used to store strategies[strategy] slot content

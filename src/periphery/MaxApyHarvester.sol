@@ -7,7 +7,7 @@ import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 
 /// @dev preview module interface
 interface IPreviewModule {
-    function previewInvest(IStrategy            strategy, uint256 amount) external view returns (uint256);
+    function previewInvest(IStrategy strategy, uint256 amount) external view returns (uint256);
     function previewDivest(IStrategy strategy, uint256 amount) external view returns (uint256);
 }
 
@@ -19,7 +19,7 @@ contract MaxApyHarvester is OwnableRoles {
     ////////////////////////////////////////////////////////////////
     error HarvestFailed();
     error NotOwner();
-    error CantReceiveETH();     
+    error CantReceiveETH();
     error Fallback();
 
     ////////////////////////////////////////////////////////////////
@@ -27,8 +27,8 @@ contract MaxApyHarvester is OwnableRoles {
     ////////////////////////////////////////////////////////////////
     /// @dev Params for harvesting
     struct HarvestData {
-        address strategyAddress;        
-        uint256 minExpectedBalance;     
+        address strategyAddress;
+        uint256 minExpectedBalance;
         uint256 minOutputAfterInvestment;
         uint256 deadline;
     }
@@ -81,7 +81,7 @@ contract MaxApyHarvester is OwnableRoles {
 
         // Iterate through each keeper in the array in order to grant roles.
         for (uint256 i = 0; i < length;) {
-                (keepers[i], KEEPER_ROLE);
+            (keepers[i], KEEPER_ROLE);
 
             unchecked {
                 ++i;
@@ -152,12 +152,12 @@ contract MaxApyHarvester is OwnableRoles {
         uint256 length = allocations.length;
 
         // Iterate through each strategy in the array in order to call the allocate.
-        for (uint256 i = 0; i < length;){
+        for (uint256 i = 0; i < length;) {
             address strategyAddress = allocations[i].strategyAddress;
             uint256 debtRatio = allocations[i].debtRatio;
             uint256 maxDebtPerHarvest = allocations[i].maxDebtPerHarvest;
             uint256 minDebtPerHarvest = allocations[i].minDebtPerHarvest;
-            uint256 performanceFee = allocations[i].performanceFee; 
+            uint256 performanceFee = allocations[i].performanceFee;
 
             vault.updateStrategyData(strategyAddress, debtRatio, maxDebtPerHarvest, minDebtPerHarvest, performanceFee);
 

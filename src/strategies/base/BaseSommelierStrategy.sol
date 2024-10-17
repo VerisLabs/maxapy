@@ -516,7 +516,7 @@ contract BaseSommelierStrategy is BaseStrategy {
     ///                      SIMULATION                          ///
     ////////////////////////////////////////////////////////////////
 
-    function _simulateHarvest() public {
+    function _simulateHarvest() public override {
         address harvester = address(0);
         uint256 minOutputAfterInvestment = 0;
         uint256 minExpectedBalance = 0;
@@ -593,7 +593,7 @@ contract BaseSommelierStrategy is BaseStrategy {
             expectedBalance = _underlyingBalance();
         }
 
-          assembly ("memory-safe") {
+        assembly ("memory-safe") {
             let m := mload(0x40) // Store free memory pointer
             // Store `vault`'s `report()` function selector:
             // `bytes4(keccak256("report(uint128,uint128,uint128,address)"))`
