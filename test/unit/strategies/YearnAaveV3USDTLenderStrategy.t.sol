@@ -1,24 +1,26 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {TransparentUpgradeableProxy, ITransparentUpgradeableProxy} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    TransparentUpgradeableProxy,
+    ITransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
-import {BaseTest, IERC20, Vm, console2} from "../../base/BaseTest.t.sol";
-import {IStrategyWrapper} from "../../interfaces/IStrategyWrapper.sol";
-import {IMaxApyVault} from "src/interfaces/IMaxApyVault.sol";
-import {YearnAaveV3USDTLenderStrategyWrapper} from "../../mock/YearnAaveV3USDTLenderStrategyWrapper.sol";
-import {MaxApyVault} from "src/MaxApyVault.sol";
-import {StrategyData} from "src/helpers/VaultTypes.sol";
-import {StrategyEvents} from "../../helpers/StrategyEvents.sol";
+import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
+import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { YearnAaveV3USDTLenderStrategyWrapper } from "../../mock/YearnAaveV3USDTLenderStrategyWrapper.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import "src/helpers/AddressBook.sol";
-import {_1_USDCE} from "test/helpers/Tokens.sol";
+import { _1_USDCE } from "test/helpers/Tokens.sol";
 
-import {console} from "forge-std/console.sol";
+import { console } from "forge-std/console.sol";
 
 contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
-    address public constant YVAULT_AAVE_USDT_POLYGON =
-        YEARN_AAVE_V3_USDT_LENDER_YVAULT_POLYGON;
+    address public constant YVAULT_AAVE_USDT_POLYGON = YEARN_AAVE_V3_USDT_LENDER_YVAULT_POLYGON;
     address public TREASURY;
 
     IStrategyWrapper public strategy;
@@ -34,13 +36,7 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
 
         TREASURY = makeAddr("treasury");
 
-        vaultDeployment = new MaxApyVault(
-            users.alice,
-            USDCE_POLYGON,
-            "MaxApyUSDTVault",
-            "maxUSDT",
-            TREASURY
-        );
+        vaultDeployment = new MaxApyVault(users.alice, USDCE_POLYGON, "MaxApyUSDTVault", "maxUSDT", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
         proxyAdmin = new ProxyAdmin(users.alice);
@@ -73,13 +69,7 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
     /*==================INITIALIZATION TESTS==================*/
 
     function testYearnAaveV3USDTLender__Initialization() public {
-        MaxApyVault _vault = new MaxApyVault(
-            users.alice,
-            USDCE_POLYGON,
-            "MaxApyUSDTVault",
-            "maxUSDT",
-            TREASURY
-        );
+        MaxApyVault _vault = new MaxApyVault(users.alice, USDCE_POLYGON, "MaxApyUSDTVault", "maxUSDT", TREASURY);
         ProxyAdmin _proxyAdmin = new ProxyAdmin(users.alice);
         YearnAaveV3USDTLenderStrategyWrapper _implementation = new YearnAaveV3USDTLenderStrategyWrapper();
 
@@ -101,37 +91,15 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
 
         assertEq(_strategy.vault(), address(_vault));
-        assertEq(
-            _strategy.hasAnyRole(_strategy.vault(), _strategy.VAULT_ROLE()),
-            true
-        );
+        assertEq(_strategy.hasAnyRole(_strategy.vault(), _strategy.VAULT_ROLE()), true);
         assertEq(_strategy.underlyingAsset(), USDCE_POLYGON);
         assertEq(
-            IERC20(USDT_POLYGON).allowance(
-                address(_strategy),
-                address(YVAULT_AAVE_USDT_POLYGON)
-            ),
-            type(uint256).max
+            IERC20(USDT_POLYGON).allowance(address(_strategy), address(YVAULT_AAVE_USDT_POLYGON)), type(uint256).max
         );
-        assertEq(
-            IERC20(USDCE_POLYGON).allowance(
-                address(_strategy),
-                address(_vault)
-            ),
-            type(uint256).max
-        );
-        assertEq(
-            _strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()),
-            true
-        );
-        assertEq(
-            _strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()),
-            true
-        );
-        assertEq(
-            _strategy.strategyName(),
-            bytes32(abi.encode("MaxApy Yearn Strategy"))
-        );
+        assertEq(IERC20(USDCE_POLYGON).allowance(address(_strategy), address(_vault)), type(uint256).max);
+        assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
+        assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
+        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy Yearn Strategy")));
         assertEq(_strategy.yVault(), YVAULT_AAVE_USDT_POLYGON);
 
         assertEq(_proxyAdmin.owner(), users.alice);
@@ -191,14 +159,9 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
         assertEq(strategy.isActive(), true);
         vm.stopPrank();
 
-        strategy.divest(
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy))
-        );
+        strategy.divest(IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)));
         vm.startPrank(address(strategy));
-        IERC20(USDCE_POLYGON).transfer(
-            makeAddr("random"),
-            IERC20(USDCE_POLYGON).balanceOf(address(strategy))
-        );
+        IERC20(USDCE_POLYGON).transfer(makeAddr("random"), IERC20(USDCE_POLYGON).balanceOf(address(strategy)));
         assertEq(strategy.isActive(), false);
 
         deal(USDCE_POLYGON, address(strategy), 1 * _1_USDCE);
@@ -244,11 +207,10 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
         vault.deposit(100 * _1_USDCE, users.alice);
-        
+
         strategy.mockReport(0, 0, 0, TREASURY);
-        
-        (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy
-            .prepareReturn(1 * _1_USDCE, 0);
+
+        (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 * _1_USDCE, 0);
         assertEq(unrealizedProfit, 0);
         assertEq(loss, 0);
         assertEq(debtPayment, 1 * _1_USDCE);
@@ -257,11 +219,7 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
 
         snapshotId = vm.snapshot();
 
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 60 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 60 * _1_USDCE });
         strategy.invest(60 * _1_USDCE, 0);
 
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
@@ -308,135 +266,82 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
 
     function testYearnAaveV3USDTLender__AdjustPosition() public {
         strategy.adjustPosition();
-        assertEq(
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            0
-        );
+        assertEq(IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), 0);
 
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 10 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDCE);
         vm.expectEmit();
         emit Invested(address(strategy), 9_992_937);
         strategy.adjustPosition();
         assertApproxEq(
-            expectedShares,
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            expectedShares / 1000
+            expectedShares, IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), expectedShares / 1000
         );
 
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 100 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 100 * _1_USDCE });
         expectedShares += strategy.sharesForAmount(100 * _1_USDCE);
         vm.expectEmit();
         emit Invested(address(strategy), 99_929_365);
         strategy.adjustPosition();
         assertApproxEq(
-            expectedShares,
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            expectedShares / 1000
+            expectedShares, IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), expectedShares / 1000
         );
 
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 500 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 500 * _1_USDCE });
         expectedShares += strategy.sharesForAmount(500 * _1_USDCE);
         vm.expectEmit();
         emit Invested(address(strategy), 499_646_825);
         strategy.adjustPosition();
         assertApproxEq(
-            expectedShares,
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            expectedShares / 1000
+            expectedShares, IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), expectedShares / 1000
         );
     }
 
     function testYearnAaveV3USDTLender__Invest() public {
         uint256 returned = strategy.invest(0, 0);
         assertEq(returned, 0);
-        assertEq(
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            0
-        );
+        assertEq(IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), 0);
 
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFundsToInvest()"));
         returned = strategy.invest(1, 0);
 
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 10 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDCE);
         //vm.expectEmit();
         //emit Invested(address(strategy), 10 * _1_USDCE);
         strategy.invest(10 * _1_USDCE, 0);
         assertApproxEq(
-            expectedShares,
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            expectedShares / 1000
+            expectedShares, IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), expectedShares / 1000
         );
 
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 10 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         expectedShares += strategy.sharesForAmount(10 * _1_USDCE);
         //vm.expectEmit();
         //emit Invested(address(strategy), 10 * _1_USDCE);
         strategy.invest(10 * _1_USDCE, 0);
         assertApproxEq(
-            expectedShares,
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            expectedShares / 1000
+            expectedShares, IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), expectedShares / 1000
         );
     }
 
     function testYearnAaveV3USDTLender__Divest() public {
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 10 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         uint256 expectedShares = strategy.sharesForAmount(9_995_000);
         strategy.invest(10 * _1_USDCE, 0);
         assertApproxEq(
-            expectedShares,
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            expectedShares / 1000
+            expectedShares, IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), expectedShares / 1000
         );
 
-        uint256 strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(
-            address(strategy)
-        );
+        uint256 strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         vm.expectEmit();
         emit Divested(address(strategy), expectedShares, 9_987_842);
         uint256 amountDivested = strategy.divest(expectedShares);
         assertEq(amountDivested, 9_987_842);
-        assertEq(
-            IERC20(USDCE_POLYGON).balanceOf(address(strategy)),
-            strategyBalanceBefore + amountDivested
-        );
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
     }
 
     function testYearnAaveV3USDTLender__LiquidatePosition() public {
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 10 * _1_USDCE
-        });
-        (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(
-            1 * _1_USDCE
-        );
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
+        (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(1 * _1_USDCE);
         assertEq(liquidatedAmount, 1 * _1_USDCE);
         assertEq(loss, 0);
 
@@ -444,87 +349,47 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
         assertEq(liquidatedAmount, 9 * _1_USDCE);
         assertEq(loss, 0);
 
-        deal({token: USDCE_POLYGON, to: address(strategy), give: 5 * _1_USDCE});
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 5 * _1_USDCE });
         strategy.invest(5 * _1_USDCE, 0);
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 10 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         (liquidatedAmount, loss) = strategy.liquidatePosition(14_990_000);
         assertEq(liquidatedAmount, 14_986_425);
         assertEq(loss, 3575);
 
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 1000 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 1000 * _1_USDCE });
         strategy.invest(1000 * _1_USDCE, 0);
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 500 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 500 * _1_USDCE });
         (liquidatedAmount, loss) = strategy.liquidatePosition(1000 * _1_USDCE);
         assertEq(liquidatedAmount, 999_642_009);
         assertEq(loss, 357_991);
     }
 
     function testYearnAaveV3USDTLender__LiquidateAllPositions() public {
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 10 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDCE);
         strategy.invest(10 * _1_USDCE, 0);
         assertApproxEq(
-            expectedShares,
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            expectedShares / 1000
+            expectedShares, IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), expectedShares / 1000
         );
 
-        uint256 strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(
-            address(strategy)
-        );
+        uint256 strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         uint256 amountFreed = strategy.liquidateAllPositions();
         assertEq(amountFreed, 9_991_788);
-        assertEq(
-            IERC20(USDCE_POLYGON).balanceOf(address(strategy)),
-            strategyBalanceBefore + 9_991_788
-        );
-        assertEq(
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            0
-        );
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + 9_991_788);
+        assertEq(IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), 0);
 
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 500 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 500 * _1_USDCE });
         expectedShares = strategy.sharesForAmount(500 * _1_USDCE);
         strategy.invest(500 * _1_USDCE, 0);
         assertApproxEq(
-            expectedShares,
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            expectedShares / 1000
+            expectedShares, IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), expectedShares / 1000
         );
 
-        strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(
-            address(strategy)
-        );
+        strategyBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(strategy));
         amountFreed = strategy.liquidateAllPositions();
         assertEq(amountFreed, 499_589_331);
-        assertEq(
-            IERC20(USDCE_POLYGON).balanceOf(address(strategy)),
-            strategyBalanceBefore + 499_589_331
-        );
-        assertEq(
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            0
-        );
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore + 499_589_331);
+        assertEq(IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), 0);
     }
 
     function testYearnAaveV3USDTLender__Harvest_Banana() public {
@@ -540,61 +405,31 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            0,
-            0,
-            0,
-            0,
-            0,
-            uint128(40 * _1_USDCE),
-            uint128(40 * _1_USDCE),
-            4000
-        );
-        
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDCE), uint128(40 * _1_USDCE), 4000);
+
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         strategy.harvest(0, 0, address(0), block.timestamp);
 
-        uint256 expectedStrategyShareBalance = strategy.sharesForAmount(
-            40 * _1_USDCE
-        );
-        assertEq(
-            IERC20(USDCE_POLYGON).balanceOf(address(vault)),
-            60 * _1_USDCE
-        );
+        uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
         assertApproxEq(
             IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
             expectedStrategyShareBalance,
             expectedStrategyShareBalance / 100
         );
 
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 10 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
 
         vm.expectEmit();
         emit StrategyReported(
-            address(strategy),
-            10 * _1_USDCE,
-            0,
-            0,
-            uint128(10 * _1_USDCE),
-            0,
-            uint128(40 * _1_USDCE),
-            0,
-            4000
+            address(strategy), 10 * _1_USDCE, 0, 0, uint128(10 * _1_USDCE), 0, uint128(40 * _1_USDCE), 0, 4000
         );
-        
+
         vm.expectEmit();
         emit Harvested(10 * _1_USDCE, 0, 0, 0);
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(
-            IERC20(USDCE_POLYGON).balanceOf(address(vault)),
-            60 * _1_USDCE
-        );
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
         uint256 shares = strategy.sharesForAmount(10 * _1_USDCE);
         assertApproxEq(
             IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
@@ -614,28 +449,15 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            0,
-            0,
-            0,
-            0,
-            0,
-            uint128(40 * _1_USDCE),
-            uint128(40 * _1_USDCE),
-            4000
-        );
-        
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDCE), uint128(40 * _1_USDCE), 4000);
+
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
-        assertEq(
-            IERC20(USDCE_POLYGON).balanceOf(address(vault)),
-            60 * _1_USDCE
-        );
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
         assertApproxEq(
             IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
             expectedStrategyShareBalance,
@@ -647,34 +469,17 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
 
         vm.startPrank(users.keeper);
 
-        deal({
-            token: USDCE_POLYGON,
-            to: address(strategy),
-            give: 10 * _1_USDCE
-        });
+        deal({ token: USDCE_POLYGON, to: address(strategy), give: 10 * _1_USDCE });
 
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            0,
-            4598,
-            39_995_402,
-            0,
-            4598,
-            2758,
-            2758,
-            4000
-        );
-        
+        emit StrategyReported(address(strategy), 0, 4598, 39_995_402, 0, 4598, 2758, 2758, 4000);
+
         vm.expectEmit();
         emit Harvested(0, 4598, 49_967_147, 0);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
         assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_964_389);
-        assertEq(
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            0
-        );
+        assertEq(IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
 
@@ -687,27 +492,14 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            0,
-            0,
-            0,
-            0,
-            0,
-            uint128(40 * _1_USDCE),
-            40 * _1_USDCE,
-            4000
-        );
-        
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 * _1_USDCE), 40 * _1_USDCE, 4000);
+
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         expectedStrategyShareBalance = strategy.sharesForAmount(40 * _1_USDCE);
-        assertEq(
-            IERC20(USDCE_POLYGON).balanceOf(address(vault)),
-            60 * _1_USDCE
-        );
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 60 * _1_USDCE);
         assertApproxEq(
             IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
             expectedStrategyShareBalance,
@@ -717,25 +509,12 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDCE);
 
         vm.startPrank(address(strategy));
-        IERC20(YVAULT_AAVE_USDT_POLYGON).transfer(
-            makeAddr("random"),
-            expectedShares
-        );
+        IERC20(YVAULT_AAVE_USDT_POLYGON).transfer(makeAddr("random"), expectedShares);
 
         vm.startPrank(users.keeper);
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            0,
-            9_993_987,
-            0,
-            0,
-            uint128(9_993_987),
-            uint128(30_006_013),
-            0,
-            3001
-        );
-        
+        emit StrategyReported(address(strategy), 0, 9_993_987, 0, 0, uint128(9_993_987), uint128(30_006_013), 0, 3001);
+
         vm.expectEmit();
         emit Harvested(0, 9_993_987, 0, 2_995_209);
         strategy.harvest(0, 0, address(0), block.timestamp);
@@ -750,25 +529,14 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
 
         vm.expectEmit();
         emit StrategyReported(
-            address(strategy),
-            0,
-            2145,
-            2_993_064,
-            0,
-            uint128(9_996_132),
-            uint128(27_010_804),
-            0,
-            3001
+            address(strategy), 0, 2145, 2_993_064, 0, uint128(9_996_132), uint128(27_010_804), 0, 3001
         );
-        
+
         vm.expectEmit();
         emit Harvested(0, 2145, 2_993_064, 644);
 
-        uint256 vaultBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(
-            address(vault)
-        );
-        uint256 strategyBalanceBefore = IERC20(YVAULT_AAVE_USDT_POLYGON)
-            .balanceOf(address(strategy));
+        uint256 vaultBalanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+        uint256 strategyBalanceBefore = IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy));
         uint256 expectedShareDecrease = strategy.sharesForAmount(2 * _1_USDCE);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
@@ -780,13 +548,9 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
         assertEq(data.strategyDebtRatio, 3001);
         assertEq(data.strategyTotalDebt, 27_010_804);
         assertEq(data.strategyTotalLoss, 9_996_132);
-        assertEq(
-            IERC20(USDCE_POLYGON).balanceOf(address(vault)),
-            vaultBalanceBefore + 2_993_064
-        );
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), vaultBalanceBefore + 2_993_064);
         assertLe(
-            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)),
-            strategyBalanceBefore - expectedShareDecrease
+            IERC20(YVAULT_AAVE_USDT_POLYGON).balanceOf(address(strategy)), strategyBalanceBefore - expectedShareDecrease
         );
     }
 
@@ -812,8 +576,7 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
         vm.startPrank(address(vault));
         uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
         strategy.liquidateExact(30 * _1_USDCE);
-        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) -
-            balanceBefore;
+        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
         assertEq(withdrawn, 30 * _1_USDCE);
         // losses are equal or fewer than expected
@@ -828,13 +591,10 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
         vm.stopPrank();
         uint256 maxLiquidateExact = strategy.maxLiquidateExact();
         uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
-        uint256 requestedAmount = strategy.previewLiquidateExact(
-            maxLiquidateExact
-        );
+        uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
         vm.startPrank(address(vault));
         uint256 losses = strategy.liquidateExact(maxLiquidateExact);
-        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) -
-            balanceBefore;
+        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
         assertEq(withdrawn, maxLiquidateExact);
         // losses are equal or fewer than expected
@@ -851,8 +611,7 @@ contract YearnAaveV3USDTLenderStrategyTest is BaseTest, StrategyEvents {
         uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
         vm.startPrank(address(vault));
         strategy.liquidate(maxWithdraw);
-        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) -
-            balanceBefore;
+        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
     }
 }

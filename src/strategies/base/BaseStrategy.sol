@@ -526,4 +526,17 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         // snapshot of the estimated total assets
         lastEstimatedTotalAssets = _estimatedTotalAssets();
     }
+
+    ////////////////////////////////////////////////////////////////
+    ///                      SIMULATION                          ///
+    ////////////////////////////////////////////////////////////////
+
+    function _simulateHarvest() public virtual;
+
+    function simulateHarvest() public returns (uint256 expectedBalance, uint256 outputAfterInvestment) {
+        try this._simulateHarvest() { }
+        catch (bytes memory e) {
+            (expectedBalance, outputAfterInvestment) = abi.decode(e, (uint256, uint256));
+        }
+    }
 }
