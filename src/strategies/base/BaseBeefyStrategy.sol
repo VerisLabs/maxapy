@@ -336,8 +336,14 @@ contract BaseBeefyStrategy is BaseStrategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
-        uint256 shares = _sharesForAmount(amount);
+        uint256 _before = beefyVault.balanceOf(address(this));
+
+        // Deposit LP tokens to Beefy vault
         beefyVault.deposit(amount);
+
+        uint256 _after = beefyVault.balanceOf(address(this));
+        uint256 shares;
+        shares = _after - _before;
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
