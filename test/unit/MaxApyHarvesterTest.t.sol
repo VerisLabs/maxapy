@@ -107,7 +107,7 @@ contract MaxApyHarvesterTest is BaseVaultTest {
             deadline: block.timestamp
         });
         vm.startPrank(users.keeper);
-        harvester.batchHarvests(harvests);
+        harvester.batchHarvest(vault, harvests);
         vm.stopPrank();
     }
 
@@ -151,7 +151,7 @@ contract MaxApyHarvesterTest is BaseVaultTest {
 
         vm.startPrank(users.keeper);
         vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
-        harvester.batchHarvests(harvests);
+        harvester.batchHarvest(vault, harvests);
         harvests[0] = MaxApyHarvester.HarvestData({
             strategyAddress: address(strategy1),
             minExpectedBalance: 0,
@@ -164,16 +164,16 @@ contract MaxApyHarvesterTest is BaseVaultTest {
             minOutputAfterInvestment: 0,
             deadline: block.timestamp
         });
-        harvester.batchHarvests(harvests);
+        harvester.batchHarvest(vault, harvests);
         vm.stopPrank();
         uint128 strategyTotalDebt = vault.strategies(address(strategy2)).strategyTotalDebt;
-        uint128 strategyDebtRatio = vault.strategies(address(strategy2)).strategyDebtRatio;
+        uint128 debtRatio = vault.strategies(address(strategy2)).strategyDebtRatio;
 
         vm.startPrank(users.alice);
         vault.updateStrategyData(address(strategy2), 100, type(uint256).max, type(uint256).max, 200);
         vm.stopPrank();
         strategyTotalDebt = vault.strategies(address(strategy2)).strategyTotalDebt;
-        strategyDebtRatio = vault.strategies(address(strategy2)).strategyDebtRatio;
+        debtRatio = vault.strategies(address(strategy2)).strategyDebtRatio;
 
         vm.startPrank(users.keeper);
         harvests[0] = MaxApyHarvester.HarvestData({
@@ -189,7 +189,7 @@ contract MaxApyHarvesterTest is BaseVaultTest {
             deadline: block.timestamp
         });
         vm.expectRevert(abi.encodeWithSignature("MinExpectedBalanceNotReached()"));
-        harvester.batchHarvests(harvests);
+        harvester.batchHarvest(vault, harvests);
     }
 
     function testMaxApyHarvester__AllocateBatch_Negatives() public {
@@ -212,6 +212,266 @@ contract MaxApyHarvesterTest is BaseVaultTest {
         vm.startPrank(users.allocator);
         vm.expectRevert(abi.encodeWithSignature("InvalidDebtRatio()"));
         harvester.batchAllocate(vault, allocations);
+        vm.stopPrank();
+    }
+
+     function testAddStrategy_single() public {
+        MaxApyHarvester.AllocationData[] memory allocations = new MaxApyHarvester.AllocationData[](1);
+        allocations[0] = MaxApyHarvester.AllocationData({
+            strategyAddress: address(0),
+            debtRatio: 2000,
+            maxDebtPerHarvest: type(uint72).max,
+            minDebtPerHarvest: 0,
+            performanceFee: 200
+        });
+
+        vm.startPrank(users.bob);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        harvester.batchAllocate(vault, allocations);
+        vm.stopPrank();
+
+        vm.startPrank(users.keeper);
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        harvester.batchAllocate(vault, allocations);
+
+        allocations[0].strategyAddress = address(strategy1);
+        harvester.batchAllocate(vault, allocations);
+        StrategyData memory strategyData = vault.strategies(address(strategy1));
+
+        assertEq(
+            allocations[0].debtRatio,
+            strategyData.strategyDebtRatio
+        );
+        assertEq(
+            allocations[0].maxDebtPerHarvest,
+            strategyData.strategyMaxDebtPerHarvest
+        );
+        assertEq(
+            allocations[0].minDebtPerHarvest,
+            strategyData.strategyMinDebtPerHarvest
+        );
+        assertEq(
+            allocations[0].performanceFee,
+            strategyData.strategyPerformanceFee
+        );
+        vm.stopPrank();
+    }
+
+    function testAddStrategy_multiple() public {
+        MaxApyHarvester.AllocationData[]
+            memory allocation = new MaxApyHarvester.AllocationData[](2);
+        allocation[0] = MaxApyHarvester.AllocationData({
+            strategyAddress: address(0),
+            debtRatio: 2000,
+            maxDebtPerHarvest: type(uint72).max,
+            minDebtPerHarvest: 0,
+            performanceFee: 200
+        });
+         allocation[1] = MaxApyHarvester.AllocationData({
+            strategyAddress: address(strategy2),
+            debtRatio: 4000,
+            maxDebtPerHarvest: type(uint72).max,
+            minDebtPerHarvest: 0,
+            performanceFee: 300
+        });
+
+        vm.startPrank(users.alice);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        harvester.batchAllocate(vault, allocation);
+        vm.stopPrank();
+
+        vm.startPrank(users.keeper);
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        harvester.batchAllocate(vault, allocation);
+
+        allocation[0].strategyAddress = address(strategy1);
+        harvester.batchAllocate(vault, allocation);
+        StrategyData memory strategyData = vault.strategies(address(strategy1));
+
+        assertEq(
+            allocation[0].debtRatio,
+            strategyData.strategyDebtRatio
+        );
+        assertEq(
+            allocation[0].maxDebtPerHarvest,
+            strategyData.strategyMaxDebtPerHarvest
+        );
+        assertEq(
+            allocation[0].minDebtPerHarvest,
+            strategyData.strategyMinDebtPerHarvest
+        );
+        assertEq(
+            allocation[0].performanceFee,
+            strategyData.strategyPerformanceFee
+        );
+
+        strategyData = vault.strategies(address(strategy2));
+
+        assertEq(
+            allocation[1].debtRatio,
+            strategyData.strategyDebtRatio
+        );
+        assertEq(
+            allocation[1].maxDebtPerHarvest,
+            strategyData.strategyMaxDebtPerHarvest
+        );
+        assertEq(
+            allocation[1].minDebtPerHarvest,
+            strategyData.strategyMinDebtPerHarvest
+        );
+        assertEq(
+            allocation[1].performanceFee,
+            strategyData.strategyPerformanceFee
+        );
+        vm.stopPrank();
+    }
+
+    function testRemoveStrategy_single() public {
+        MaxApyHarvester.AllocationData[] memory allocation = new MaxApyHarvester.AllocationData[](1);
+        allocation[0] = MaxApyHarvester.AllocationData({
+            strategyAddress: address(strategy1),
+            debtRatio: 2000,
+            maxDebtPerHarvest: type(uint72).max,
+            minDebtPerHarvest: 0,
+            performanceFee: 200
+        });
+
+        vm.startPrank(users.keeper);
+        harvester.batchAllocate(vault, allocation);
+        StrategyData memory strategyData = vault.strategies(address(strategy1));
+
+        assertEq(
+            allocation[0].debtRatio,
+            strategyData.strategyDebtRatio
+        );
+        assertEq(
+            allocation[0].maxDebtPerHarvest,
+            strategyData.strategyMaxDebtPerHarvest
+        );
+        assertEq(
+            allocation[0].minDebtPerHarvest,
+            strategyData.strategyMinDebtPerHarvest
+        );
+        assertEq(
+            allocation[0].performanceFee,
+            strategyData.strategyPerformanceFee
+        );
+
+        vm.stopPrank();
+        MaxApyHarvester.HarvestData[]
+            memory harvestData = new MaxApyHarvester.HarvestData[](1);
+        harvestData[0] = MaxApyHarvester.HarvestData({
+            strategyAddress: address(strategy1),
+            minExpectedBalance: 0,
+            minOutputAfterInvestment: 0,
+            deadline: block.timestamp
+        });
+
+        vm.startPrank(users.bob);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        harvester.batchHarvest(vault, harvestData);
+        vm.stopPrank();
+       
+        vm.startPrank(users.keeper);
+        allocation = new MaxApyHarvester.AllocationData[](1);
+        allocation[0] = MaxApyHarvester.AllocationData({
+            strategyAddress: address(strategy1),
+            debtRatio: 0,
+            maxDebtPerHarvest: type(uint72).max,
+            minDebtPerHarvest: 0,
+            performanceFee: 200
+        });
+        harvester.batchAllocate(vault, allocation);
+        harvester.batchHarvest(vault, harvestData);
+
+        strategyData = vault.strategies(address(strategy1));
+        assertEq(
+            vault.hasAnyRole(address(strategy1), vault.STRATEGY_ROLE()),
+            false
+        );
+        
+        // it will fail on report modifier STRATEGY_ROLE
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
+        harvester.batchHarvest(vault, harvestData);
+        
+        vm.stopPrank();
+    }
+
+    function testRemoveStrategy_multiple() public {
+        MaxApyHarvester.AllocationData[]
+            memory allocations = new MaxApyHarvester.AllocationData[](2);
+            allocations[0] = MaxApyHarvester.AllocationData({
+            strategyAddress: address(strategy1),
+            debtRatio: 2000,
+            maxDebtPerHarvest: type(uint72).max,
+            minDebtPerHarvest: 0,
+            performanceFee: 200
+        });
+         allocations[1] = MaxApyHarvester.AllocationData({
+            strategyAddress: address(strategy2),
+            debtRatio: 4000,
+            maxDebtPerHarvest: type(uint72).max,
+            minDebtPerHarvest: 0,
+            performanceFee: 300
+        });
+
+        vm.startPrank(users.keeper);
+        harvester.batchAllocate(vault, allocations);
+
+        MaxApyHarvester.HarvestData[]
+            memory harvestData = new MaxApyHarvester.HarvestData[](2);
+        harvestData[0] = MaxApyHarvester.HarvestData({
+            strategyAddress: address(strategy1),
+            minExpectedBalance: 0,
+            minOutputAfterInvestment: 0,
+            deadline: block.timestamp
+        });
+        harvestData[1] = MaxApyHarvester.HarvestData({
+            strategyAddress: address(strategy2),
+            minExpectedBalance: 0,
+            minOutputAfterInvestment: 0,
+            deadline: block.timestamp
+        });
+
+        assertEq(
+            vault.hasAnyRole(address(strategy1), vault.STRATEGY_ROLE()),
+            true
+        );
+        assertEq(
+            vault.hasAnyRole(address(strategy2), vault.STRATEGY_ROLE()),
+            true
+        );
+
+        harvester.batchHarvest(vault, harvestData);
+
+        allocations = new MaxApyHarvester.AllocationData[](2);
+            allocations[0] = MaxApyHarvester.AllocationData({
+            strategyAddress: address(strategy1),
+            debtRatio: 0,
+            maxDebtPerHarvest: type(uint72).max,
+            minDebtPerHarvest: 0,
+            performanceFee: 200
+        });
+         allocations[1] = MaxApyHarvester.AllocationData({
+            strategyAddress: address(strategy2),
+            debtRatio: 0,
+            maxDebtPerHarvest: type(uint72).max,
+            minDebtPerHarvest: 0,
+            performanceFee: 300
+        });
+
+        harvester.batchAllocate(vault, allocations);
+        harvester.batchHarvest(vault, harvestData);
+        
+        assertEq(
+            vault.hasAnyRole(address(strategy1), vault.STRATEGY_ROLE()),
+            false
+        );
+        assertEq(
+            vault.hasAnyRole(address(strategy2), vault.STRATEGY_ROLE()),
+            false
+        );
+
         vm.stopPrank();
     }
 }
