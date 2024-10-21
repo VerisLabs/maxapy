@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { IYVault, BaseYearnV2Strategy, IMaxApyVault, SafeTransferLib, IERC20Metadata } from "src/strategies/base/BaseYearnV2Strategy.sol";
+import {
+    IYVault,
+    BaseYearnV2Strategy,
+    IMaxApyVault,
+    SafeTransferLib,
+    IERC20Metadata
+} from "src/strategies/base/BaseYearnV2Strategy.sol";
 
 /// @title YearnWETHStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -9,7 +15,7 @@ import { IYVault, BaseYearnV2Strategy, IMaxApyVault, SafeTransferLib, IERC20Meta
 /// earning the Yearn Vault's yield
 contract YearnWETHStrategy is BaseYearnV2Strategy {
     using SafeTransferLib for address;
-    
+
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy

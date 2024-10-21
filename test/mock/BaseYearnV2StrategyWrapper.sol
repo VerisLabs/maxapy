@@ -1,8 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {IMaxApyVault, IYVault, BaseYearnV2Strategy, SafeTransferLib, IERC20Metadata} from "src/strategies/base/BaseYearnV2Strategy.sol";
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import {
+    IMaxApyVault,
+    IYVault,
+    BaseYearnV2Strategy,
+    SafeTransferLib,
+    IERC20Metadata
+} from "src/strategies/base/BaseYearnV2Strategy.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
     using SafeTransferLib for address;
@@ -13,7 +19,12 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
         bytes32 _strategyName,
         address _strategist,
         IYVault _yVault
-    ) public virtual override initializer {
+    )
+        public
+        virtual
+        override
+        initializer
+    {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         yVault = _yVault;
 
@@ -31,26 +42,15 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
     }
 
     function triggerLoss(uint256 amount) external {
-        uint256 amountToWithdraw = _sub0(
-            amount,
-            underlyingAsset.balanceOf(address(this))
-        );
+        uint256 amountToWithdraw = _sub0(amount, underlyingAsset.balanceOf(address(this)));
         if (amountToWithdraw > 0) {
-            uint256 shares = Math.min(
-                yVault.balanceOf(address(this)),
-                _sharesForAmount(amountToWithdraw)
-            );
+            uint256 shares = Math.min(yVault.balanceOf(address(this)), _sharesForAmount(amountToWithdraw));
             yVault.withdraw(shares);
         }
         underlyingAsset.safeTransfer(address(underlyingAsset), amount);
     }
 
-    function mockReport(
-        uint128 gain,
-        uint128 loss,
-        uint128 debtPayment,
-        address treasury
-    ) external {
+    function mockReport(uint128 gain, uint128 loss, uint128 debtPayment, address treasury) external {
         vault.report(gain, loss, debtPayment, treasury);
     }
 
@@ -61,10 +61,7 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
         external
         returns (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-        (unrealizedProfit, loss, debtPayment) = _prepareReturn(
-            debtOutstanding,
-            minExpectedBalance
-        );
+        (unrealizedProfit, loss, debtPayment) = _prepareReturn(debtOutstanding, minExpectedBalance);
     }
 
     function adjustPosition() external {
@@ -72,10 +69,7 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
         ///silence warning
     }
 
-    function invest(
-        uint256 amount,
-        uint256 minOutputAfterInvestment
-    ) external returns (uint256) {
+    function invest(uint256 amount, uint256 minOutputAfterInvestment) external returns (uint256) {
         return _invest(amount, minOutputAfterInvestment);
     }
 
@@ -83,9 +77,7 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
         return _divest(shares);
     }
 
-    function liquidatePosition(
-        uint256 amountNeeded
-    ) external returns (uint256, uint256) {
+    function liquidatePosition(uint256 amountNeeded) external returns (uint256, uint256) {
         return _liquidatePosition(amountNeeded);
     }
 

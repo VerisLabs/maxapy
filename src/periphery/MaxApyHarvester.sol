@@ -8,10 +8,9 @@ import { StrategyData } from "../helpers/VaultTypes.sol";
 
 /**
  * @title MaxHarvester
- * @dev This is an internal contract to call harvest in an atomic way. 
+ * @dev This is an internal contract to call harvest in an atomic way.
  */
 contract MaxApyHarvester is OwnableRoles {
-
     /*//////////////////////////////////////////////////////////////
                              ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -94,7 +93,7 @@ contract MaxApyHarvester is OwnableRoles {
         uint256 length = keepers.length;
 
         // Iterate through each Keeper in the array in order to grant roles.
-        for (uint256 i = 0; i < length; ) {
+        for (uint256 i = 0; i < length;) {
             _grantRoles(keepers[i], KEEPER_ROLE);
 
             unchecked {
@@ -128,17 +127,14 @@ contract MaxApyHarvester is OwnableRoles {
      * @param vault The MaxApyVault contract instance.
      * @param strategies An array of strategy values to add to the vault.
      */
-    function batchAllocate(
-        IMaxApyVault vault,
-        AllocationData[] calldata strategies
-    ) public checkRoles(KEEPER_ROLE) {
+    function batchAllocate(IMaxApyVault vault, AllocationData[] calldata strategies) public checkRoles(KEEPER_ROLE) {
         uint256 length = strategies.length;
 
         AllocationData calldata stratData;
         StrategyData memory isStratActive;
 
         // Iterate through each strategy in the array in order to add the strategy .
-        for (uint i = 0; i < length; ) {
+        for (uint256 i = 0; i < length;) {
             stratData = strategies[i];
             isStratActive = vault.strategies(stratData.strategyAddress);
             if (isStratActive.strategyActivation != 0) {
@@ -158,7 +154,7 @@ contract MaxApyHarvester is OwnableRoles {
                     stratData.performanceFee
                 );
             }
-            
+
             unchecked {
                 i++;
             }
@@ -170,27 +166,24 @@ contract MaxApyHarvester is OwnableRoles {
      * @param vault The MaxApyVault contract instance.
      * @param harvests An array of harvest data for strategies to remove from the vault.
      */
-    function batchHarvest(
-        IMaxApyVault vault,
-        HarvestData[] calldata harvests
-    ) public checkRoles(KEEPER_ROLE) {
+    function batchHarvest(IMaxApyVault vault, HarvestData[] calldata harvests) public checkRoles(KEEPER_ROLE) {
         uint256 length = harvests.length;
 
         // Iterate through each strategy in the array in order to call the harvest.
         StrategyData memory strategyData;
 
-        for (uint i = 0; i < length; ) {
+        for (uint256 i = 0; i < length;) {
             address strategyAddress = harvests[i].strategyAddress;
 
             strategyData = vault.strategies(strategyAddress);
 
             strategy = IStrategy(strategyAddress);
             strategy.harvest(
-                    harvests[i].minExpectedBalance,
-                    harvests[i].minOutputAfterInvestment,
-                    DEFAULT_HARVESTER,
-                    harvests[i].deadline
-                );
+                harvests[i].minExpectedBalance,
+                harvests[i].minOutputAfterInvestment,
+                DEFAULT_HARVESTER,
+                harvests[i].deadline
+            );
 
             if (strategyData.strategyDebtRatio == 0) {
                 vault.exitStrategy(strategyAddress);

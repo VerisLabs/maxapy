@@ -630,4 +630,3 @@ contract BaseYearnV3Strategy is BaseStrategy {
         }
     }
 }
-

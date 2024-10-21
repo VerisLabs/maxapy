@@ -2,30 +2,33 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
-import {TransparentUpgradeableProxy, ITransparentUpgradeableProxy} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    TransparentUpgradeableProxy,
+    ITransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
-import {IERC20, console2} from "../../test/base/BaseTest.t.sol";
-import {IStrategy} from "src/interfaces/IStrategy.sol";
-import {IMaxApyVault} from "src/interfaces/IMaxApyVault.sol";
-import {MaxApyVault, OwnableRoles} from "src/MaxApyVault.sol";
-import {StrategyData} from "src/helpers/VaultTypes.sol";
-import {StrategyEvents} from "../../test/helpers/StrategyEvents.sol";
-import {IUniswapV2Router02 as IRouter} from "src/interfaces/IUniswap.sol";
+import { IERC20, console2 } from "../../test/base/BaseTest.t.sol";
+import { IStrategy } from "src/interfaces/IStrategy.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { MaxApyVault, OwnableRoles } from "src/MaxApyVault.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
+import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 
 //// Strategiess
-import {BeefyMaiUSDCeStrategy} from "src/strategies/polygon/USDCe/beefy/BeefyMaiUSDCeStrategy.sol";
-import {ConvexUSDCCrvUSDStrategy} from "src/strategies/polygon/USDCe/convex/ConvexUSDCCrvUSDStrategy.sol";
-import {ConvexUSDTCrvUSDStrategy} from "src/strategies/polygon/USDCe/convex/ConvexUSDTCrvUSDStrategy.sol";
-import {YearnDAIStrategy} from "src/strategies/polygon/USDCe/yearn/YearnDAIStrategy.sol";
-import {YearnDAILenderStrategy} from "src/strategies/polygon/USDCe/yearn/YearnDAILenderStrategy.sol";
-import {YearnUSDTStrategy} from "src/strategies/polygon/USDCe/yearn/YearnUSDTStrategy.sol";
+import { BeefyMaiUSDCeStrategy } from "src/strategies/polygon/USDCe/beefy/BeefyMaiUSDCeStrategy.sol";
+import { ConvexUSDCCrvUSDStrategy } from "src/strategies/polygon/USDCe/convex/ConvexUSDCCrvUSDStrategy.sol";
+import { ConvexUSDTCrvUSDStrategy } from "src/strategies/polygon/USDCe/convex/ConvexUSDTCrvUSDStrategy.sol";
+import { YearnDAIStrategy } from "src/strategies/polygon/USDCe/yearn/YearnDAIStrategy.sol";
+import { YearnDAILenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnDAILenderStrategy.sol";
+import { YearnUSDTStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDTStrategy.sol";
 
 //// Helpers(Factory , Router)f
-import {MaxApyRouter} from "src/MaxApyRouter.sol";
-import {MaxApyVaultFactory} from "src/MaxApyVaultFactory.sol";
+import { MaxApyRouter } from "src/MaxApyRouter.sol";
+import { MaxApyVaultFactory } from "src/MaxApyVaultFactory.sol";
 
-import {IWrappedToken} from "src/interfaces/IWrappedToken.sol";
+import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
 import "src/helpers/AddressBook.sol";
 
 /// @notice this is a simple test deployment of a polygon USDCe vault in a local rpc
@@ -66,9 +69,7 @@ contract PolygonStrategiesDeploymentScript is Script, OwnableRoles {
         //keepers.push(vm.envAddress("KEEPER3_ADDRESS"));
 
         strategyAdmin = vm.envAddress("STRATEGY_ADMIN_ADDRESS");
-        strategyEmergencyAdmin = vm.envAddress(
-            "STRATEGY_EMERGENCY_ADMIN_ADDRESS"
-        );
+        strategyEmergencyAdmin = vm.envAddress("STRATEGY_EMERGENCY_ADMIN_ADDRESS");
         bool isFork = vm.envBool("FORK");
 
         if (isFork) {
@@ -96,16 +97,13 @@ contract PolygonStrategiesDeploymentScript is Script, OwnableRoles {
                 bytes32(abi.encode("MaxApy Beefy MAI<>USDCe")),
                 strategyAdmin,
                 CURVE_MAI_USDCE_POOL_POLYGON, // curveLpPool
-                BEEFY_MAI_USDCE_POLYGON // beefyVault 
+                BEEFY_MAI_USDCE_POLYGON // beefyVault
             )
         );
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         strategy1 = IStrategy(address(proxy));
         strategy1.grantRoles(strategyAdmin, strategy1.ADMIN_ROLE());
-        strategy1.grantRoles(
-            strategyEmergencyAdmin,
-            strategy1.EMERGENCY_ADMIN_ROLE()
-        );
+        strategy1.grantRoles(strategyEmergencyAdmin, strategy1.EMERGENCY_ADMIN_ROLE());
 
         // Strategy2(ConvexUSDCCrvUSDStrategy)
         ConvexUSDCCrvUSDStrategy implementation2 = new ConvexUSDCCrvUSDStrategy();
@@ -118,17 +116,14 @@ contract PolygonStrategiesDeploymentScript is Script, OwnableRoles {
                 keepers,
                 bytes32(abi.encode("MaxApy Convex USDC<>USD")),
                 strategyAdmin,
-                CURVE_CRVUSD_USDC_POOL_POLYGON, // curveLpPool 
+                CURVE_CRVUSD_USDC_POOL_POLYGON, // curveLpPool
                 UNISWAP_V3_ROUTER_POLYGON
             )
         );
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         strategy2 = IStrategy(address(proxy));
         strategy2.grantRoles(strategyAdmin, strategy2.ADMIN_ROLE());
-        strategy2.grantRoles(
-            strategyEmergencyAdmin,
-            strategy2.EMERGENCY_ADMIN_ROLE()
-        );
+        strategy2.grantRoles(strategyEmergencyAdmin, strategy2.EMERGENCY_ADMIN_ROLE());
 
         // Strategy3(ConvexUSDTCrvUSDStrategy)
         ConvexUSDTCrvUSDStrategy implementation3 = new ConvexUSDTCrvUSDStrategy();
@@ -148,10 +143,7 @@ contract PolygonStrategiesDeploymentScript is Script, OwnableRoles {
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         strategy3 = IStrategy(address(proxy));
         strategy3.grantRoles(strategyAdmin, strategy3.ADMIN_ROLE());
-        strategy3.grantRoles(
-            strategyEmergencyAdmin,
-            strategy3.EMERGENCY_ADMIN_ROLE()
-        );
+        strategy3.grantRoles(strategyEmergencyAdmin, strategy3.EMERGENCY_ADMIN_ROLE());
 
         // Strategy4(YearnDAIStrategy)
         YearnDAIStrategy implementation4 = new YearnDAIStrategy();
@@ -170,10 +162,7 @@ contract PolygonStrategiesDeploymentScript is Script, OwnableRoles {
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         strategy4 = IStrategy(address(proxy));
         strategy4.grantRoles(strategyAdmin, strategy4.ADMIN_ROLE());
-        strategy4.grantRoles(
-            strategyEmergencyAdmin,
-            strategy4.EMERGENCY_ADMIN_ROLE()
-        );
+        strategy4.grantRoles(strategyEmergencyAdmin, strategy4.EMERGENCY_ADMIN_ROLE());
 
         // Strategy5(YearnDAILenderStrategy)
         YearnDAILenderStrategy implementation5 = new YearnDAILenderStrategy();
@@ -192,10 +181,7 @@ contract PolygonStrategiesDeploymentScript is Script, OwnableRoles {
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         strategy5 = IStrategy(address(proxy));
         strategy5.grantRoles(strategyAdmin, strategy5.ADMIN_ROLE());
-        strategy5.grantRoles(
-            strategyEmergencyAdmin,
-            strategy5.EMERGENCY_ADMIN_ROLE()
-        );
+        strategy5.grantRoles(strategyEmergencyAdmin, strategy5.EMERGENCY_ADMIN_ROLE());
 
         // Strategy6(YearnUSDTStrategy)
         YearnUSDTStrategy implementation6 = new YearnUSDTStrategy();
@@ -214,14 +200,9 @@ contract PolygonStrategiesDeploymentScript is Script, OwnableRoles {
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         strategy6 = IStrategy(address(proxy));
         strategy6.grantRoles(strategyAdmin, strategy6.ADMIN_ROLE());
-        strategy6.grantRoles(
-            strategyEmergencyAdmin,
-            strategy6.EMERGENCY_ADMIN_ROLE()
-        );
+        strategy6.grantRoles(strategyEmergencyAdmin, strategy6.EMERGENCY_ADMIN_ROLE());
 
-        console2.log(
-            "***************************DEPLOYMENT ADDRESSES**********************************"
-        );
+        console2.log("***************************DEPLOYMENT ADDRESSES**********************************");
         console2.log("[MAXAPY] USDCE Vault :", address(vaultUsdce));
         console2.log("[BEEFY] BeefyMaiUSDCe:", address(strategy1));
         console2.log("[CONVEX] ConvexUSDCCrvUSD:", address(strategy2));
