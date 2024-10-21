@@ -17,7 +17,7 @@ import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import "src/helpers/AddressBook.sol";
 
 contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
-    address public constant YVAULT_DAI_MAINNET = YEARN_DAI_MAINNET_YVAULT_MAINNET;
+    address public constant YVAULT_DAI_MAINNET = YEARN_DAI_YVAULT_MAINNET;
     address public TREASURY;
 
     IStrategyWrapper public strategy;

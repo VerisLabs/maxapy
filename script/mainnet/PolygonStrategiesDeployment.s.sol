@@ -156,7 +156,7 @@ contract PolygonStrategiesDeploymentScript is Script, OwnableRoles {
                 keepers,
                 bytes32(abi.encode("MaxApy Yearn  DAI")),
                 strategyAdmin,
-                YEARN_DAI_POLYGON_VAULT_POLYGON
+                YEARN_DAI_YVAULT_POLYGON
             )
         );
         proxy = ITransparentUpgradeableProxy(address(_proxy));

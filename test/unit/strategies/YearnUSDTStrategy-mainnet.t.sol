@@ -21,7 +21,7 @@ import "src/helpers/AddressBook.sol";
 contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
     using SafeTransferLib for address;
 
-    address public constant YVAULT_USDT_MAINNET = YEARN_USDT_POLYGON_YVAULT_MAINNET;
+    address public constant YVAULT_USDT_MAINNET = YEARN_USDT_YVAULT_MAINNET;
     address public TREASURY;
 
     IStrategyWrapper public strategy;
