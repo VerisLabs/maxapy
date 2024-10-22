@@ -32,6 +32,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
 
     function setUp() public {
         super._setUp("MAINNET");
+        vm.rollFork(21019709);
 
         TREASURY = makeAddr("treasury");
 
