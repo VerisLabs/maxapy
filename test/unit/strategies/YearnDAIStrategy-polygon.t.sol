@@ -18,7 +18,7 @@ import "src/helpers/AddressBook.sol";
 import { _1_USDCE } from "test/helpers/Tokens.sol";
 
 contract YearnDAIStrategyTest is BaseTest, StrategyEvents {
-    address public constant YVAULT_DAI_POLYGON = YEARN_DAI_POLYGON_VAULT_POLYGON;
+    address public constant YVAULT_DAI_POLYGON = YEARN_DAI_YVAULT_POLYGON;
     address public TREASURY;
 
     IStrategyWrapper public strategy;

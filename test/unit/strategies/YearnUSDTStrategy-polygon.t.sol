@@ -23,7 +23,7 @@ import "forge-std/console.sol";
 contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
     using SafeTransferLib for address;
 
-    address public constant YVAULT_USDT_POLYGON = YEARN_USDT_MAINNET_YVAULT_POLYGON;
+    address public constant YVAULT_USDT_POLYGON = YEARN_USDT_YVAULT_POLYGON;
     address public TREASURY;
 
     IStrategyWrapper public strategy;

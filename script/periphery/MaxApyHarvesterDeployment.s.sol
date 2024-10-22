@@ -54,6 +54,7 @@ contract MaxApyHarvesterDeployment is Script {
         strategy3.grantRoles(address(harvester), strategy3.KEEPER_ROLE());
         strategy4.grantRoles(address(harvester), strategy4.KEEPER_ROLE());
         strategy5.grantRoles(address(harvester), strategy5.KEEPER_ROLE());
+
         strategy6.grantRoles(address(harvester), strategy6.KEEPER_ROLE());
         strategy7.grantRoles(address(harvester), strategy7.KEEPER_ROLE());
         strategy8.grantRoles(address(harvester), strategy8.KEEPER_ROLE());
