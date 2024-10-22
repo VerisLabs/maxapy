@@ -5,75 +5,76 @@ MaxAPY is a yield farming **gas-optimized** and **capital-efficient** vault impl
 ## Contracts
 
 ```ml
-src/
-├── MaxApyRouter.sol
-├── MaxApyVault.sol
-├── MaxApyVaultFactory.sol
-└── strategies
-    ├── base
-    │   ├── BaseBeefyCurveStrategy.sol
-    │   ├── BaseBeefyStrategy.sol
-    │   ├── BaseConvexStrategy.sol
-    │   ├── BaseConvexStrategyPolygon.sol
-    │   ├── BaseSommelierStrategy.sol
-    │   ├── BaseStrategy.sol
-    │   ├── BaseYearnV2Strategy.sol
-    │   └── BaseYearnV3Strategy.sol
-    ├── mainnet
-    │   ├── DAI
-    │   │   └── yearn
-    │   │       ├── YearnAjnaDAIStakingStrategy.sol
-    │   │       └── YearnDAIStrategy.sol
-    │   ├── USDC
-    │   │   ├── convex
-    │   │   │   └── ConvexCrvUSDWethCollateralStrategy.sol
-    │   │   ├── sommelier
-    │   │   │   └── SommelierTurboGHOStrategy.sol
-    │   │   └── yearn
-    │   │       ├── YearnLUSDStrategy.sol
-    │   │       └── YearnUSDCStrategy.sol
-    │   ├── USDT
-    │   │   └── yearn
-    │   │       └── YearnUSDTStrategy.sol
-    │   └── WETH
-    │       ├── convex
-    │       │   └── ConvexdETHFrxETHStrategy.sol
-    │       ├── sommelier
-    │       │   ├── SommelierMorphoEthMaximizerStrategy.sol
-    │       │   ├── SommelierStEthDepositTurboStEthStrategy.sol
-    │       │   ├── SommelierTurboDivEthStrategy.sol
-    │       │   ├── SommelierTurboEEthV2Strategy.sol
-    │       │   ├── SommelierTurboEthXStrategy.sol
-    │       │   ├── SommelierTurboEzEthStrategy.sol
-    │       │   ├── SommelierTurboRsEthStrategy.sol
-    │       │   ├── SommelierTurboStEthStrategy.sol
-    │       │   └── SommelierTurboSwEthStrategy.sol
-    │       └── yearn
-    │           ├── YearnAaveV3WETHLenderStrategy.sol
-    │           ├── YearnAjnaWETHStakingStrategy.sol
-    │           ├── YearnCompoundV3WETHLenderStrategy.sol
-    │           ├── YearnV3WETH2Strategy.sol
-    │           ├── YearnV3WETHStrategy.sol
-    │           └── YearnWETHStrategy.sol
-    └── polygon
-        └── USDCe
-            ├── beefy
-            │   ├── BeefyCrvUSDUSDCeStrategy.sol
-            │   ├── BeefyMaiUSDCeStrategy.sol
-            │   └── BeefyUSDCeDAIStrategy.sol
-            ├── convex
-            │   ├── ConvexUSDCCrvUSDStrategy.sol
-            │   └── ConvexUSDTCrvUSDStrategy.sol
-            └── yearn
-                ├── YearnAaveV3USDTLenderStrategy.sol
-                ├── YearnAjnaUSDCStrategy.sol
-                ├── YearnCompoundUSDCeLenderStrategy.sol
-                ├── YearnDAILenderStrategy.sol
-                ├── YearnDAIStrategy.sol
-                ├── YearnMaticUSDCStakingStrategy.sol
-                ├── YearnUSDCeLenderStrategy.sol
-                ├── YearnUSDCeStrategy.sol
-                └── YearnUSDTStrategy.sol```
+├── src
+│   ├── MaxApyRouter.sol
+│   ├── MaxApyVaultFactory.sol
+│   ├── MaxApyVault.sol
+│   └── strategies
+│       ├── base
+│       │   ├── BaseBeefyCurveStrategy.sol
+│       │   ├── BaseBeefyStrategy.sol
+│       │   ├── BaseConvexStrategyPolygon.sol
+│       │   ├── BaseConvexStrategy.sol
+│       │   ├── BaseSommelierStrategy.sol
+│       │   ├── BaseStrategy.sol
+│       │   ├── BaseYearnV2Strategy.sol
+│       │   └── BaseYearnV3Strategy.sol
+│       ├── mainnet
+│       │   ├── DAI
+│       │   │   └── yearn
+│       │   │       ├── YearnAjnaDAIStakingStrategy.sol
+│       │   │       └── YearnDAIStrategy.sol
+│       │   ├── USDC
+│       │   │   ├── convex
+│       │   │   │   └── ConvexCrvUSDWethCollateralStrategy.sol
+│       │   │   ├── sommelier
+│       │   │   │   └── SommelierTurboGHOStrategy.sol
+│       │   │   └── yearn
+│       │   │       ├── YearnLUSDStrategy.sol
+│       │   │       └── YearnUSDCStrategy.sol
+│       │   ├── USDT
+│       │   │   └── yearn
+│       │   │       └── YearnUSDTStrategy.sol
+│       │   └── WETH
+│       │       ├── convex
+│       │       │   └── ConvexdETHFrxETHStrategy.sol
+│       │       ├── sommelier
+│       │       │   ├── SommelierMorphoEthMaximizerStrategy.sol
+│       │       │   ├── SommelierStEthDepositTurboStEthStrategy.sol
+│       │       │   ├── SommelierTurboDivEthStrategy.sol
+│       │       │   ├── SommelierTurboEEthV2Strategy.sol
+│       │       │   ├── SommelierTurboEthXStrategy.sol
+│       │       │   ├── SommelierTurboEzEthStrategy.sol
+│       │       │   ├── SommelierTurboRsEthStrategy.sol
+│       │       │   ├── SommelierTurboStEthStrategy.sol
+│       │       │   └── SommelierTurboSwEthStrategy.sol
+│       │       └── yearn
+│       │           ├── YearnAaveV3WETHLenderStrategy.sol
+│       │           ├── YearnAjnaWETHStakingStrategy.sol
+│       │           ├── YearnCompoundV3WETHLenderStrategy.sol
+│       │           ├── YearnV3WETH2Strategy.sol
+│       │           ├── YearnV3WETHStrategy.sol
+│       │           └── YearnWETHStrategy.sol
+│       └── polygon
+│           └── USDCe
+│               ├── beefy
+│               │   ├── BeefyCrvUSDUSDCeStrategy.sol
+│               │   ├── BeefyMaiUSDCeStrategy.sol
+│               │   └── BeefyUSDCeDAIStrategy.sol
+│               ├── convex
+│               │   ├── ConvexUSDCCrvUSDStrategy.sol
+│               │   └── ConvexUSDTCrvUSDStrategy.sol
+│               └── yearn
+│                   ├── YearnAaveV3USDTLenderStrategy.sol
+│                   ├── YearnAjnaUSDCStrategy.sol
+│                   ├── YearnCompoundUSDCeLenderStrategy.sol
+│                   ├── YearnDAILenderStrategy.sol
+│                   ├── YearnDAIStrategy.sol
+│                   ├── YearnMaticUSDCStakingStrategy.sol
+│                   ├── YearnUSDCeLenderStrategy.sol
+│                   ├── YearnUSDCeStrategy.sol
+│                   └── YearnUSDTStrategy.sol
+
 ```
 
 ## Installation
