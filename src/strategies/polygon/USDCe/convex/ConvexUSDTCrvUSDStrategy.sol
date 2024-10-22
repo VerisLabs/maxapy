@@ -473,10 +473,10 @@ contract ConvexUSDTCrvUSDStrategy is BaseConvexStrategyPolygon {
             mstore(0x60, 0) // Restore the zero slot
             mstore(0x40, m) // Restore the free memory pointer
         }
-        uint256 sharesBalanceBefore = curveLpPool.balances(address(this));
+        uint256 sharesBalanceBefore = curveLpPool.balanceOf(address(this));
         // Check if vault transferred underlying and re-invest it
         _adjustPosition(debtOutstanding, minOutputAfterInvestment);
-        outputAfterInvestment = curveLpPool.balances(address(this)) - sharesBalanceBefore;
+        outputAfterInvestment = curveLpPool.balanceOf(address(this)) - sharesBalanceBefore;
         _snapshotEstimatedTotalAssets();
         // revert with data we need
         assembly {

@@ -80,7 +80,7 @@ interface ICurveLpPool is IERC20 {
         payable
         returns (uint256);
 
-    function balances(address) external view returns (uint256);
+    function balances(uint256) external view returns (uint256);
 
     function price_oracle() external view returns (uint256);
 
