@@ -531,12 +531,25 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     ///                      SIMULATION                          ///
     ////////////////////////////////////////////////////////////////
 
+    /// @dev internal helper function that reverts and returns needed values in the revert message
     function _simulateHarvest() public virtual;
 
-    function simulateHarvest() public returns (uint256 expectedBalance, uint256 outputAfterInvestment) {
+    /// @notice helper function to accurately simulate the effects of a harvest
+    function simulateHarvest()
+        public
+        returns (
+            uint256 expectedBalance,
+            uint256 outputAfterInvestment,
+            uint256 intendedInvest,
+            uint256 actualInvest,
+            uint256 intendedDivest,
+            uint256 actualDivest
+        )
+    {
         try this._simulateHarvest() { }
         catch (bytes memory e) {
-            (expectedBalance, outputAfterInvestment) = abi.decode(e, (uint256, uint256));
+            (expectedBalance, outputAfterInvestment, intendedInvest, actualInvest, intendedDivest, actualDivest) =
+                abi.decode(e, (uint256, uint256, uint256, uint256, uint256, uint256));
         }
     }
 }

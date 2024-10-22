@@ -318,23 +318,19 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
     ///                      SIMULATION                          ///
     ////////////////////////////////////////////////////////////////
 
+    /// @dev internal helper function that reverts and returns needed values in the revert message
     function _simulateHarvest() public override {
         address harvester = address(0);
-        uint256 minOutputAfterInvestment = 0;
-        uint256 minExpectedBalance = 0;
 
         uint256 expectedBalance;
         uint256 outputAfterInvestment;
+        uint256 intendedDivest;
+        uint256 actualDivest;
+        uint256 intendedInvest;
+        uint256 actualInvest;
 
         // normally the treasury would get the management fee
         address managementFeeReceiver;
-        // if the harvest was done from the vault means it the
-        // harvest was triggered on a deposit
-        if (msg.sender == address(vault)) {
-            // the depositing user will get the management fees as a reward
-            // for paying gas costs of harvest
-            managementFeeReceiver = harvester;
-        }
 
         uint256 unrealizedProfit;
         uint256 loss;
@@ -367,6 +363,7 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
             // Store debt outstanding returned by staticcall into `debtOutstanding`
             debtOutstanding := mload(0x00)
         }
+        intendedDivest = debtOutstanding;
 
         if (emergencyExit == 2) {
             // Do what needed before
@@ -390,10 +387,11 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
             // Do what needed before
             _beforePrepareReturn();
             // Free up returns for vault to pull
-            (unrealizedProfit, loss, debtPayment) = _prepareReturn(debtOutstanding, minExpectedBalance);
+            (unrealizedProfit, loss, debtPayment) = _prepareReturn(debtOutstanding, 0);
 
             expectedBalance = _underlyingBalance();
         }
+        actualDivest = debtPayment;
 
         assembly ("memory-safe") {
             let m := mload(0x40) // Store free memory pointer
@@ -428,10 +426,13 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
             mstore(0x40, m) // Restore the free memory pointer
         }
 
+        intendedInvest = _underlyingBalance();
+
         uint256 sharesBalanceBefore = curveLpPool.balanceOf(address(this));
         // Check if vault transferred underlying and re-invest it
-        _adjustPosition(debtOutstanding, minOutputAfterInvestment);
+        _adjustPosition(debtOutstanding, 0);
         outputAfterInvestment = curveLpPool.balanceOf(address(this)) - sharesBalanceBefore;
+        actualInvest = _lpValue(outputAfterInvestment);
         _snapshotEstimatedTotalAssets();
 
         // revert with data we need
@@ -439,7 +440,11 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
             let ptr := mload(0x40)
             mstore(ptr, expectedBalance)
             mstore(add(ptr, 32), outputAfterInvestment)
-            revert(ptr, 64)
+            mstore(add(ptr, 64), intendedDivest)
+            mstore(add(ptr, 96), actualDivest)
+            mstore(add(ptr, 128), intendedInvest)
+            mstore(add(ptr, 160), actualInvest)
+            revert(ptr, 192)
         }
     }
 }

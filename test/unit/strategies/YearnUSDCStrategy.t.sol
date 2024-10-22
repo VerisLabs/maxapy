@@ -607,7 +607,7 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
         vault.deposit(100 * _1_USDC, users.alice);
 
         vm.startPrank(users.keeper);
-        (uint256 expectedBalance, uint256 outputAfterInvestment) = strategy.simulateHarvest();
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
 
         strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }

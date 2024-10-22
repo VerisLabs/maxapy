@@ -552,7 +552,7 @@ contract BeefyMaiUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDCE, users.alice);
         vm.startPrank(users.keeper);
-        (uint256 expectedBalance, uint256 outputAfterInvestment) = strategy.simulateHarvest();
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
         strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
 }
