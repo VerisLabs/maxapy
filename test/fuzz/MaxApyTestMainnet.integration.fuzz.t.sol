@@ -45,7 +45,7 @@ import { StrategyFuzzer } from "./fuzzers/StrategyFuzzer.t.sol";
 import { LibPRNG } from "solady/utils/LibPRNG.sol";
 
 /// @dev Integration fuzz tests for the mainnet WETH vault
-contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
+contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
     using LibPRNG for LibPRNG.PRNG;
 
     ////////////////////////////////////////////////////////////////
@@ -403,7 +403,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
         strategy5.grantRoles(address(strategyFuzzer), _keeperRole);
     }
 
-    function testFuzzMaxApyVault__DepositAndRedeemWithoutHarvests(
+    function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithoutHarvests(
         uint256 actorSeed,
         uint256 assets,
         uint256 shares
@@ -420,31 +420,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
         vaultFuzzer.redeem(actorSeedRNG, shares);
     }
 
-    function testFuzzMaxApyVault__DepositAndRedeemWithHarvests(
-        uint256 actorSeed,
-        uint256 strategySeed,
-        uint256 assets,
-        uint256 shares
-    )
-        public
-    {
-        LibPRNG.PRNG memory actorSeedRNG;
-        LibPRNG.PRNG memory strategyRNG;
-        actorSeedRNG.seed(actorSeed);
-        strategyRNG.seed(strategySeed);
-
-        vaultFuzzer.deposit(assets);
-        strategyFuzzer.harvest(strategyRNG);
-        vaultFuzzer.deposit(assets);
-        strategyFuzzer.harvest(strategyRNG);
-        vaultFuzzer.deposit(assets);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-        strategyFuzzer.harvest(strategyRNG);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
-    }
-
-    function testFuzzMaxApyVault__DepositAndRedeemAfterExitStrategy(
+    function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithHarvests(
         uint256 actorSeed,
         uint256 strategySeed,
         uint256 assets,
@@ -458,6 +434,30 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
         strategyRNG.seed(strategySeed);
 
         vaultFuzzer.deposit(assets);
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.deposit(assets);
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.deposit(assets);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        strategyFuzzer.harvest(strategyRNG);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+        vaultFuzzer.redeem(actorSeedRNG, shares);
+    }
+
+    function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemAfterExitStrategy(
+        uint256 actorSeed,
+        uint256 strategySeed,
+        uint256 assets,
+        uint256 shares
+    )
+        public
+    {
+        LibPRNG.PRNG memory actorSeedRNG;
+        LibPRNG.PRNG memory strategyRNG;
+        actorSeedRNG.seed(actorSeed);
+        strategyRNG.seed(strategySeed);
+
+        vaultFuzzer.deposit(assets);
         strategyFuzzer.exitStrategy(strategyRNG);
         vaultFuzzer.deposit(assets);
         strategyFuzzer.exitStrategy(strategyRNG);
@@ -468,7 +468,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
         vaultFuzzer.redeem(actorSeedRNG, shares);
     }
 
-    function testFuzzMaxApyVault__DepositAndRedeemWithGainsAndLossesWithoutHarvests(
+    function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithGainsAndLossesWithoutHarvests(
         uint256 actorSeed,
         uint256 strategySeed,
         uint256 gainsAndLossesSeed,
@@ -506,7 +506,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
         vaultFuzzer.redeem(actorSeedRNG, shares);
     }
 
-    function testFuzzMaxApyVault__DepositAndRedeemWithGainsAndLossesWithHarvests(
+    function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithGainsAndLossesWithHarvests(
         uint256 actorSeed,
         uint256 strategySeed,
         uint256 gainsAndLossesSeed,
@@ -534,7 +534,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
         vaultFuzzer.redeem(actorSeedRNG, shares);
     }
 
-    function testFuzzMaxApyVault__MintAndWithdrawWithoutHarvests(
+    function testFuzzMaxApyIntegrationMainnet__MintAndWithdrawWithoutHarvests(
         uint256 actorSeed,
         uint256 assets,
         uint256 shares
@@ -551,7 +551,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
         vaultFuzzer.withdraw(actorSeedRNG, assets);
     }
 
-    function testFuzzMaxApyVault__MintAndWithdrawWithHarvests(
+    function testFuzzMaxApyIntegrationMainnet__MintAndWithdrawWithHarvests(
         uint256 actorSeed,
         uint256 strategySeed,
         uint256 shares,
@@ -575,7 +575,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
         vaultFuzzer.withdraw(actorSeedRNG, assets);
     }
 
-    function testFuzzMaxApyVault__MintAndWithdrawGainsAndLossesWithoutHarvests(
+    function testFuzzMaxApyIntegrationMainnet__MintAndWithdrawGainsAndLossesWithoutHarvests(
         uint256 actorSeed,
         uint256 strategySeed,
         uint256 gainsAndLossesSeed,
@@ -603,7 +603,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
         vaultFuzzer.withdraw(actorSeedRNG, assets);
     }
 
-    function testFuzzMaxApyVault__MintAndWithdrawGainsAndLossesWithHarvests(
+    function testFuzzMaxApyIntegrationMainnet__MintAndWithdrawGainsAndLossesWithHarvests(
         uint256 actorSeed,
         uint256 strategySeed,
         uint256 gainsAndLossesSeed,
@@ -639,7 +639,7 @@ contract MaxApyV2IntegrationTest is BaseTest, StrategyEvents {
         strategyFuzzer.harvest(strategyRNG);
     }
 
-    function testFuzzMaxApyVault__RandomSequence(
+    function testFuzzMaxApyIntegrationMainnet__RandomSequence(
         uint256 actorSeed,
         uint256 strategySeed,
         uint256 functionSeed,

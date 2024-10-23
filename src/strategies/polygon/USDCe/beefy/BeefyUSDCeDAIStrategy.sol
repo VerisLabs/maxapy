@@ -294,7 +294,7 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
         (, uint128 positionFees0, uint128 positionFees1) = getPositionInfo(tickLower, tickUpper);
 
         if (amount0 | amount1 != 0) {
-        (positionFees0, positionFees1) = (positionFees0 + (uint128(amount0)), positionFees1 + (uint128(amount1)));
+            (positionFees0, positionFees1) = (positionFees0 + (uint128(amount0)), positionFees1 + (uint128(amount1)));
         }
 
         //Pool.collect
