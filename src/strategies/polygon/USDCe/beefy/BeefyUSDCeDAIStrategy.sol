@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
+import "solady/utils/SafeCastLib.sol";
 import { IUniProxy } from "src/interfaces/IUniProxy.sol";
 import { OracleLibrary } from "src/lib/OracleLibrary.sol";
 import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
 import { IHypervisor } from "src/interfaces/IHypervisor.sol";
 import { IAlgebraPool } from "src/interfaces/IAlgebraPool.sol";
 import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { LiquidityRangePool } from "src/lib/LiquidityRangePool.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { BaseBeefyStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
@@ -22,8 +24,9 @@ import {
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `BeefyUSDCeDAIStrategy` supplies an underlying token into a generic Beefy Vault,
 /// earning the Beefy Vault's yield
-contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
+contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy, ReentrancyGuard {
     using SafeTransferLib for address;
+    using SafeCastLib for uint256;
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -77,8 +80,6 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
 
         underlyingAsset.safeApprove(address(zapper), type(uint256).max);
         dai.safeApprove(address(zapper), type(uint256).max);
-
-        underlyingAsset.safeApprove(address(uniProxy), type(uint256).max);
 
         underlyingAsset.safeApprove(address(hypervisor), type(uint256).max);
         dai.safeApprove(address(hypervisor), type(uint256).max);
@@ -374,7 +375,7 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
     {
         (uint128 position,,) = getPositionInfo(tickLower, tickUpper);
 
-        return uint128(uint256(position) * shares / hypervisor.totalSupply());
+        return (uint256(position) * shares / hypervisor.totalSupply()).toUint128();
     }
 
     // @notice Get the info of the given position
@@ -389,6 +390,7 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy {
     )
         internal
         view
+        nonReadReentrant
         returns (uint128 liquidity, uint128 tokensOwed0, uint128 tokensOwed1)
     {
         bytes32 positionKey;
