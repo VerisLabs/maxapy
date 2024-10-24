@@ -2,6 +2,10 @@
 pragma solidity >=0.5.0;
 
 interface IAlgebraPool {
+
+    function token0() external view returns (address);
+    function token1() external view returns (address);
+    
     function positions(bytes32 key)
         external
         view
@@ -26,4 +30,14 @@ interface IAlgebraPool {
             uint8 communityFeeToken1,
             bool unlocked
         );
+
+    function getTimepoints(uint32[] calldata secondsAgos)
+    external
+    view
+    returns (
+      int56[] memory tickCumulatives,
+      uint160[] memory secondsPerLiquidityCumulatives,
+      uint112[] memory volatilityCumulatives,
+      uint256[] memory volumePerAvgLiquiditys
+    );
 }

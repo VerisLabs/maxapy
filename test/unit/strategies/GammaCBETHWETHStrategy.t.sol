@@ -33,7 +33,7 @@ contract GammaCBETHWETHStrategy is BaseTest, ConvexdETHFrxETHStrategyEvents {
 
     function setUp() public {
         super._setUp("POLYGON");
-        vm.rollFork(63_362_947);
+        vm.rollFork(63_398_630);
 
         TREASURY = makeAddr("treasury");
 
@@ -51,15 +51,14 @@ contract GammaCBETHWETHStrategy is BaseTest, ConvexdETHFrxETHStrategyEvents {
             address(implementation),
             address(proxyAdmin),
             abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address,address,address,address,address)",
+                "initialize(address,address[],bytes32,address,address,address,address,address)",
                 address(vault),
                 keepers,
                 bytes32(abi.encode("MaxApy CBETH<>WETH Strategy")),
                 users.alice,
                 GAMMA_UNIPROXY_POLYGON,
                 GAMMA_CBETH_WETH_HYPERVISOR_POLYGON,
-                UNISWAP_V2_ROUTER_POLYGON,
-                UNISWAP_V2_PAIR_CBETH_WETH,
+                QUICKSWAP_V3_ROUTER_POLYGON,
                 ALGEBRA_POOL_CBETH_WETH
             )
         );
@@ -86,15 +85,14 @@ contract GammaCBETHWETHStrategy is BaseTest, ConvexdETHFrxETHStrategyEvents {
             address(_implementation),
             address(_proxyAdmin),
             abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address,address,address,address,address)",
+                "initialize(address,address[],bytes32,address,address,address,address,address)",
                 address(_vault),
                 keepers,
                 bytes32(abi.encode("MaxApy CBETH<>WETH Strategy")),
                 users.alice,
                 GAMMA_UNIPROXY_POLYGON,
                 GAMMA_CBETH_WETH_HYPERVISOR_POLYGON,
-                UNISWAP_V2_ROUTER_POLYGON,
-                UNISWAP_V2_PAIR_CBETH_WETH,
+                QUICKSWAP_V3_ROUTER_POLYGON,
                 ALGEBRA_POOL_CBETH_WETH
             )
         );
@@ -294,6 +292,7 @@ contract GammaCBETHWETHStrategy is BaseTest, ConvexdETHFrxETHStrategyEvents {
         // returned = strategy.invest(1, 0);
 
         deal({ token: WETH_POLYGON, to: address(strategy), give: 10 * _1_WETH });
+        
         // uint256 expectedShares = strategy.sharesForAmount(10 * _1_WETH);
 
         // uint256 value = strategy.shareValue(expectedShares);

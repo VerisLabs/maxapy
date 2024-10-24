@@ -7,13 +7,14 @@ import { IUniProxy } from "src/interfaces/IUniProxy.sol";
 import { OracleLibrary } from "src/lib/OracleLibrary.sol";
 import { IHypervisor } from "src/interfaces/IHypervisor.sol";
 import { IAlgebraPool } from "src/interfaces/IAlgebraPool.sol";
-import { IUniswapV2Router02, IUniswapV2Pair } from "src/interfaces/IUniswap.sol";
-import { LiquidityRangePool } from "src/lib/LiquidityRangePool.sol";
 
-import { UNISWAP_V2_PAIR_CBETH_WETH, ALGEBRA_POOL_CBETH_WETH } from "src/helpers/AddressBook.sol";
+import { IUniswapV3Pool } from "src/interfaces/IUniswap.sol";
+import { ISwapRouter as IRouter } from "src/interfaces/ISwapRouter.sol";
+import { LiquidityRangePool } from "src/lib/LiquidityRangePool.sol";
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
+import { OracleLibrary } from "src/lib/OracleLibrary.sol";
 
 import { console2 } from "forge-std/console2.sol";
 
@@ -69,6 +70,8 @@ contract BaseGammaStrategy is BaseStrategy {
     address public token0;
     IHypervisor public hypervisor;
     IUniProxy public uniProxy;
+    IAlgebraPool public algebraPool;
+    IRouter public router;
 
     uint256 constant _1_WETH = 1 ether; // underlyingAsset
 
@@ -77,10 +80,6 @@ contract BaseGammaStrategy is BaseStrategy {
 
     /// @notice Minimun trade size within the strategy
     uint256 public minSingleTrade;
-
-    IUniswapV2Router02 public uniswapRouter;
-    IUniswapV2Pair public uniswapPair;
-    IAlgebraPool public algebraPool;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -94,8 +93,7 @@ contract BaseGammaStrategy is BaseStrategy {
     /// @param _strategyName the name of the strategy
     /// @param _uniProxy The address of the gamma's main proxy contract used for depositing tokens
     /// @param _hypervisor The address of gamma's hypervisor contract  used for withdrawing
-    /// @param _uniswapRouter The address of the quickswap's router inspired by uniswap
-    /// @param _uniswapPair The address of the quickswap's pair pool used to get the reserves of the pool
+    /// @param _router The address of the quickswap's router inspired by uniswap
     /// @param _algebraPool The address of the gamma's algebra pool contract used to get global state and positions
     function initialize(
         IMaxApyVault _vault,
@@ -104,9 +102,9 @@ contract BaseGammaStrategy is BaseStrategy {
         address _strategist,
         IUniProxy _uniProxy,
         IHypervisor _hypervisor,
-        IUniswapV2Router02 _uniswapRouter,
-        IUniswapV2Pair _uniswapPair,
+        IRouter _router,
         IAlgebraPool _algebraPool
+        
     )
         public
         virtual
@@ -117,16 +115,16 @@ contract BaseGammaStrategy is BaseStrategy {
         // Gamma init
         uniProxy = _uniProxy;
         hypervisor = _hypervisor;
-        uniswapRouter = _uniswapRouter;
-        uniswapPair = _uniswapPair;
         algebraPool = _algebraPool;
-        token0 = uniswapPair.token0();
+        token0 = algebraPool.token0();
+
+        router = _router;
 
         /// Approve Vault to transfer USDCe
         underlyingAsset.safeApprove(address(_vault), type(uint256).max);
 
-        underlyingAsset.safeApprove(address(uniswapRouter), type(uint256).max);
-        token0.safeApprove(address(uniswapRouter), type(uint256).max);
+        underlyingAsset.safeApprove(address(router), type(uint256).max);
+        token0.safeApprove(address(router), type(uint256).max);
 
         underlyingAsset.safeApprove(address(uniProxy), type(uint256).max);
 
@@ -135,6 +133,7 @@ contract BaseGammaStrategy is BaseStrategy {
 
         /// Unlimited max single trade by default
         maxSingleTrade = type(uint256).max;
+
     }
 
     ////////////////////////////////////////////////////////////////
@@ -366,15 +365,9 @@ contract BaseGammaStrategy is BaseStrategy {
 
     // Function to calculate how much USDCe to swap
     function calculateWETHToSwap(uint256 totalweth, uint256 ratio) public view returns (uint256 wethToSwap) {
-        
-        (uint256 reserve0, uint256 reserve1, ) = uniswapPair.getReserves();
-        console2.log("###   ~ file: BaseGammaStrategy.sol:371 ~ calculateWETHToSwap ~ reserve1:", reserve1);
 
-        console2.log("###   ~ file: BaseGammaStrategy.sol:371 ~ calculateWETHToSwap ~ reserve0:", reserve0);
-
-        uint256 rate = getConversionRate(1 * _1_WETH, reserve1, reserve0);
-        console2.log("###   ~ file: BaseGammaStrategy.sol:376 ~ calculateWETHToSwap ~ rate:", rate);
-
+        uint256 rate = _estimateAmountOut(address(underlyingAsset), address(token0), _uint128Safe(1 * _1_WETH), 30);
+        console2.log("###   ~ file: BaseGammaStrategy.sol:385 ~ calculateWETHToSwap ~ rateV3:", rate);
 
         assembly {
             wethToSwap := div(mul(ratio, totalweth), add(rate, ratio))
@@ -411,32 +404,47 @@ contract BaseGammaStrategy is BaseStrategy {
         // step1 get the Gamma pool ratio
         // 1 usdce -> x dai
         (uint256 amountStart, uint256 amountEnd) = uniProxy.getDepositAmount(address(hypervisor), address(underlyingAsset), 1 * _1_WETH);
+
+        uint256 percentA = amountStart * 10000 / (amountStart + 1 * _1_WETH);
+        console2.log("###   ~ file: BaseGammaStrategy.sol:409 ~ _invest ~ percentA:", percentA);
+
+        
         
         console2.log("###   ~ file: BaseGammaStrategy.sol:404 ~ _invest ~ amountEnd:", amountEnd);
 
         console2.log("###   ~ file: BaseGammaStrategy.sol:404 ~ _invest ~ amountStart:", amountStart);
 
             
-
+        uint256 amountToConsider = amount - amount * 1 / 100;
         // Calculate how much USDCe should be swapped into DAI
-        uint256 wethToSwap = calculateWETHToSwap(amount, (amountStart + amountEnd) / 2);
+        uint256 wethToSwap = calculateWETHToSwap(amountToConsider, (amountStart + amountEnd) / 2);
         console2.log("###   ~ file: BaseGammaStrategy.sol:423 ~ _invest ~ wethToSwap:", wethToSwap);
 
+        console2.log("###   ~ file: BaseGammaStrategy.sol:434 ~ _invest ~ xyz:", underlyingAsset.balanceOf(address(this)), token0.balanceOf(address(this)));
 
-
-        address[] memory path = new address[](2);
-        path[0] = address(underlyingAsset);
-        path[1] = address(token0);
-
-        uint256 deadline = block.timestamp + 3600;
+        // swap the LUSD to USDC
+        router.exactInputSingle(
+            IRouter.ExactInputSingleParams({
+                tokenIn: address(underlyingAsset),
+                tokenOut: address(token0),
+                recipient: address(this),
+                deadline: block.timestamp,
+                amountIn: wethToSwap + amount * 1 / 100,
+                amountOutMinimum: 0,
+                limitSqrtPrice: 0
+            })
+        );
 
         console2.log("###   ~ file: BaseGammaStrategy.sol:434 ~ _invest ~ xyz:", underlyingAsset.balanceOf(address(this)), token0.balanceOf(address(this)));
 
+        // (uint256 amountStart1,  uint256 amountEnd2) = uniProxy.getDepositAmount(address(hypervisor), address(underlyingAsset), uint256(underlyingAsset.balanceOf(address(this))));
+        // console2.log("###   ~ file: BaseGammaStrategy.sol:436 ~ _invest ~ amountStart:", amountStart1);
 
-        // step2 swap a part of usdce into dai
-        uniswapRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(wethToSwap, 0, path, address(this), deadline);
+        // console2.log("###   ~ file: BaseGammaStrategy.sol:436 ~ _invest ~ amountEnd:", amountEnd2);
 
-        console2.log("###   ~ file: BaseGammaStrategy.sol:434 ~ _invest ~ xyz:", underlyingAsset.balanceOf(address(this)), token0.balanceOf(address(this)));
+        uint256 token0ToDeposit = ((amountStart + amountEnd) / 2 * underlyingAsset.balanceOf(address(this))) / 1 ether ;
+        console2.log("###   ~ file: BaseGammaStrategy.sol:441 ~ _invest ~ token0ToDeposit:", token0ToDeposit);
+
 
         //step3 deposit usdce and dai into gamma vault
         uint256[4] memory minOut = [uint256(0), uint256(0), uint256(0), uint256(0)];
@@ -446,7 +454,7 @@ contract BaseGammaStrategy is BaseStrategy {
 
         if (token0.balanceOf(address(this)) > 0 && underlyingAsset.balanceOf(address(this)) > 0) {
             shares = uniProxy.deposit(
-                token0.balanceOf(address(this)),
+                token0ToDeposit,
                 underlyingAsset.balanceOf(address(this)),
                 address(this),
                 address(hypervisor),
@@ -484,15 +492,22 @@ contract BaseGammaStrategy is BaseStrategy {
 
         (uint256 amount0, uint256 amount1) = hypervisor.withdraw(shares, address(this), address(this), minOut);
 
-        address[] memory path = new address[](2);
-        path[0] = address(token0);
-        path[1] = address(underlyingAsset);
-
-        uint256 deadline = 0;    // TODO
-
         // step2 swap a part of usdce into dai
         uint256 WETHAmountBefore = underlyingAsset.balanceOf(address(this));
-        uniswapRouter.swapExactTokensForTokensSupportingFeeOnTransferTokens(amount0, 0, path, address(this), deadline);
+        // swap the LUSD to USDC
+
+        router.exactInputSingle(
+            IRouter.ExactInputSingleParams({
+                tokenIn: address(token0),
+                tokenOut: address(underlyingAsset),
+                recipient: address(this),
+                deadline: block.timestamp,
+                amountIn: amount0,
+                amountOutMinimum: 0,
+                limitSqrtPrice: 0
+            })
+        );
+
         uint256 WETHAmountAfter = underlyingAsset.balanceOf(address(this));
 
         withdrawn = WETHAmountAfter - WETHAmountBefore + amount1;
@@ -577,8 +592,8 @@ contract BaseGammaStrategy is BaseStrategy {
 
         uint256 amount1 = base1 + limit1 + unusedAmount1;
 
-        (uint256 reserve0, uint256 reserve1, ) = uniswapPair.getReserves();
-        _assets = getConversionRate(amount0, reserve0, reserve1) + amount1;
+        _assets = _estimateAmountOut(address(underlyingAsset), address(token0), _uint128Safe(amount0), 30) + amount1;
+
     }
 
     function _CalcBurnLiquidity(
@@ -625,8 +640,7 @@ contract BaseGammaStrategy is BaseStrategy {
         // Calculate how much USDCe should be swapped into DAI
         uint256 wethToSwap = calculateWETHToSwap(amount, (amountStart + amountEnd) / 2);
 
-        (uint256 reserve0, uint256 reserve1, ) = uniswapPair.getReserves();
-        uint256 token0Amount = getConversionRate(wethToSwap, reserve1, reserve0);
+        uint256 token0Amount = _estimateAmountOut(address(underlyingAsset), address(token0), _uint128Safe(wethToSwap), 30);
 
         // uint256 wethTokenAmount = amount - wethToSwap;
 
@@ -657,11 +671,42 @@ contract BaseGammaStrategy is BaseStrategy {
 
     }
 
-    // @notice Converts USDT to USDCe
-    /// @param amountA Amount of USDT
-    /// @return Equivalent amount in USDCe
-    function getConversionRate(uint256 amountA, uint256 reserveA, uint256 reserveB) internal view returns (uint256) {
-        return uniswapRouter.quote(amountA, reserveA, reserveB);
+
+    /// @notice returns the estimated result of a Uniswap V3 swap
+    /// @dev use TWAP oracle for more safety
+    function _estimateAmountOut(
+        address tokenIn,
+        address tokenOut,
+        uint128 amountIn,
+        uint32 secondsAgo
+    )
+        internal
+        view
+        returns (uint256 amountOut)
+    {
+        // Code copied from OracleLibrary.sol, consult()
+        uint32[] memory secondsAgos = new uint32[](2);
+        secondsAgos[0] = secondsAgo;
+        secondsAgos[1] = 0;
+
+        // int56 since tick * time = int24 * uint32
+        // 56 = 24 + 32
+        (int56[] memory tickCumulatives,,,) = algebraPool.getTimepoints(secondsAgos);
+        // (int56[] memory tickCumulatives,) = IUniswapV3Pool(pool).observe(secondsAgos);
+
+        int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
+
+        // int56 / uint32 = int24
+        int24 tick = int24(int256(tickCumulativesDelta) / int256(int32(secondsAgo)));
+        // Always round to negative infinity
+
+        if (tickCumulativesDelta < 0 && (int256(tickCumulativesDelta) % int256(int32(secondsAgo)) != 0)) {
+            tick--;
+        }
+
+        amountOut = OracleLibrary.getQuoteAtTick(tick, amountIn, tokenIn, tokenOut);
+        console2.log("###   ~ file: BaseGammaStrategy.sol:708 ~ amountOut:", amountOut);
+
     }
 
     // Gamma hypervisor internal functions
