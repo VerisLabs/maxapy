@@ -49,7 +49,7 @@ contract YearnDAILenderStrategy is BaseYearnV3Strategy {
         underlyingAsset.safeApprove(address(zapper), type(uint256).max);
 
         minSingleTrade = 1 * 10 ** 6; // 1 USDC
-        maxSingleTrade = 100_000  ether; // 100,000 DAI
+        maxSingleTrade = 100_000 ether; // 100,000 DAI
     }
 
     ////////////////////////////////////////////////////////////////

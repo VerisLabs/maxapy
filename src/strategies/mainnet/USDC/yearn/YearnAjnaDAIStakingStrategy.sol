@@ -2,14 +2,17 @@
 pragma solidity ^0.8.19;
 
 import {
-    Math
-    BaseYearnV3Strategy, SafeTransferLib, IMaxApyVault, IYVaultV3,
+    Math,
+    BaseYearnV3Strategy,
+    SafeTransferLib,
+    IMaxApyVault,
+    IYVaultV3
 } from "src/strategies/base/BaseYearnV3Strategy.sol";
 import { IStakingRewardsMulti } from "src/interfaces/IStakingRewardsMulti.sol";
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 import { AJNA_MAINNET, WETH_MAINNET, UNISWAP_V3_ROUTER_MAINNET } from "src/helpers/AddressBook.sol";
 import { CURVE_3POOL_POOL_MAINNET, DAI_MAINNET } from "src/helpers/AddressBook.sol";
-import { ICurveLpPool} from "src/interfaces/ICurve.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 
 /// @title YearnAjnaDAIStakingStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -33,7 +36,7 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
     IStakingRewardsMulti public constant yearnStakingRewards =
         IStakingRewardsMulti(0x54C6b2b293297e65b1d163C3E8dbc45338bfE443);
 
-    ICurveLpPool triPool = ICurveLpPool(CURVE_3POOL_POOL_MAINNET);
+    ICurveLpPool public constant triPool = ICurveLpPool(CURVE_3POOL_POOL_MAINNET);
     address constant dai = DAI_MAINNET;
 
     ////////////////////////////////////////////////////////////////
@@ -71,6 +74,9 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
         underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
         ajna.safeApprove(address(router), type(uint256).max);
         address(_yVault).safeApprove(address(yearnStakingRewards), type(uint256).max);
+        underlyingAsset.safeApprove(address(triPool), type(uint256).max);
+        dai.safeApprove(address(triPool), type(uint256).max);
+
 
         minSingleTrade = 1e6;
         maxSingleTrade = 1000e18;

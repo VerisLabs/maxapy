@@ -106,7 +106,7 @@ contract BeefyUSDCeDAIStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         assertEq(_strategy.owner(), users.alice);
         assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy USDCe<>DAI Strategy")));
         assertEq(_strategy.uniProxy(), GAMMA_USDCE_DAI_UNIPROXY_POLYGON, "hereee");
-    
+
         assertEq(_proxyAdmin.owner(), users.alice);
         vm.startPrank(address(_proxyAdmin));
         vm.stopPrank();

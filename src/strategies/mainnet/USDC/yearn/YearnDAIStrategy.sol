@@ -10,7 +10,7 @@ import {
     Math
 } from "src/strategies/base/BaseYearnV2Strategy.sol";
 import { CURVE_3POOL_POOL_MAINNET, DAI_MAINNET } from "src/helpers/AddressBook.sol";
-import { ICurveLpPool} from "src/interfaces/ICurve.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 
 /// @title YearnDAIStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -22,7 +22,7 @@ contract YearnDAIStrategy is BaseYearnV2Strategy {
     ////////////////////////////////////////////////////////////////
     ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
-    ICurveLpPool triPool = ICurveLpPool(CURVE_3POOL_POOL_MAINNET);
+    ICurveLpPool public constant triPool = ICurveLpPool(CURVE_3POOL_POOL_MAINNET);
     address constant dai = DAI_MAINNET;
 
     /// @notice Initialize the Strategy
@@ -47,6 +47,8 @@ contract YearnDAIStrategy is BaseYearnV2Strategy {
 
         /// Approve Yearn Vault to transfer underlying
         underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
+        underlyingAsset.safeApprove(address(triPool), type(uint256).max);
+        dai.safeApprove(address(triPool), type(uint256).max);
 
         /// Mininmum single trade is 0.01 token units
         minSingleTrade = 10 ** IERC20Metadata(underlyingAsset).decimals() / 100;
