@@ -48,8 +48,8 @@ contract YearnDAILenderStrategy is BaseYearnV3Strategy {
         dai.safeApprove(address(_yVault), type(uint256).max);
         underlyingAsset.safeApprove(address(zapper), type(uint256).max);
 
-        minSingleTrade = 1 * 10 ** 6; // 1 USD
-        maxSingleTrade = 100_000 * 10 ** 6; // 100,000 USD
+        minSingleTrade = 1 * 10 ** 6; // 1 USDC
+        maxSingleTrade = 100_000  ether; // 100,000 DAI
     }
 
     ////////////////////////////////////////////////////////////////
@@ -150,11 +150,10 @@ contract YearnDAILenderStrategy is BaseYearnV3Strategy {
         uint256 maxDeposit = yVault.maxDeposit(address(this));
 
         // Scale up to 18 decimals
-        uint256 scaledAmount = amount.mulWad(1e12);
-        uint256 scaledMaxSingleTrade = maxSingleTrade.mulWad(1e12);
-        uint256 minAmount = Math.min(Math.min(scaledAmount, maxDeposit), scaledMaxSingleTrade);
+        uint256 scaledAmount = amount * 1e12;
+        uint256 minAmount = Math.min(Math.min(scaledAmount, maxDeposit), maxSingleTrade);
         // Scale back down to 6 decimals
-        amount = minAmount.divWad(1e12);
+        amount = minAmount / 1e12;
 
         uint256 balanceBefore = DAI_POLYGON.balanceOf(address(this));
         // Swap the USDCe to base asset

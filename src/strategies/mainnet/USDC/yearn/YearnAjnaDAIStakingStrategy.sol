@@ -2,12 +2,14 @@
 pragma solidity ^0.8.19;
 
 import {
-    BaseYearnV3Strategy, SafeTransferLib, IMaxApyVault, IYVaultV3
+    Math
+    BaseYearnV3Strategy, SafeTransferLib, IMaxApyVault, IYVaultV3,
 } from "src/strategies/base/BaseYearnV3Strategy.sol";
 import { IStakingRewardsMulti } from "src/interfaces/IStakingRewardsMulti.sol";
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
-import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { AJNA_MAINNET, WETH_MAINNET, UNISWAP_V3_ROUTER_MAINNET } from "src/helpers/AddressBook.sol";
+import { CURVE_3POOL_POOL_MAINNET, DAI_MAINNET } from "src/helpers/AddressBook.sol";
+import { ICurveLpPool} from "src/interfaces/ICurve.sol";
 
 /// @title YearnAjnaDAIStakingStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -30,6 +32,9 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
     /// @notice The staking contract to stake the vault shares
     IStakingRewardsMulti public constant yearnStakingRewards =
         IStakingRewardsMulti(0x54C6b2b293297e65b1d163C3E8dbc45338bfE443);
+
+    ICurveLpPool triPool = ICurveLpPool(CURVE_3POOL_POOL_MAINNET);
+    address constant dai = DAI_MAINNET;
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -67,7 +72,7 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
         ajna.safeApprove(address(router), type(uint256).max);
         address(_yVault).safeApprove(address(yearnStakingRewards), type(uint256).max);
 
-        minSingleTrade = 1e4;
+        minSingleTrade = 1e6;
         maxSingleTrade = 1000e18;
 
         minSwapAjna = 1e18;
@@ -130,6 +135,17 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
+        uint256 adjustedMaxSingleTrade = maxSingleTrade / 1e12;
+
+        uint256 balanceBefore = dai.balanceOf(address(this));
+
+        amount = Math.min(maxSingleTrade, adjustedMaxSingleTrade);
+
+        // Swap underlying to DAI
+        triPool.exchange(1, 0, amount, 0);
+
+        amount = dai.balanceOf(address(this)) - balanceBefore;
+
         uint256 shares = yVault.deposit(amount, address(this));
 
         assembly ("memory-safe") {
@@ -162,6 +178,12 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
         yearnStakingRewards.withdraw(shares);
         withdrawn = yVault.redeem(shares, address(this), address(this));
+        uint256 balanceBefore = underlyingAsset.balanceOf(address(this));
+
+        // Swap DAI to underlying
+        triPool.exchange(0, 1, withdrawn, 0);
+
+        withdrawn = underlyingAsset.balanceOf(address(this)) - balanceBefore;
         emit Divested(address(this), shares, withdrawn);
     }
 

@@ -149,7 +149,7 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
                 revert(0x1c, 0x04)
             }
         }
-
+        
         depositedAmount = _shareValue(shares);
 
         yearnStakingRewards.stake(shares);
