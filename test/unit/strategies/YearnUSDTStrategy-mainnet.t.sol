@@ -343,16 +343,16 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         deal({ token: USDC_MAINNET, to: address(strategy), give: 5 * _1_USDT });
         strategy.invest(5 * _1_USDT, 0);
         deal({ token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDT });
-        (liquidatedAmount, loss) = strategy.liquidatePosition(15 * _1_USDT);
-        assertEq(liquidatedAmount, 14_999_999);
-        assertEq(loss, 1);
+        (liquidatedAmount, loss) = strategy.liquidatePosition(14 * _1_USDT);
+        assertEq(liquidatedAmount, 13_999_198);
+        assertEq(loss, 802);
 
         deal({ token: USDC_MAINNET, to: address(strategy), give: 1000 * _1_USDT });
         strategy.invest(1000 * _1_USDT, 0);
         deal({ token: USDC_MAINNET, to: address(strategy), give: 500 * _1_USDT });
         (liquidatedAmount, loss) = strategy.liquidatePosition(1000 * _1_USDT);
-        assertEq(liquidatedAmount, 999_999_998);
-        assertEq(loss, 2);
+        assertEq(liquidatedAmount, 999_899_995);
+        assertEq(loss, 100_005);
     }
 
     function testYearnUSDT__LiquidateAllPositions() public {

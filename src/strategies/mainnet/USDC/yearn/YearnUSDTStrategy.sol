@@ -170,4 +170,20 @@ contract YearnUSDTStrategy is BaseYearnV2Strategy {
         }
         return super._sharesForAmount(amount);
     }
+
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
+    /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
+    /// @return requestedAmount
+    function previewLiquidateExact(uint256 liquidatedAmount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 requestedAmount)
+    {
+        // we cannot predict losses so return as if there were not
+        // increase 1% to be pessimistic
+        return previewLiquidate(liquidatedAmount) * 102 / 100;
+    }
 }
