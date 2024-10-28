@@ -12,7 +12,7 @@ import { IStakingRewardsMulti } from "src/interfaces/IStakingRewardsMulti.sol";
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 import { AJNA_MAINNET, WETH_MAINNET, UNISWAP_V3_ROUTER_MAINNET } from "src/helpers/AddressBook.sol";
 import { CURVE_3POOL_POOL_MAINNET, DAI_MAINNET } from "src/helpers/AddressBook.sol";
-import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+import { ICurveTriPool } from "src/interfaces/ICurve.sol";
 
 /// @title YearnAjnaDAIStakingStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -36,7 +36,7 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
     IStakingRewardsMulti public constant yearnStakingRewards =
         IStakingRewardsMulti(0x54C6b2b293297e65b1d163C3E8dbc45338bfE443);
 
-    ICurveLpPool public constant triPool = ICurveLpPool(CURVE_3POOL_POOL_MAINNET);
+    ICurveTriPool public constant triPool = ICurveTriPool(CURVE_3POOL_POOL_MAINNET);
     address constant dai = DAI_MAINNET;
 
     ////////////////////////////////////////////////////////////////
@@ -71,12 +71,11 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
         yVault = _yVault;
 
         /// Perform needed approvals
-        underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
+        dai.safeApprove(address(_yVault), type(uint256).max);
         ajna.safeApprove(address(router), type(uint256).max);
         address(_yVault).safeApprove(address(yearnStakingRewards), type(uint256).max);
         underlyingAsset.safeApprove(address(triPool), type(uint256).max);
         dai.safeApprove(address(triPool), type(uint256).max);
-
 
         minSingleTrade = 1e6;
         maxSingleTrade = 1000e18;
@@ -98,11 +97,16 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
             unchecked {
                 amountToWithdraw = amountNeeded - underlyingBalance;
             }
+            amountToWithdraw = Math.mulDiv(amountNeeded * 1e12, 101, 100);
             uint256 neededVaultShares = yVault.previewWithdraw(amountToWithdraw);
             yearnStakingRewards.withdraw(neededVaultShares);
             uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
             loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
+        uint256 daiBalance = dai.balanceOf(address(this));
+
+        triPool.exchange(0, 1, daiBalance, 0);
+
         underlyingAsset.safeTransfer(address(vault), amountNeeded);
 
         // In case all shares were not burnt reinvest them
@@ -141,11 +145,15 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
-        uint256 adjustedMaxSingleTrade = maxSingleTrade / 1e12;
-
         uint256 balanceBefore = dai.balanceOf(address(this));
 
-        amount = Math.min(maxSingleTrade, adjustedMaxSingleTrade);
+        amount = Math.min(amount, maxSingleTrade);
+
+        assembly {
+            // Emit the `Invested` event
+            mstore(0x00, amount)
+            log2(0x00, 0x20, _INVESTED_EVENT_SIGNATURE, address())
+        }
 
         // Swap underlying to DAI
         triPool.exchange(1, 0, amount, 0);
@@ -163,15 +171,9 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
             }
         }
 
-        depositedAmount = _shareValue(shares);
-
         yearnStakingRewards.stake(shares);
 
-        assembly {
-            // Emit the `Invested` event
-            mstore(0x00, amount)
-            log2(0x00, 0x20, _INVESTED_EVENT_SIGNATURE, address())
-        }
+        depositedAmount = _shareValue(shares);
     }
 
     /// @notice Divests amount `shares` from Yearn Vault
@@ -280,5 +282,51 @@ contract YearnAjnaDAIStakingStrategy is BaseYearnV3Strategy {
     /// @return _balance balance the strategy's balance of yearn vault shares
     function _shareBalance() internal view override returns (uint256 _balance) {
         return yearnStakingRewards.balanceOf(address(this));
+    }
+
+    /// @notice Determines the current value of `shares`.
+    /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
+    /// @return returns the estimated amount of underlying computed from shares `shares`
+    function _shareValue(uint256 shares) internal view override returns (uint256) {
+        uint256 sharesValue = super._shareValue(shares);
+        if (sharesValue > 0) {
+            return triPool.get_dy(0, 1, sharesValue);
+        }
+    }
+
+    /// @notice Determines how many shares depositor of `amount` of underlying would receive.
+    /// @return shares returns the estimated amount of shares computed in exchange for the underlying `amount`
+    function _sharesForAmount(uint256 amount) internal view override returns (uint256 shares) {
+        if (amount > 0) {
+            amount = triPool.get_dy(1, 0, amount);
+        }
+        return super._sharesForAmount(amount);
+    }
+
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates estimated the @param requestedAmount the vault has to request to this strategy
+    /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
+    /// @return requestedAmount
+    function previewLiquidateExact(uint256 liquidatedAmount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 requestedAmount)
+    {
+        uint256 underlyingBalance = _underlyingBalance();
+        if (underlyingBalance < liquidatedAmount) {
+            unchecked {
+                liquidatedAmount = liquidatedAmount - underlyingBalance;
+            }
+            requestedAmount = _shareValue(yVault.previewWithdraw(Math.mulDiv(liquidatedAmount * 1e12, 101, 100)));
+        }
+        return requestedAmount + underlyingBalance;
+    }
+
+    /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
+    function maxLiquidateExact() public view virtual override returns (uint256) {
+        // make sure it doesnt revert when increaseing it 1% in the withdraw
+        return previewLiquidate(estimatedTotalAssets()) * 99 / 100;
     }
 }

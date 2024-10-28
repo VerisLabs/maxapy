@@ -11,7 +11,7 @@ contract YearnDAIStrategyWrapper is YearnDAIStrategy {
     }
 
     function triggerLoss(uint256 amount) external {
-        underlyingAsset.safeTransfer(address(underlyingAsset), amount);
+        underlyingAsset.safeTransfer(address(1), amount);
     }
 
     function mockReport(uint128 gain, uint128 loss, uint128 debtPayment, address treasury) external {

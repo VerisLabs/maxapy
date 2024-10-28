@@ -10,7 +10,7 @@ import {
     Math
 } from "src/strategies/base/BaseYearnV2Strategy.sol";
 import { CURVE_3POOL_POOL_MAINNET, DAI_MAINNET } from "src/helpers/AddressBook.sol";
-import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+import { ICurveTriPool } from "src/interfaces/ICurve.sol";
 
 /// @title YearnDAIStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -22,7 +22,7 @@ contract YearnDAIStrategy is BaseYearnV2Strategy {
     ////////////////////////////////////////////////////////////////
     ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
-    ICurveLpPool public constant triPool = ICurveLpPool(CURVE_3POOL_POOL_MAINNET);
+    ICurveTriPool public constant triPool = ICurveTriPool(CURVE_3POOL_POOL_MAINNET);
     address constant dai = DAI_MAINNET;
 
     /// @notice Initialize the Strategy
@@ -46,7 +46,7 @@ contract YearnDAIStrategy is BaseYearnV2Strategy {
         yVault = _yVault;
 
         /// Approve Yearn Vault to transfer underlying
-        underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
+        dai.safeApprove(address(_yVault), type(uint256).max);
         underlyingAsset.safeApprove(address(triPool), type(uint256).max);
         dai.safeApprove(address(triPool), type(uint256).max);
 
@@ -75,14 +75,18 @@ contract YearnDAIStrategy is BaseYearnV2Strategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
-        uint256 adjustedMaxSingleTrade = maxSingleTrade / 1e12;
-
         uint256 balanceBefore = dai.balanceOf(address(this));
 
-        amount = Math.min(maxSingleTrade, adjustedMaxSingleTrade);
+        amount = Math.min(amount, maxSingleTrade);
+
+        assembly {
+            // Emit the `Invested` event
+            mstore(0x00, amount)
+            log2(0x00, 0x20, _INVESTED_EVENT_SIGNATURE, address())
+        }
 
         // Swap underlying to DAI
-        triPool.exchange(1, 0, amount, 0);
+        triPool.exchange(1, 0, amount, 1);
 
         amount = dai.balanceOf(address(this)) - balanceBefore;
 
@@ -98,12 +102,6 @@ contract YearnDAIStrategy is BaseYearnV2Strategy {
         }
 
         depositedAmount = _shareValue(shares);
-
-        assembly {
-            // Emit the `Invested` event
-            mstore(0x00, amount)
-            log2(0x00, 0x20, _INVESTED_EVENT_SIGNATURE, address())
-        }
     }
 
     /// @notice Divests amount `shares` from Yearn Vault
@@ -136,5 +134,28 @@ contract YearnDAIStrategy is BaseYearnV2Strategy {
             mstore(0x20, withdrawn)
             log2(0x00, 0x40, _DIVESTED_EVENT_SIGNATURE, address())
         }
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                 INTERNAL VIEW FUNCTIONS                  ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @notice Determines the current value of `shares`.
+    /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
+    /// @return returns the estimated amount of underlying computed from shares `shares`
+    function _shareValue(uint256 shares) internal view override returns (uint256) {
+        uint256 sharesValue = super._shareValue(shares);
+        if (sharesValue > 0) {
+            return triPool.get_dy(0, 1, sharesValue);
+        }
+    }
+
+    /// @notice Determines how many shares depositor of `amount` of underlying would receive.
+    /// @return shares returns the estimated amount of shares computed in exchange for the underlying `amount`
+    function _sharesForAmount(uint256 amount) internal view override returns (uint256 shares) {
+        if (amount > 0) {
+            amount = triPool.get_dy(1, 0, amount);
+        }
+        return super._sharesForAmount(amount);
     }
 }

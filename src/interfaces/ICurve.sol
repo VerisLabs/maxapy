@@ -95,6 +95,12 @@ interface ICurveLpPool is IERC20 {
 
 interface ICurveLendingPool is IERC4626 { }
 
+interface ICurveTriPool {
+    function get_dy(int128 i, int128 j, uint256 dx) external view returns (uint256);
+
+    function exchange(int128 i, int128 j, uint256 _dx, uint256 _min_dy) external;
+}
+
 interface ICurveAtriCryptoZapper {
     function exchange(
         address pool,
