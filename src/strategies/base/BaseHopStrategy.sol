@@ -11,7 +11,7 @@ import { console2 } from "forge-std/console2.sol";
 
 /// @title BaseHopStrategy
 /// @author MaxApy
-/// @notice `BaseHopStrategy` sets the base functionality to be implemented by MaxApy Beefy strategies.
+/// @notice `BaseHopStrategy` sets the base functionality to be implemented by MaxApy Hop strategies.
 /// @dev Some functions can be overriden if needed
 contract BaseHopStrategy is BaseStrategy {
     using SafeTransferLib for address;
@@ -26,10 +26,10 @@ contract BaseHopStrategy is BaseStrategy {
     ///                         EVENTS                           ///
     ////////////////////////////////////////////////////////////////
 
-    /// @notice Emitted when underlying asset is deposited into the Beefy Vault
+    /// @notice Emitted when underlying asset is deposited into the Hop Pool
     event Invested(address indexed strategy, uint256 amountInvested);
 
-    /// @notice Emitted when the `requestedShares` are divested from the Beefy Vault
+    /// @notice Emitted when the `requestedShares` are divested from the Hop Pool
     event Divested(address indexed strategy, uint256 requestedShares, uint256 amountDivested);
 
     /// @notice Emitted when the strategy's min single trade value is updated
@@ -101,8 +101,11 @@ contract BaseHopStrategy is BaseStrategy {
 
         underlyingAsset.safeApprove(address(hopPool), type(uint256).max);
         address(hopLPToken).safeApprove(address(hopPool), type(uint256).max);
+
         /// Unlimited max single trade by default
         maxSingleTrade = type(uint256).max;
+        /// min single trade by default
+        minSingleTrade = 1e18;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -163,7 +166,7 @@ contract BaseHopStrategy is BaseStrategy {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
-        // the requested amount, we divest from the beefy Vault
+        // the requested amount, we divest from the Hop Pool
         if (underlyingBalance < requestedAmount) {
             uint256 amountToWithdraw;
             unchecked {
@@ -267,27 +270,19 @@ contract BaseHopStrategy is BaseStrategy {
 
             // Cannot repay all debt if it does not have enough assets
             uint256 amountToWithdraw = Math.min(debtOutstanding, _estimatedTotalAssets_);
-            console2.log("###   ~ file: BaseHopStrategy.sol:270 ~ amountToWithdraw:", amountToWithdraw);
-
 
             // Check if underlying funds held in the strategy are enough to cover withdrawal.
             // If not, divest from Cellar
             if (amountToWithdraw > underlyingBalance) {
                 uint256 expectedAmountToWithdraw = amountToWithdraw - underlyingBalance;
-                console2.log("###   ~ file: BaseHopStrategy.sol:277 ~ expectedAmountToWithdraw:", expectedAmountToWithdraw);
-
 
                 // We cannot withdraw more than actual balance or maxSingleTrade
                 expectedAmountToWithdraw =
                     Math.min(Math.min(expectedAmountToWithdraw, _shareValue(_shareBalance())), maxSingleTrade);
 
                 uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
-                console2.log("###   ~ file: BaseHopStrategy.sol:285 ~ sharesToWithdraw:", sharesToWithdraw);
-
 
                 uint256 withdrawn = _divest(sharesToWithdraw);
-                console2.log("###   ~ file: BaseHopStrategy.sol:289 ~ withdrawn:", withdrawn);
-
 
                 // Overwrite underlyingBalance with the proper amount after withdrawing
                 underlyingBalance = _underlyingBalance();
@@ -335,12 +330,13 @@ contract BaseHopStrategy is BaseStrategy {
     /// was made is available for reinvestment. This number could be 0, and this scenario should be handled accordingly.
     function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal virtual override {
         uint256 toInvest = _underlyingBalance();
+
         if (toInvest > minSingleTrade) {
             _invest(toInvest, minOutputAfterInvestment);
         }
     }
 
-    /// @notice Invests `amount` of underlying, depositing it in the Beefy Vault
+    /// @notice Invests `amount` of underlying, depositing it in the Hop Pool
     /// @param amount The amount of underlying to be deposited in the vault
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
     /// @return shares The amount of shares received, in terms of underlying
@@ -356,11 +352,6 @@ contract BaseHopStrategy is BaseStrategy {
         amounts[1] = 0;
 
         shares = hopPool.addLiquidity(amounts, 0, block.timestamp + 60);
-        console2.log("###   ~ file: BaseHopStrategy.sol:340 ~ actual shares:", shares);
-        
-        
-        console2.log("###   ~ file: BaseHopStrategy.sol:369 ~ _invest ~ hopLPToken.balanceOf(address(this)):", hopLPToken.balanceOf(address(this)));
-
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -377,19 +368,16 @@ contract BaseHopStrategy is BaseStrategy {
             log2(0x00, 0x20, _INVESTED_EVENT_SIGNATURE, address())
         }
     }
-        
 
-
-    /// @notice Divests amount `shares` from Beefy Vault
-    /// Note that divesting from Beefy could potentially cause loss (set to 0.01% as default in
+    /// @notice Divests amount `shares` from Hop Pool
+    /// Note that divesting from Hop could potentially cause loss (set to 0.01% as default in
     /// the Vault implementation), so the divested amount might actually be different from
     /// the requested `shares` to divest
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
-    /// but in terms of "yvault" shares ...........########## TODO
+    /// but in terms of "Hop" shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal virtual returns (uint256 withdrawn) {
         withdrawn = hopPool.removeLiquidityOneToken(shares, 0, 0, block.timestamp + 60);
-        console2.log("###   ~ file: BaseHopStrategy.sol:374 ~ _divest ~ withdrawn:", withdrawn);
 
         assembly {
             // Emit the `Divested` event
@@ -418,7 +406,7 @@ contract BaseHopStrategy is BaseStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         // If underlying balance currently held by strategy is not enough to cover
-        // the requested amount, we divest from the Beefy Vault
+        // the requested amount, we divest from the Hop Pool
         if (underlyingBalance < amountNeeded) {
             uint256 amountToWithdraw;
             unchecked {
@@ -453,17 +441,7 @@ contract BaseHopStrategy is BaseStrategy {
     /// @notice Determines the current value of `shares`.
     /// @return _assets the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view virtual returns (uint256 _assets) {
-        uint256[] memory assets = hopPool.calculateRemoveLiquidity(address(this), shares);
-        console2.log("###   ~ file: BaseHopStrategy.sol:440 ~ estimated _shareValue ~ assets[0]:", assets[0]);
-        console2.log("###   ~ file: BaseHopStrategy.sol:440 ~ estimated _shareValue ~ assets[1]:", assets[1]);
-
-        if (assets[1] > 0) {
-            _assets = assets[0] + hopPool.calculateSwap(1, 0, assets[1]);
-        } else {
-            _assets = assets[0];
-        }
-
-        console2.log("###   ~ file: BaseHopStrategy.sol:455 ~ estimated _shareValue ~ total _assets [0+1]:", _assets);
+        _assets = hopPool.calculateRemoveLiquidityOneToken(address(this), shares, 0);
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
@@ -474,11 +452,10 @@ contract BaseHopStrategy is BaseStrategy {
         amounts[1] = 0;
 
         shares = hopPool.calculateTokenAmount(address(this), amounts, true);
-        console2.log("###   ~ file: BaseHopStrategy.sol:454 ~ estimated _sharesForAmount ~ shares:", shares);
     }
 
-    /// @notice Returns the current strategy's amount of Beefy vault shares
-    /// @return _balance balance the strategy's balance of Beefy vault shares
+    /// @notice Returns the current strategy's amount of Hop Pool shares
+    /// @return _balance balance the strategy's balance of Hop Pool shares
     function _shareBalance() internal view returns (uint256 _balance) {
         _balance = hopLPToken.balanceOf(address(this));
     }

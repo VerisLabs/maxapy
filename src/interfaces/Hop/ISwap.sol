@@ -32,6 +32,7 @@ interface ISwap {
     function calculateRemoveLiquidity(address account, uint256 amount) external view returns (uint256[] memory);
 
     function calculateRemoveLiquidityOneToken(
+        address account,
         uint256 tokenAmount,
         uint8 tokenIndex
     )
