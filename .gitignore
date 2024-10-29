@@ -8,9 +8,6 @@ broadcast/
 # Ignores git vscode config
 .vscode/
 
-# Docs
-docs/
-
 # Dotenv file
 .env
 .env.*
