@@ -90,4 +90,6 @@ interface IStrategyWrapper is IStrategy {
     function unharvestedAmount() external view returns (int256);
 
     function uniProxy() external view returns (address);
+
+    function hopPool() external view returns (address);
 }
