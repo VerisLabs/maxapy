@@ -190,18 +190,18 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     }
 
     /*==================STRATEGY CORE LOGIC TESTS==================*/
-    // function testHopETH__InvestmentSlippage() public {
-    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-    //
-    //     vault.deposit(100 * _1_WETH, users.alice);
-    //
-    //     vm.startPrank(users.keeper);
+    function testHopETH__InvestmentSlippage() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+    
+        vault.deposit(100 * _1_WETH, users.alice);
+    
+        vm.startPrank(users.keeper);
 
-    //     // Expect revert if output amount is gt amount obtained
-    //     vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
-    //     strategy.harvest(0, type(uint256).max, address(0), block.timestamp);
-    //
-    // }
+        // Expect revert if output amount is gt amount obtained
+        vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
+        strategy.harvest(0, type(uint256).max, address(0), block.timestamp);
+    
+    }
 
     function testHopETH__PrepareReturn() public {
         uint256 snapshotId = vm.snapshot();
@@ -273,17 +273,15 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     }
 
     function testHopETH__Invest() public {
-        // uint256 returned = strategy.invest(0, 0);
-        // assertEq(returned, 0);
-        // assertEq(IERC20(HOP_ETH_SWAP_LP_TOKEN_POLYGON).balanceOf(address(strategy)), 0);
+        uint256 returned = strategy.invest(0, 0);
+        assertEq(returned, 0);
+        assertEq(IERC20(HOP_ETH_SWAP_LP_TOKEN_POLYGON).balanceOf(address(strategy)), 0);
 
-        // vm.expectRevert(abi.encodeWithSignature("NotEnoughFundsToInvest()"));
-        // returned = strategy.invest(1, 0);
+        vm.expectRevert(abi.encodeWithSignature("NotEnoughFundsToInvest()"));
+        returned = strategy.invest(1, 0);
 
         deal({ token: WETH_POLYGON, to: address(strategy), give: 10 * _1_WETH });
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_WETH);
-
-        uint256 value = strategy.shareValue(expectedShares);
 
         vm.expectEmit();
         emit Invested(address(strategy), 10 * _1_WETH);
