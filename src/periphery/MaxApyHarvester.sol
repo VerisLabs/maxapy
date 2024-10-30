@@ -252,7 +252,7 @@ contract MaxApyHarvester is OwnableRoles {
             }
         }
 
-        // 2. Simulate harvrests
+        // 2. Simulate harvests
         length = harvests.length;
 
         // Iterate through each strategy in the array in order to call the harvest.
@@ -296,8 +296,6 @@ contract MaxApyHarvester is OwnableRoles {
         }
 
         uint256 totalAssetsAfter = vault.totalAssets();
-
-
 
         bytes memory returnData = abi.encode(totalAssetsBefore, totalAssetsAfter, simulationResults);
 
