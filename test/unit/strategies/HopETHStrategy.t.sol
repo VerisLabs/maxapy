@@ -192,15 +192,14 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     /*==================STRATEGY CORE LOGIC TESTS==================*/
     function testHopETH__InvestmentSlippage() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-    
+
         vault.deposit(100 * _1_WETH, users.alice);
-    
+
         vm.startPrank(users.keeper);
 
         // Expect revert if output amount is gt amount obtained
         vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
         strategy.harvest(0, type(uint256).max, address(0), block.timestamp);
-    
     }
 
     function testHopETH__PrepareReturn() public {
