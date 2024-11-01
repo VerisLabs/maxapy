@@ -49,7 +49,7 @@ contract YearnAjnaWETHStakingStrategyTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address)",
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                bytes32("MaxApy Yearn Strategy"),
                 users.alice,
                 YVAULT_WETH_MAINNET
             )
@@ -82,7 +82,7 @@ contract YearnAjnaWETHStakingStrategyTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address)",
                 address(_vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                bytes32("MaxApy Yearn Strategy"),
                 users.alice,
                 YVAULT_WETH_MAINNET
             )
@@ -96,7 +96,7 @@ contract YearnAjnaWETHStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(WETH_MAINNET).allowance(address(_strategy), address(_vault)), type(uint256).max);
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
-        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy Yearn Strategy")));
+        assertEq(_strategy.strategyName(), bytes32("MaxApy Yearn Strategy"));
         assertEq(_strategy.yVault(), YVAULT_WETH_MAINNET);
         assertEq(IERC20(WETH_MAINNET).allowance(address(_strategy), YVAULT_WETH_MAINNET), type(uint256).max);
 
