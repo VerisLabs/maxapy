@@ -51,7 +51,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address)",
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Real USD Strategy")),
+                bytes32("MaxApy Real USD Strategy"),
                 users.alice,
                 CELLAR_USDC_MAINNET
             )
@@ -84,7 +84,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address)",
                 address(_vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Sommelier Strategy")),
+                bytes32("MaxApy Sommelier Strategy"),
                 users.alice,
                 CELLAR_USDC_MAINNET
             )
@@ -98,7 +98,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(USDC_MAINNET).allowance(address(_strategy), address(_vault)), type(uint256).max);
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
-        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy Sommelier Strategy")));
+        assertEq(_strategy.strategyName(), bytes32("MaxApy Sommelier Strategy"));
         assertEq(_strategy.cellar(), CELLAR_USDC_MAINNET);
         assertEq(IERC20(USDC_MAINNET).allowance(address(_strategy), CELLAR_USDC_MAINNET), type(uint256).max);
 

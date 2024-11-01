@@ -7,8 +7,6 @@ import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src
 
 import { ERC20Burnable } from "openzeppelin/token/ERC20/extensions/ERC20Burnable.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 /// @title BaseHopStrategy
 /// @author MaxApy
 /// @notice `BaseHopStrategy` sets the base functionality to be implemented by MaxApy Hop strategies.
@@ -351,7 +349,7 @@ contract BaseHopStrategy is BaseStrategy {
         amounts[0] = amount;
         amounts[1] = 0;
 
-        shares = hopPool.addLiquidity(amounts, 0, block.timestamp + 60);
+        shares = hopPool.addLiquidity(amounts, 0, block.timestamp + 600);
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)

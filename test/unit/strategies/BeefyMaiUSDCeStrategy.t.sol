@@ -53,7 +53,7 @@ contract BeefyMaiUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
                 "initialize(address,address[],bytes32,address,address,address)",
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy MAI<>USDCe Strategy")),
+                bytes32("MaxApy MAI<>USDCe Strategy"),
                 users.alice,
                 CURVE_MAI_USDCE_POOL_POLYGON,
                 BEEFY_MAI_USDCE_POLYGON
@@ -511,7 +511,7 @@ contract BeefyMaiUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
 
         uint256 loss = strategy.liquidate(amount / 3);
 
-        assertLe(expected, amount / 3 - loss);
+        assertLe(expected, ((amount/3) - loss));  
     }
 
     function testBeefyMaiUSDCE__PreviewLiquidateExact() public {
