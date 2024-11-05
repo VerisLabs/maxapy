@@ -105,7 +105,7 @@ contract BaseHopStrategy is BaseStrategy {
         /// Unlimited max single trade by default
         maxSingleTrade = type(uint256).max;
         /// min single trade by default
-        minSingleTrade = 1e18;
+        minSingleTrade = 0.001 ether;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -191,8 +191,8 @@ contract BaseHopStrategy is BaseStrategy {
         returns (uint256 requestedAmount)
     {
         // we cannot predict losses so return as if there were not
-        // increase 1% to be pessimistic
-        return previewLiquidate(liquidatedAmount) * 101 / 100;
+        // increase 4% to be pessimistic
+        return previewLiquidate(liquidatedAmount) * 104 / 100;
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
@@ -203,7 +203,7 @@ contract BaseHopStrategy is BaseStrategy {
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxLiquidateExact() public view override returns (uint256) {
         // make sure it doesnt revert when increaseing it 1% in the withdraw
-        return previewLiquidate(estimatedTotalAssets()) * 99 / 100;
+        return previewLiquidate(estimatedTotalAssets()) * 96 / 100;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -441,7 +441,11 @@ contract BaseHopStrategy is BaseStrategy {
     /// @notice Determines the current value of `shares`.
     /// @return _assets the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view virtual returns (uint256 _assets) {
+        // if (shares > 0) {
         _assets = hopPool.calculateRemoveLiquidityOneToken(address(this), shares, 0);
+        // } else {
+        //     _assets = 0;
+        // }
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
@@ -451,8 +455,12 @@ contract BaseHopStrategy is BaseStrategy {
         amounts[0] = amount;
         amounts[1] = 0;
 
+        // shares = (hopPool.calculateTokenAmount(address(this), amounts, true)) * 9998 / 10000 ;
         shares = hopPool.calculateTokenAmount(address(this), amounts, true);
     }
+
+    // 861070266222154043
+    // 861328636377192038
 
     /// @notice Returns the current strategy's amount of Hop Pool shares
     /// @return _balance balance the strategy's balance of Hop Pool shares

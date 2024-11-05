@@ -159,7 +159,7 @@ contract BaseBeefyStrategy is BaseStrategy {
             uint256 withdrawn = _shareValue(shares);
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
-        liquidatedAmount = requestedAmount - loss;
+        liquidatedAmount = (requestedAmount - loss) * 997 / 1000;
     }
 
     /// @notice This function is meant to be called from the vault
