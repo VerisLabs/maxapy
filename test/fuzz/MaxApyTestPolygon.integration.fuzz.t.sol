@@ -31,6 +31,9 @@ import { YearnUSDCeStrategyWrapper } from "../mock/YearnUSDCeStrategyWrapper.sol
 import { YearnDAIStrategyWrapper } from "../mock/YearnDAIStrategyWrapper-polygon.sol";
 import { YearnDAILenderStrategyWrapper } from "../mock/YearnDAILenderStrategyWrapper.sol";
 import { YearnCompoundUSDCeLenderStrategyWrapper } from "../mock/YearnCompoundUSDCeLenderStrategyWrapper.sol";
+import { BeefyCrvUSDUSDCeStrategyWrapper } from "../mock/BeefyCrvUSDUSDCeStrategyWrapper.sol";
+import { BeefyUSDCeDAIStrategyWrapper } from "../mock/BeefyUSDCeDAIStrategyWrapper.sol";
+import { YearnAaveV3USDTLenderStrategyWrapper } from "../mock/YearnAaveV3USDTLenderStrategyWrapper.sol";
 
 //// Vault
 import { StrategyData } from "src/helpers/VaultTypes.sol";
@@ -65,6 +68,9 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
     IStrategyWrapper public strategy9; // YearnDAIStrategyWrapper
     IStrategyWrapper public strategy10; // YearnDAILenderStrategyWrapper
     IStrategyWrapper public strategy11; // YearnCompoundUSDCeLender
+    IStrategyWrapper public strategy12; // BeefyCrvUSDUSDCeStrategyWrapper
+    IStrategyWrapper public strategy13; //BeefyUSDCeDAIStrategyWrapper
+    IStrategyWrapper public strategy14; // YearnAaveV3USDTLenderStrategyWrapper
 
     // Vault Fuzzer
     MaxApyVaultFuzzer public vaultFuzzer;
@@ -312,7 +318,64 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
         vm.label(address(proxy), "YearnCompoundUSDCeLender");
         strategy11 = IStrategyWrapper(address(proxy));
 
-        address[] memory strategyList = new address[](11);
+        // StrategyWrapper12(BeefyMaBeefyCrvUSDUSDCeStrategyWrapperiUSDCeStrategyWrapper)
+        BeefyCrvUSDUSDCeStrategyWrapper implementation12 = new BeefyCrvUSDUSDCeStrategyWrapper();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation12),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address,address)",
+                address(vault),
+                keepers,
+                bytes32(abi.encode("MaxApy CrvUSD<>USDCe Strategy")),
+                users.alice,
+                CURVE_CRVUSD_USDCE_POOL_POLYGON,
+                BEEFY_CRVUSD_USDCE_POLYGON
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        vm.label(address(proxy), "BeefyCrvUSDUSDCeStrategy");
+        strategy12 = IStrategyWrapper(address(proxy));
+
+        // StrategyWrapper13(BeefyUSDCeDAIStrategyWrapper)
+        BeefyUSDCeDAIStrategyWrapper implementation13 = new BeefyUSDCeDAIStrategyWrapper();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation13),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address,address,address)",
+                address(vault),
+                keepers,
+                bytes32(abi.encode("MaxApy USDCe<>DAI Strategy")),
+                users.alice,
+                GAMMA_USDCE_DAI_UNIPROXY_POLYGON,
+                GAMMA_USDCE_DAI_HYPERVISOR_POLYGON,
+                BEEFY_USDCE_DAI_POLYGON
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        vm.label(address(proxy), "BeefyUSDCeDAIStrategy");
+        strategy13 = IStrategyWrapper(address(proxy));
+
+        // StrategyWrapper14(YearnAaveV3USDTLenderStrategyWrapper)
+        YearnAaveV3USDTLenderStrategyWrapper implementation14 = new YearnAaveV3USDTLenderStrategyWrapper();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation14),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address)",
+                address(vault),
+                keepers,
+                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                users.alice,
+                YVAULT_AAVE_USDT_POLYGON
+            )
+        );
+        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        vm.label(address(proxy), "YearnAaveV3USDTLenderStrategy");
+        strategy14 = IStrategyWrapper(address(proxy));
+
+        address[] memory strategyList = new address[](14);
 
         strategyList[0] = address(strategy1);
         strategyList[1] = address(strategy2);
@@ -325,6 +388,9 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
         strategyList[8] = address(strategy9);
         strategyList[9] = address(strategy10);
         strategyList[10] = address(strategy11);
+        strategyList[11] = address(strategy12);
+        strategyList[12] = address(strategy13);
+        strategyList[13] = address(strategy14);
 
         // Add all the strategies
         vault.addStrategy(address(strategy1), 700, type(uint72).max, 0, 0);
@@ -338,6 +404,9 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
         vault.addStrategy(address(strategy9), 700, type(uint72).max, 0, 0);
         vault.addStrategy(address(strategy10), 700, type(uint72).max, 0, 0);
         vault.addStrategy(address(strategy11), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy12), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy13), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy14), 700, type(uint72).max, 0, 0);
 
         vm.label(address(USDCE_POLYGON), "USDCE");
         /// Alice approves vault for deposits
@@ -365,6 +434,8 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
         strategy9.grantRoles(address(strategyFuzzer), _keeperRole);
         strategy10.grantRoles(address(strategyFuzzer), _keeperRole);
         strategy11.grantRoles(address(strategyFuzzer), _keeperRole);
+        strategy12.grantRoles(address(strategyFuzzer), _keeperRole);
+        strategy13.grantRoles(address(strategyFuzzer), _keeperRole);
     }
 
     function testFuzzMaxApyIntegrationPolygon__DepositAndRedeemWithoutHarvests(
