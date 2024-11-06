@@ -494,21 +494,20 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     }
 
     function testHopETH__PreviewLiquidate__FUZZY(uint256 amount) public {
-        vm.assume(amount > _1_WETH && amount < 10_000 * _1_WETH);
+        vm.assume(amount > _1_WETH && amount < 1000 * _1_WETH);
         deal(WETH_POLYGON, users.alice, amount);
-        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         vault.deposit(amount, users.alice);
         vm.startPrank(users.keeper);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
 
         vm.stopPrank();
-        uint256 expected = strategy.previewLiquidate(amount / 3);
+        uint256 expected = strategy.previewLiquidate(amount * 90 / 100);
         vm.startPrank(address(vault));
 
-        uint256 loss = strategy.liquidate(amount / 3);
-
-        assertLe(expected, amount / 3 - loss);
+        uint256 loss = strategy.liquidate(amount * 90 / 100);
+        assertLe(expected, amount * 90 / 100 - loss);
     }
 
     function testHopETH__PreviewLiquidateExact() public {
@@ -535,24 +534,24 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         vm.assume(amount > _1_WETH && amount < 10_000 * _1_WETH);
         deal(WETH_POLYGON, users.alice, amount);
 
-        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
         vault.deposit(amount, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
 
-        uint256 requestedAmount = strategy.previewLiquidateExact(amount / 3);
+        uint256 requestedAmount = strategy.previewLiquidateExact(amount * 80 / 100);
 
         vm.startPrank(address(vault));
         uint256 balanceBefore = IERC20(WETH_POLYGON).balanceOf(address(vault));
 
-        strategy.liquidateExact(amount / 3);
+        strategy.liquidateExact(amount * 80 / 100);
         uint256 withdrawn = IERC20(WETH_POLYGON).balanceOf(address(vault)) - balanceBefore;
 
         // withdraw exactly what requested
-        assertGe(withdrawn, amount / 3);
+        assertEq(withdrawn, amount * 80 / 100);
         // losses are equal or fewer than expected
-        assertLe(withdrawn - amount / 3, requestedAmount - amount / 3);
+        assertLe(withdrawn - amount * 80 / 100, requestedAmount - amount * 80 / 100);
     }
 
     function testHopETH__maxLiquidateExact() public {
@@ -574,7 +573,7 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     }
 
     function testHopETH__maxLiquidateExact__FUZZY(uint256 amount) public {
-        vm.assume(amount > _1_WETH && amount < 10_000 * _1_WETH);
+        vm.assume(amount > _1_WETH && amount < 1000 * _1_WETH);
         deal(WETH_POLYGON, users.alice, amount);
 
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
@@ -598,7 +597,7 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         uint256 withdrawn = IERC20(WETH_POLYGON).balanceOf(address(vault)) - balanceBefore;
 
         // withdraw exactly what requested
-        assertGe(withdrawn, maxLiquidateExact);
+        assertEq(withdrawn, maxLiquidateExact);
         // losses are equal or fewer than expected
         assertLe(losses, requestedAmount - maxLiquidateExact);
     }

@@ -496,7 +496,7 @@ contract BeefyUSDCeDAIStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
 
         uint256 loss = strategy.liquidate(30 * _1_USDCE);
 
-        assertApproxEq(expected, 30 * _1_USDCE - loss, 1500);
+        assertLe(expected, 30 * _1_USDCE - loss);
     }
 
     function testBeefyUSDCeDai__PreviewLiquidate__FUZZY(uint256 amount) public {

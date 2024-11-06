@@ -7,8 +7,6 @@ import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src
 
 import { ERC20Burnable } from "openzeppelin/token/ERC20/extensions/ERC20Burnable.sol";
 
-import { console2 } from "forge-std/console2.sol";
-
 /// @title BaseHopStrategy
 /// @author MaxApy
 /// @notice `BaseHopStrategy` sets the base functionality to be implemented by MaxApy Hop strategies.
@@ -172,8 +170,14 @@ contract BaseHopStrategy is BaseStrategy {
             unchecked {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
-            uint256 shares = _sharesForAmount(amountToWithdraw);
-            uint256 withdrawn = _shareValue(shares);
+            uint256 shares = _lpForAmount(amountToWithdraw);
+            uint256 _balance = _shareBalance();
+
+            assembly {
+                // Adjust computed lp amount by current lp balance
+                if gt(shares, _balance) { shares := _balance }
+            }
+            uint256 withdrawn = hopPool.calculateRemoveLiquidityOneToken(address(this), shares, 0);
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
         liquidatedAmount = requestedAmount - loss;
@@ -190,9 +194,13 @@ contract BaseHopStrategy is BaseStrategy {
         override
         returns (uint256 requestedAmount)
     {
-        // we cannot predict losses so return as if there were not
-        // increase 4% to be pessimistic
-        return previewLiquidate(liquidatedAmount) * 104 / 100;
+        uint256 underlyingBalance = _underlyingBalance();
+        if (underlyingBalance < liquidatedAmount) {
+            requestedAmount = liquidatedAmount - underlyingBalance;
+            // increase 1% to be pessimistic
+            requestedAmount = previewLiquidate(requestedAmount) * 101 / 100;
+        }
+        return requestedAmount + underlyingBalance;
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
@@ -203,12 +211,13 @@ contract BaseHopStrategy is BaseStrategy {
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxLiquidateExact() public view override returns (uint256) {
         // make sure it doesnt revert when increaseing it 1% in the withdraw
-        return previewLiquidate(estimatedTotalAssets()) * 96 / 100;
+        return previewLiquidate(estimatedTotalAssets()) * 90 / 100;
     }
 
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
+
     /// @notice Perform any Strategy unwinding or other calls necessary to capture the
     /// "free return" this Strategy has generated since the last time its core
     /// position(s) were adjusted. Examples include unwrapping extra rewards.
@@ -229,7 +238,6 @@ contract BaseHopStrategy is BaseStrategy {
     ///       Payments should be made to minimize loss from slippage, debt,
     ///       withdrawal fees, etc.
     /// See `MaxApy.debtOutstanding()`.
-
     function _prepareReturn(
         uint256 debtOutstanding,
         uint256 minExpectedBalance
@@ -278,9 +286,9 @@ contract BaseHopStrategy is BaseStrategy {
 
                 // We cannot withdraw more than actual balance or maxSingleTrade
                 expectedAmountToWithdraw =
-                    Math.min(Math.min(expectedAmountToWithdraw, _shareValue(_shareBalance())), maxSingleTrade);
+                    Math.min(Math.min(expectedAmountToWithdraw, _lpValue(_shareBalance())), maxSingleTrade);
 
-                uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
+                uint256 sharesToWithdraw = _lpForAmount(expectedAmountToWithdraw);
 
                 uint256 withdrawn = _divest(sharesToWithdraw);
 
@@ -412,7 +420,7 @@ contract BaseHopStrategy is BaseStrategy {
             unchecked {
                 amountToWithdraw = amountNeeded - underlyingBalance;
             }
-            uint256 shares = _sharesForAmount(amountToWithdraw);
+            uint256 shares = _lpForAmount(amountToWithdraw);
             if (shares == 0) return (0, 0);
             uint256 withdrawn = _divest(shares);
             assembly {
@@ -438,29 +446,19 @@ contract BaseHopStrategy is BaseStrategy {
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
 
-    /// @notice Determines the current value of `shares`.
-    /// @return _assets the estimated amount of underlying computed from shares `shares`
-    function _shareValue(uint256 shares) internal view virtual returns (uint256 _assets) {
-        // if (shares > 0) {
-        _assets = hopPool.calculateRemoveLiquidityOneToken(address(this), shares, 0);
-        // } else {
-        //     _assets = 0;
-        // }
+    /// @notice Determines how many lp tokens depositor of `amount` of underlying would receive.
+    /// @dev Some loss of precision is occured, but it is not critical as this is only an underestimation of
+    /// the actual assets, and profit will be later accounted for.
+    /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
+    function _lpValue(uint256 lp) internal view virtual returns (uint256) {
+        return (lp * _lpPrice()) / 1e18;
     }
 
-    /// @notice Determines how many shares depositor of `amount` of underlying would receive.
-    /// @return shares the estimated amount of shares computed in exchange for underlying `amount`
-    function _sharesForAmount(uint256 amount) internal view virtual returns (uint256 shares) {
-        uint256[] memory amounts = new uint256[](2);
-        amounts[0] = amount;
-        amounts[1] = 0;
-
-        // shares = (hopPool.calculateTokenAmount(address(this), amounts, true)) * 9998 / 10000 ;
-        shares = hopPool.calculateTokenAmount(address(this), amounts, true);
+    /// @notice Determines how many lp tokens depositor of `amount` of underlying would receive.
+    /// @return returns the estimated amount of lp tokens computed in exchange for underlying `amount`
+    function _lpForAmount(uint256 amount) internal view virtual returns (uint256) {
+        return (amount * 1e18) / _lpPrice();
     }
-
-    // 861070266222154043
-    // 861328636377192038
 
     /// @notice Returns the current strategy's amount of Hop Pool shares
     /// @return _balance balance the strategy's balance of Hop Pool shares
@@ -468,10 +466,16 @@ contract BaseHopStrategy is BaseStrategy {
         _balance = hopLPToken.balanceOf(address(this));
     }
 
+    /// @notice Returns the estimated price for the strategy's Convex's LP token
+    /// @return returns the estimated lp token price
+    function _lpPrice() internal view virtual returns (uint256) {
+        return ((hopPool.getVirtualPrice() * hopPool.calculateSwap(0, 1, 1 ether)) / 1 ether);
+    }
+
     /// @notice Returns the real time estimation of the value in assets held by the strategy
     /// @return the strategy's total assets(idle + investment positions)
     function _estimatedTotalAssets() internal view override returns (uint256) {
-        return _underlyingBalance() + _shareValue(_shareBalance());
+        return _underlyingBalance() + _lpValue(_shareBalance());
     }
 
     ////////////////////////////////////////////////////////////////
@@ -592,7 +596,7 @@ contract BaseHopStrategy is BaseStrategy {
         // Check if vault transferred underlying and re-invest it
         _adjustPosition(debtOutstanding, 0);
         outputAfterInvestment = _shareBalance() - sharesBalanceBefore;
-        actualInvest = _shareValue(outputAfterInvestment);
+        actualInvest = _lpValue(outputAfterInvestment);
         _snapshotEstimatedTotalAssets();
 
         // revert with data we need

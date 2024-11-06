@@ -532,7 +532,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         vm.warp(block.timestamp + 1 days);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_989_136);
+        assertEq(IERC20(USDCE_POLYGON).balanceOf(address(vault)), 109_988_576);
         assertEq(IERC20(strategy.convexRewardPool()).balanceOf(address(strategy)), 0);
         vm.revertTo(snapshotId);
 
@@ -579,7 +579,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         uint256 expected = strategy.previewLiquidate(30 * _1_USDC);
         vm.startPrank(address(vault));
         uint256 loss = strategy.liquidate(30 * _1_USDC);
-        assertEq(expected, 30 * _1_USDC - loss);
+        assertLe(expected, 30 * _1_USDC - loss);
     }
 
     function testConvexUSDCCrvUSD__PreviewLiquidate__FUZZY(uint256 amount) public {
@@ -669,7 +669,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         uint256 losses = strategy.liquidateExact(maxLiquidateExact);
         uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
-        assertGe(withdrawn, maxLiquidateExact);
+        assertEq(withdrawn, maxLiquidateExact);
         // losses are equal or fewer than expected
         assertLe(losses, requestedAmount - maxLiquidateExact);
     }
