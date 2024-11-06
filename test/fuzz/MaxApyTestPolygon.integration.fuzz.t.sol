@@ -368,7 +368,7 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
                 keepers,
                 bytes32(abi.encode("MaxApy Yearn Strategy")),
                 users.alice,
-                YVAULT_AAVE_USDT_POLYGON
+                YEARN_AAVE_V3_USDT_LENDER_YVAULT_POLYGON
             )
         );
         proxy = ITransparentUpgradeableProxy(address(_proxy));
