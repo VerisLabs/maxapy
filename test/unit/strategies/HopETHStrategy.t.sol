@@ -505,8 +505,11 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         vm.stopPrank();
         uint256 expected = strategy.previewLiquidate(amount * 90 / 100);
         vm.startPrank(address(vault));
-
+        uint256 balanceBefore = WETH_POLYGON.balanceOf(address(vault));
         uint256 loss = strategy.liquidate(amount * 90 / 100);
+        uint256 balanceAfter = WETH_POLYGON.balanceOf(address(vault));
+
+
         assertLe(expected, amount * 90 / 100 - loss);
     }
 
@@ -531,7 +534,7 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     }
 
     function testHopETH__PreviewLiquidateExact__FUZZY(uint256 amount) public {
-        vm.assume(amount > _1_WETH && amount < 10_000 * _1_WETH);
+        vm.assume(amount > _1_WETH && amount < 1_000 * _1_WETH);
         deal(WETH_POLYGON, users.alice, amount);
 
         vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);

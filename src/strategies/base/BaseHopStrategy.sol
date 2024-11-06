@@ -209,9 +209,8 @@ contract BaseHopStrategy is BaseStrategy {
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxLiquidateExact() public view override returns (uint256) {
-        // make sure it doesnt revert when increaseing it 1% in the withdraw
-        return previewLiquidate(estimatedTotalAssets()) * 90 / 100;
+    function maxLiquidateExact() public view virtual override returns (uint256) {
+        return previewLiquidate(_estimatedTotalAssets()) * 99 / 100;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -469,7 +468,7 @@ contract BaseHopStrategy is BaseStrategy {
     /// @notice Returns the estimated price for the strategy's Convex's LP token
     /// @return returns the estimated lp token price
     function _lpPrice() internal view virtual returns (uint256) {
-        return ((hopPool.getVirtualPrice() * hopPool.calculateSwap(0, 1, 1 ether)) / 1 ether);
+        return hopPool.getVirtualPrice();
     }
 
     /// @notice Returns the real time estimation of the value in assets held by the strategy
