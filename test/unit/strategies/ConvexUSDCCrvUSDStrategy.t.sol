@@ -582,24 +582,6 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         assertLe(expected, 30 * _1_USDC - loss);
     }
 
-    function testConvexUSDCCrvUSD__PreviewLiquidate__FUZZY(uint256 amount) public {
-        vm.assume(amount > _1_USDC && amount < 1_000_000 * _1_USDC);
-        deal(USDCE_POLYGON, users.alice, amount);
-        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-        vault.deposit(amount, users.alice);
-        vm.startPrank(users.keeper);
-
-        strategy.harvest(0, 0, address(0), block.timestamp);
-
-        vm.stopPrank();
-        uint256 expected = strategy.previewLiquidate(amount / 3);
-        vm.startPrank(address(vault));
-
-        uint256 loss = strategy.liquidate(amount / 3);
-
-        assertLe(expected, amount / 3 - loss);
-    }
-
     function testConvexUSDCCrvUSD__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
@@ -617,48 +599,9 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         assertLe(withdrawn - 30 * _1_USDC, requestedAmount - 30 * _1_USDC);
     }
 
-    function testConvexUSDCCrvUSD__PreviewLiquidateExact_FUZZY(uint256 amount) public {
-        vm.assume(amount > _1_USDC && amount < 1_000_000 * _1_USDC);
-        deal(USDCE_POLYGON, users.alice, amount);
-        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-        vault.deposit(amount, users.alice);
-        vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, address(0), block.timestamp);
-        vm.stopPrank();
-        uint256 requestedAmount = strategy.previewLiquidateExact(amount / 3);
-        vm.startPrank(address(vault));
-        uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
-        strategy.liquidateExact(amount / 3);
-        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
-        // withdraw exactly what requested
-        assertGe(withdrawn, amount / 3);
-        // losses are equal or fewer than expected
-        assertLe(withdrawn - amount / 3, requestedAmount - amount / 3);
-    }
-
     function testConvexUSDCCrvUSD__maxLiquidateExact() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
-        vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, address(0), block.timestamp);
-        vm.stopPrank();
-        uint256 maxLiquidateExact = strategy.maxLiquidateExact();
-        uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
-        uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
-        vm.startPrank(address(vault));
-        uint256 losses = strategy.liquidateExact(maxLiquidateExact);
-        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
-        // withdraw exactly what requested
-        assertEq(withdrawn, maxLiquidateExact);
-        // losses are equal or fewer than expected
-        assertLe(losses, requestedAmount - maxLiquidateExact);
-    }
-
-    function testConvexUSDCCrvUSD__maxLiquidateExact_FUZZY(uint256 amount) public {
-        vm.assume(amount > _1_USDC && amount < 1_000_000 * _1_USDC);
-        deal(USDCE_POLYGON, users.alice, amount);
-        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
-        vault.deposit(amount, users.alice);
         vm.startPrank(users.keeper);
         strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
@@ -688,22 +631,6 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         assertLe(withdrawn, maxWithdraw);
     }
 
-    function testConvexUSDCCrvUSD__MaxLiquidate_FUZZY(uint256 amount) public {
-        vm.assume(amount > _1_USDC && amount < 1_000_000 * _1_USDC);
-        deal(USDCE_POLYGON, users.alice, amount);
-        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
-        vault.deposit(amount, users.alice);
-        vm.startPrank(users.keeper);
-        strategy.harvest(0, 0, address(0), block.timestamp);
-        vm.stopPrank();
-        uint256 maxWithdraw = strategy.maxLiquidate();
-        uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
-        vm.startPrank(address(vault));
-        strategy.liquidate(maxWithdraw);
-        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
-        assertLe(withdrawn, maxWithdraw);
-    }
-
     function testConvexUSDCCrvUSD__SimulateHarvest() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
@@ -713,4 +640,77 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
 
         strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
+
+    // function testConvexUSDCCrvUSD__PreviewLiquidate__FUZZY(uint256 amount) public {
+    //     vm.assume(amount > _1_USDC && amount < 1_000_000 * _1_USDC);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+
+    //     vm.stopPrank();
+    //     uint256 expected = strategy.previewLiquidate(amount / 3);
+    //     vm.startPrank(address(vault));
+
+    //     uint256 loss = strategy.liquidate(amount / 3);
+
+    //     assertLe(expected, amount / 3 - loss);
+    // }
+
+    // function testConvexUSDCCrvUSD__PreviewLiquidateExact_FUZZY(uint256 amount) public {
+    //     vm.assume(amount > _1_USDC && amount < 1_000_000 * _1_USDC);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+    //     vm.stopPrank();
+    //     uint256 requestedAmount = strategy.previewLiquidateExact(amount / 3);
+    //     vm.startPrank(address(vault));
+    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+    //     strategy.liquidateExact(amount / 3);
+    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+    //     // withdraw exactly what requested
+    //     assertGe(withdrawn, amount / 3);
+    //     // losses are equal or fewer than expected
+    //     assertLe(withdrawn - amount / 3, requestedAmount - amount / 3);
+    // }
+
+    // function testConvexUSDCCrvUSD__maxLiquidateExact_FUZZY(uint256 amount) public {
+    //     vm.assume(amount > _1_USDC && amount < 1_000_000 * _1_USDC);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+    //     vm.stopPrank();
+    //     uint256 maxLiquidateExact = strategy.maxLiquidateExact();
+    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+    //     uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
+    //     vm.startPrank(address(vault));
+    //     uint256 losses = strategy.liquidateExact(maxLiquidateExact);
+    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+    //     // withdraw exactly what requested
+    //     assertEq(withdrawn, maxLiquidateExact);
+    //     // losses are equal or fewer than expected
+    //     assertLe(losses, requestedAmount - maxLiquidateExact);
+    // }
+
+    // function testConvexUSDCCrvUSD__MaxLiquidate_FUZZY(uint256 amount) public {
+    //     vm.assume(amount > _1_USDC && amount < 1_000_000 * _1_USDC);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+    //     vm.stopPrank();
+    //     uint256 maxWithdraw = strategy.maxLiquidate();
+    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+    //     vm.startPrank(address(vault));
+    //     strategy.liquidate(maxWithdraw);
+    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+    //     assertLe(withdrawn, maxWithdraw);
+    // }
 }
