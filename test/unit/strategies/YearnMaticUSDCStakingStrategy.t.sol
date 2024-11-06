@@ -698,21 +698,21 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertLe(losses, requestedAmount - maxLiquidateExact);
     }
 
-    // function testYearnMaticUSDC_Staking__MaxLiquidate_FUZZY(uint256 amount) public {
-    //     vm.assume(amount > 1 * _1_USDC && amount < 1_000 * _1_USDC);
-    //     deal(USDCE_POLYGON, users.alice, amount);
-    //     vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
-    //     vault.deposit(amount, users.alice);
-    //     vm.startPrank(users.keeper);
-    //     strategy.harvest(0, 0, address(0), block.timestamp);
-    //     vm.stopPrank();
-    //     uint256 maxWithdraw = strategy.maxLiquidate();
-    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
-    //     vm.startPrank(address(vault));
-    //     strategy.liquidate(maxWithdraw);
-    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
-    //     assertLe(withdrawn, maxWithdraw);
-    // }
+    function testYearnMaticUSDC_Staking__MaxLiquidate_FUZZY(uint256 amount) public {
+        vm.assume(amount > 1 * _1_USDC && amount < 1_000 * _1_USDC);
+        deal(USDCE_POLYGON, users.alice, amount);
+        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+        vault.deposit(amount, users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+        vm.stopPrank();
+        uint256 maxWithdraw = strategy.maxLiquidate();
+        uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+        vm.startPrank(address(vault));
+        strategy.liquidate(maxWithdraw);
+        uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+        assertLe(withdrawn, maxWithdraw);
+    }
 
     function testYearnMaticUSDC_Staking__SimulateHarvest() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);

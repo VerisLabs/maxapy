@@ -508,8 +508,7 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         uint256 balanceBefore = WETH_POLYGON.balanceOf(address(vault));
         uint256 loss = strategy.liquidate(amount * 90 / 100);
         uint256 balanceAfter = WETH_POLYGON.balanceOf(address(vault));
-
-
+        assertLe(balanceAfter - balanceBefore, amount * 90 / 100);
         assertLe(expected, amount * 90 / 100 - loss);
     }
 
