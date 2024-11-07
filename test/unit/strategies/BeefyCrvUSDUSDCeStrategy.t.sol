@@ -53,7 +53,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
                 "initialize(address,address[],bytes32,address,address,address)",
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy CrvUSD<>USDCe Strategy")),
+                bytes32("MaxApy CrvUSD<>USDCe Strategy"),
                 users.alice,
                 CURVE_CRVUSD_USDCE_POOL_POLYGON,
                 BEEFY_CRVUSD_USDCE_POLYGON
@@ -85,7 +85,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
                 "initialize(address,address[],bytes32,address,address,address)",
                 address(_vault),
                 keepers,
-                bytes32(abi.encode("MaxApy CrvUSD<>USDCe Strategy")),
+                bytes32("MaxApy CrvUSD<>USDCe Strategy"),
                 users.alice,
                 CURVE_CRVUSD_USDCE_POOL_POLYGON,
                 BEEFY_CRVUSD_USDCE_POLYGON
@@ -102,7 +102,7 @@ contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
 
         assertEq(_strategy.owner(), users.alice);
-        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy CrvUSD<>USDCe Strategy")));
+        assertEq(_strategy.strategyName(), bytes32("MaxApy CrvUSD<>USDCe Strategy"));
 
         assertEq(_strategy.curveLpPool(), CURVE_CRVUSD_USDCE_POOL_POLYGON, "hereee");
         assertEq(

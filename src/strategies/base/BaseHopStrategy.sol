@@ -358,7 +358,7 @@ contract BaseHopStrategy is BaseStrategy {
         amounts[0] = amount;
         amounts[1] = 0;
 
-        shares = hopPool.addLiquidity(amounts, 0, block.timestamp + 60);
+        shares = hopPool.addLiquidity(amounts, 0, block.timestamp + 600);
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)

@@ -53,7 +53,7 @@ contract BeefyUSDCeDAIStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
                 "initialize(address,address[],bytes32,address,address,address,address)",
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy USDCe<>DAI Strategy")),
+                bytes32("MaxApy USDCe<>DAI Strategy"),
                 users.alice,
                 GAMMA_USDCE_DAI_UNIPROXY_POLYGON,
                 GAMMA_USDCE_DAI_HYPERVISOR_POLYGON,
@@ -86,7 +86,7 @@ contract BeefyUSDCeDAIStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
                 "initialize(address,address[],bytes32,address,address,address,address)",
                 address(_vault),
                 keepers,
-                bytes32(abi.encode("MaxApy USDCe<>DAI Strategy")),
+                bytes32("MaxApy USDCe<>DAI Strategy"),
                 users.alice,
                 GAMMA_USDCE_DAI_UNIPROXY_POLYGON,
                 GAMMA_USDCE_DAI_HYPERVISOR_POLYGON,
@@ -104,7 +104,7 @@ contract BeefyUSDCeDAIStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
 
         assertEq(_strategy.owner(), users.alice);
-        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy USDCe<>DAI Strategy")));
+        assertEq(_strategy.strategyName(), bytes32("MaxApy USDCe<>DAI Strategy"));
         assertEq(_strategy.uniProxy(), GAMMA_USDCE_DAI_UNIPROXY_POLYGON, "hereee");
 
         assertEq(_proxyAdmin.owner(), users.alice);

@@ -57,7 +57,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
                 implementation.initialize.selector,
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy USDC<>crvUSD Strategy")),
+                bytes32("MaxApy USDC<>crvUSD Strategy"),
                 users.alice,
                 CURVE_CRVUSD_USDC_POOL_POLYGON,
                 UNISWAP_V3_ROUTER_POLYGON
@@ -89,10 +89,10 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
             address(implementation),
             address(proxyAdmin),
             abi.encodeWithSelector(
-                implementation.initialize.selector,
+                _implementation.initialize.selector,
                 address(_vault),
                 keepers,
-                bytes32(abi.encode("MaxApy USDC<>crvUSD Strategy")),
+                bytes32("MaxApy USDC<>crvUSD Strategy"),
                 users.alice,
                 CURVE_CRVUSD_USDC_POOL_POLYGON,
                 UNISWAP_V3_ROUTER_POLYGON
@@ -107,7 +107,7 @@ contract ConvexUSDCCrvUSDCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
         assertEq(_strategy.owner(), users.alice);
-        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy USDC<>crvUSD Strategy")));
+        assertEq(_strategy.strategyName(), bytes32("MaxApy USDC<>crvUSD Strategy"));
         assertEq(_strategy.convexBooster(), CONVEX_BOOSTER_MAINNET);
         assertEq(_strategy.router(), address(UNISWAP_V3_ROUTER_POLYGON));
 

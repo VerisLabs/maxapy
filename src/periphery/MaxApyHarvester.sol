@@ -14,6 +14,7 @@ contract MaxApyHarvester is OwnableRoles {
     /*//////////////////////////////////////////////////////////////
                              ERRORS
     //////////////////////////////////////////////////////////////*/
+
     error AddStrategyFailed();
     error CantReceiveETH();
     error Fallback();
@@ -206,5 +207,114 @@ contract MaxApyHarvester is OwnableRoles {
         batchAllocate(vault, allocations);
         batchHarvest(vault, harvests);
         return true;
+    }
+
+    function _simulateBatchAllocateAndHarvest(
+        IMaxApyVault vault,
+        AllocationData[] calldata allocations,
+        HarvestData[] calldata harvests
+    )
+        public
+    {
+        // Store totalAssets before allocation and harvest
+        uint256 totalAssetsBefore = vault.totalAssets();
+
+        // 1. Simulate allocation
+        uint256 length = allocations.length;
+
+        AllocationData calldata stratData;
+        StrategyData memory isStratActive;
+
+        // Iterate through each strategy in the array in order to add the strategy .
+        for (uint256 i = 0; i < length;) {
+            stratData = allocations[i];
+            isStratActive = vault.strategies(stratData.strategyAddress);
+            if (isStratActive.strategyActivation != 0) {
+                vault.updateStrategyData(
+                    stratData.strategyAddress,
+                    stratData.debtRatio,
+                    stratData.maxDebtPerHarvest,
+                    stratData.minDebtPerHarvest,
+                    stratData.performanceFee
+                );
+            } else {
+                vault.addStrategy(
+                    stratData.strategyAddress,
+                    stratData.debtRatio,
+                    stratData.maxDebtPerHarvest,
+                    stratData.minDebtPerHarvest,
+                    stratData.performanceFee
+                );
+            }
+
+            unchecked {
+                i++;
+            }
+        }
+
+        // 2. Simulate harvests
+        length = harvests.length;
+
+        // Iterate through each strategy in the array in order to call the harvest.
+        StrategyData memory strategyData;
+        bytes[] memory simulationResults = new bytes[](length);
+
+        for (uint256 i = 0; i < length;) {
+            address strategyAddress = harvests[i].strategyAddress;
+
+            strategyData = vault.strategies(strategyAddress);
+
+            strategy = IStrategy(strategyAddress);
+            {
+                (
+                    uint256 expectedBalance,
+                    uint256 outputAfterInvestment,
+                    uint256 intendedInvest,
+                    uint256 actualInvest,
+                    uint256 intendedDivest,
+                    uint256 actualDivest
+                ) = strategy.simulateHarvest();
+                simulationResults[i] = abi.encode(
+                    expectedBalance, outputAfterInvestment, intendedInvest, actualInvest, intendedDivest, actualDivest
+                );
+
+            }
+            strategy.harvest(
+                harvests[i].minExpectedBalance,
+                harvests[i].minOutputAfterInvestment,
+                DEFAULT_HARVESTER,
+                harvests[i].deadline
+            );
+
+            if (strategyData.strategyDebtRatio == 0) {
+                vault.exitStrategy(strategyAddress);
+            }
+
+            unchecked {
+                i++;
+            }
+        }
+
+        uint256 totalAssetsAfter = vault.totalAssets();
+
+        bytes memory returnData = abi.encode(totalAssetsBefore, totalAssetsAfter, simulationResults);
+
+        assembly {
+            revert(add(returnData, 0x20), mload(returnData))
+        }
+    }
+
+    function simulateBatchAllocateAndHarvest(
+        IMaxApyVault vault,
+        AllocationData[] calldata allocations,
+        HarvestData[] calldata harvests
+    )
+        external
+        returns (uint256 totalAssetsBefore, uint256 totalAssetsAfter, bytes[] memory simulationResults)
+    {
+        try this._simulateBatchAllocateAndHarvest(vault, allocations, harvests) { }
+        catch (bytes memory e) {
+            (totalAssetsBefore, totalAssetsAfter, simulationResults) = abi.decode(e, (uint256, uint256, bytes[]));
+        }
     }
 }

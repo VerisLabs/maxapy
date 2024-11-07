@@ -407,4 +407,76 @@ contract MaxApyHarvesterTest is BaseVaultTest {
 
         vm.stopPrank();
     }
+
+    function testMaxApyHarvester__SimulateBatchAllocateAndHarvest() public {
+        vault.deposit(100 ether, users.alice);
+        MaxApyHarvester.AllocationData[] memory allocations = new MaxApyHarvester.AllocationData[](2);
+        allocations[0] = MaxApyHarvester.AllocationData({
+            strategyAddress: address(strategy1),
+            debtRatio: 2000,
+            maxDebtPerHarvest: type(uint72).max,
+            minDebtPerHarvest: 0,
+            performanceFee: 200
+        });
+        allocations[1] = MaxApyHarvester.AllocationData({
+            strategyAddress: address(strategy2),
+            debtRatio: 7000,
+            maxDebtPerHarvest: type(uint72).max,
+            minDebtPerHarvest: 0,
+            performanceFee: 300
+        });
+
+        MaxApyHarvester.HarvestData[] memory harvests = new MaxApyHarvester.HarvestData[](2);
+
+        harvests[0] = MaxApyHarvester.HarvestData({
+            strategyAddress: address(strategy1),
+            minExpectedBalance: 0,
+            minOutputAfterInvestment: 0,
+            deadline: block.timestamp
+        });
+        harvests[1] = MaxApyHarvester.HarvestData({
+            strategyAddress: address(strategy2),
+            minExpectedBalance: 0,
+            minOutputAfterInvestment: 0,
+            deadline: block.timestamp
+        });
+
+        vm.startPrank(users.keeper);
+        harvester.batchHarvest(vault, harvests);
+        (uint256 totalAssetsBefore, uint256 totalAssetsAfter, bytes[] memory simulationResults) =
+            harvester.simulateBatchAllocateAndHarvest(vault, allocations, harvests);
+        assertEq(totalAssetsBefore, 99_980_656_151_763_373_925);
+        assertEq(totalAssetsAfter, 99_966_148_265_585_904_369);
+        (
+            uint256 expectedBalance,
+            uint256 outputAfterInvestment,
+            uint256 intendedInvest,
+            uint256 actualInvest,
+            uint256 intendedDivest,
+            uint256 actualDivest
+        ) = abi.decode(simulationResults[0], (uint256, uint256, uint256, uint256, uint256, uint256));
+
+        assertEq(expectedBalance, 19_999_999_999_999_999_999);
+        assertEq(outputAfterInvestment, 0);
+        assertEq(intendedInvest, 20_000_000_000_000_000_000);
+        assertEq(actualInvest, 19_999_999_999_999_999_999);
+        assertEq(intendedDivest, 0);
+        assertEq(actualDivest, 0);
+
+        (expectedBalance, outputAfterInvestment, intendedInvest, actualInvest, intendedDivest, actualDivest) =
+            abi.decode(simulationResults[1], (uint256, uint256, uint256, uint256, uint256, uint256));
+
+        assertEq(expectedBalance, 0);
+        assertEq(outputAfterInvestment, 29_695_148_057_962_666_946);
+        assertEq(intendedInvest, 0);
+        assertEq(actualInvest, 0);
+        assertEq(intendedDivest, 29_999_999_999_999_999_999);
+        assertEq(actualDivest, 29_985_492_113_822_530_443);
+
+        harvester.batchAllocateAndHarvest(vault, allocations, harvests);
+
+        assertEq(vault.totalIdle(), 10 ether);
+        assertEq(vault.strategies(address(strategy1)).strategyTotalDebt, 20 ether);
+        assertEq(vault.strategies(address(strategy2)).strategyTotalDebt, 69999999999999999999);
+    }
 }
