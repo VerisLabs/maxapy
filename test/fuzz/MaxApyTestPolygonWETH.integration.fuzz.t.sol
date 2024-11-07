@@ -76,7 +76,7 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
 
         /// Deploy MaxApyVault
         MaxApyVault vaultDeployment =
-            new MaxApyVault(users.alice, USDCE_POLYGON, "MaxApyUSDCEVault", "maxApy", TREASURY);
+            new MaxApyVault(users.alice, WETH_POLYGON, "MaxApyWETHVault", "maxApy", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
@@ -91,7 +91,6 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
         /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin(users.alice);
 
-        // StrategyWrapper1(BeefyMaiUSDCeStrategyWrapper)
         HopETHStrategyWrapper implementation1 = new HopETHStrategyWrapper();
         TransparentUpgradeableProxy _proxy = new TransparentUpgradeableProxy(
             address(implementation1),
@@ -107,7 +106,7 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
             )
         );
         proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "BeefyMaiUSDCeStrategy");
+        vm.label(address(proxy), "HopStrategy");
         strategy1 = IStrategyWrapper(address(proxy));
 
         address[] memory strategyList = new address[](1);
@@ -117,17 +116,17 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
         // Add all the strategies
         vault.addStrategy(address(strategy1), 9000, type(uint72).max, 0, 0);
 
-        vm.label(address(USDCE_POLYGON), "USDCE");
+        vm.label(address(WETH_POLYGON), "WETH");
         /// Alice approves vault for deposits
-        IERC20(USDCE_POLYGON).approve(address(vault), type(uint256).max);
+        IERC20(WETH_POLYGON).approve(address(vault), type(uint256).max);
         vm.startPrank(users.bob);
-        IERC20(USDCE_POLYGON).approve(address(vault), type(uint256).max);
+        IERC20(WETH_POLYGON).approve(address(vault), type(uint256).max);
         vm.stopPrank();
         vm.startPrank(users.alice);
 
         // deploy fuzzers
-        strategyFuzzer = new StrategyFuzzer(strategyList, vault, USDCE_POLYGON);
-        vaultFuzzer = new MaxApyVaultFuzzer(vault, USDCE_POLYGON);
+        strategyFuzzer = new StrategyFuzzer(strategyList, vault, WETH_POLYGON);
+        vaultFuzzer = new MaxApyVaultFuzzer(vault, WETH_POLYGON);
 
         vault.grantRoles(address(strategyFuzzer), vault.ADMIN_ROLE());
         uint256 _keeperRole = strategy1.KEEPER_ROLE();

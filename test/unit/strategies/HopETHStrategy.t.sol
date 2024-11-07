@@ -85,13 +85,13 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
                 "initialize(address,address[],bytes32,address,address,address)",
                 address(_vault),
                 keepers,
-                abi.encode("MaxApy WETH Strategy"),
+                bytes32("MaxApy WETH Strategy"),
                 users.alice,
                 HOP_ETH_SWAP_POLYGON,
                 HOP_ETH_SWAP_LP_TOKEN_POLYGON
             )
         );
-
+        
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
         assertEq(_strategy.vault(), address(_vault));
         assertEq(_strategy.hasAnyRole(address(_vault), _strategy.VAULT_ROLE()), true);
@@ -377,7 +377,7 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         assertEq(IERC20(HOP_ETH_SWAP_LP_TOKEN_POLYGON).balanceOf(address(strategy)), 0);
     }
 
-    function testHopETH__Harvest() public {
+    function testHopETH__Harvest_Banana() public {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.harvest(0, 0, address(0), block.timestamp);
 

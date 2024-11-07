@@ -97,7 +97,7 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
                 "initialize(address,address[],bytes32,address,address,address)",
                 address(vault),
                 keepers,
-                abi.encode("MaxApy HOP WETH"),
+                bytes32("MaxApy HOP WETH"),
                 strategyAdmin,
                 HOP_ETH_SWAP_POLYGON,
                 HOP_ETH_SWAP_LP_TOKEN_POLYGON
