@@ -20,20 +20,7 @@ import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
 
 //// Strategies
-import { BeefyMaiUSDCeStrategyWrapper } from "../mock/BeefyMaiUSDCeStrategyWrapper.sol";
-import { ConvexUSDCCrvUSDStrategyWrapper } from "../mock/ConvexUSDCCrvUSDStrategyWrapper.sol";
-import { ConvexUSDTCrvUSDStrategyWrapper } from "../mock/ConvexUSDTCrvUSDStrategyWrapper.sol";
-import { YearnMaticUSDCStakingStrategyWrapper } from "../mock/YearnMaticUSDCStakingStrategyWrapper.sol";
-import { YearnAjnaUSDCStrategyWrapper } from "../mock/YearnAjnaUSDCStrategyWrapper.sol";
-import { YearnUSDTStrategyWrapper } from "../mock/YearnUSDTStrategyWrapper-polygon.sol";
-import { YearnUSDCeLenderStrategyWrapper } from "../mock/YearnUSDCeLenderStrategyWrapper.sol";
-import { YearnUSDCeStrategyWrapper } from "../mock/YearnUSDCeStrategyWrapper.sol";
-import { YearnDAIStrategyWrapper } from "../mock/YearnDAIStrategyWrapper-polygon.sol";
-import { YearnDAILenderStrategyWrapper } from "../mock/YearnDAILenderStrategyWrapper.sol";
-import { YearnCompoundUSDCeLenderStrategyWrapper } from "../mock/YearnCompoundUSDCeLenderStrategyWrapper.sol";
-import { BeefyCrvUSDUSDCeStrategyWrapper } from "../mock/BeefyCrvUSDUSDCeStrategyWrapper.sol";
-import { BeefyUSDCeDAIStrategyWrapper } from "../mock/BeefyUSDCeDAIStrategyWrapper.sol";
-import { YearnAaveV3USDTLenderStrategyWrapper } from "../mock/YearnAaveV3USDTLenderStrategyWrapper.sol";
+import { HopETHStrategyWrapper } from "../mock/HopETHStrategyWrapper.sol";
 
 //// Vault
 import { StrategyData } from "src/helpers/VaultTypes.sol";
@@ -57,21 +44,8 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
     // **********STRATS******************
     // USDCE
-    IStrategyWrapper public strategy1; // BeefyMaiUSDCeStrategyWrapper
-    IStrategyWrapper public strategy2; // ConvexUSDCCrvUSDStrategyWrapper
-    IStrategyWrapper public strategy3; // ConvexUSDTCrvUSDStrategyWrapper
-    IStrategyWrapper public strategy4; // YearnMaticUSDCStaking
-    IStrategyWrapper public strategy5; // YearnAjnaUSDC
-    IStrategyWrapper public strategy6; // YearnUSDTStrategyWrapper
-    IStrategyWrapper public strategy7; // YearnUSDCeLender
-    IStrategyWrapper public strategy8; // YearnUSDCe
-    IStrategyWrapper public strategy9; // YearnDAIStrategyWrapper
-    IStrategyWrapper public strategy10; // YearnDAILenderStrategyWrapper
-    IStrategyWrapper public strategy11; // YearnCompoundUSDCeLender
-    IStrategyWrapper public strategy12; // BeefyCrvUSDUSDCeStrategyWrapper
-    IStrategyWrapper public strategy13; //BeefyUSDCeDAIStrategyWrapper
-    IStrategyWrapper public strategy14; // YearnAaveV3USDTLenderStrategyWrapper
-
+    IStrategyWrapper public strategy1; 
+    
     // Vault Fuzzer
     MaxApyVaultFuzzer public vaultFuzzer;
     // Strategies fuzzer
@@ -118,7 +92,7 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
         proxyAdmin = new ProxyAdmin(users.alice);
 
         // StrategyWrapper1(BeefyMaiUSDCeStrategyWrapper)
-        BeefyMaiUSDCeStrategyWrapper implementation1 = new BeefyMaiUSDCeStrategyWrapper();
+        HopETHStrategyWrapper implementation1 = new HopETHStrategyWrapper();
         TransparentUpgradeableProxy _proxy = new TransparentUpgradeableProxy(
             address(implementation1),
             address(proxyAdmin),
@@ -126,287 +100,22 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address,address)",
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Beefy MAI<>USDCe")),
+                abi.encode("MaxApy HOP WETH"),
                 users.alice,
-                CURVE_MAI_USDCE_POOL_POLYGON,
-                BEEFY_MAI_USDCE_POLYGON
+                HOP_ETH_SWAP_POLYGON,
+                HOP_ETH_SWAP_LP_TOKEN_POLYGON
             )
         );
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         vm.label(address(proxy), "BeefyMaiUSDCeStrategy");
         strategy1 = IStrategyWrapper(address(proxy));
 
-        // StrategyWrapper2(ConvexUSDCCrvUSDStrategyWrapper)
-        ConvexUSDCCrvUSDStrategyWrapper implementation2 = new ConvexUSDCCrvUSDStrategyWrapper();
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation2),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy Convex USD<>USDCe")),
-                users.alice,
-                CURVE_CRVUSD_USDC_POOL_POLYGON,
-                UNISWAP_V3_ROUTER_POLYGON
-            )
-        );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "ConvexUSDCCrvUSDStrategy");
-        strategy2 = IStrategyWrapper(address(proxy));
-
-        // StrategyWrapper3(ConvexUSDTCrvUSDStrategyWrapper)
-        ConvexUSDTCrvUSDStrategyWrapper implementation3 = new ConvexUSDTCrvUSDStrategyWrapper();
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation3),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy Convex USDT<>USDCe")),
-                users.alice,
-                CURVE_CRVUSD_USDT_POOL_POLYGON,
-                UNISWAP_V3_ROUTER_POLYGON
-            )
-        );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "ConvexUSDTCrvUSDStrategy");
-        strategy3 = IStrategyWrapper(address(proxy));
-
-        // StrategyWrapper4(YearnMaticUSDCStaking)
-        YearnMaticUSDCStakingStrategyWrapper implementation4 = new YearnMaticUSDCStakingStrategyWrapper();
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation4),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy Yearn Matic<>USDCe")),
-                users.alice,
-                YEARN_MATIC_USDC_STAKING_YVAULT_POLYGON
-            )
-        );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "YearnMaticUSDCStaking");
-        strategy4 = IStrategyWrapper(address(proxy));
-
-        // StrategyWrapper5(YearnAjnaUSDC)
-        YearnAjnaUSDCStrategyWrapper implementation5 = new YearnAjnaUSDCStrategyWrapper();
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation5),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy Yearn Ajna<>USDCe")),
-                users.alice,
-                YEARN_AJNA_USDC_YVAULT_POLYGON
-            )
-        );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "YearnAjnaUSDC");
-        strategy5 = IStrategyWrapper(address(proxy));
-
-        // StrategyWrapper6(YearnUSDTStrategyWrapper)
-        YearnUSDTStrategyWrapper implementation6 = new YearnUSDTStrategyWrapper();
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation6),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy Yearn USDT<>USDCe")),
-                users.alice,
-                YEARN_USDT_YVAULT_POLYGON
-            )
-        );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "YearnUSDTStrategyWrapper");
-        strategy6 = IStrategyWrapper(address(proxy));
-
-        // StrategyWrapper7(YearnUSDCeLender)
-        YearnUSDCeLenderStrategyWrapper implementation7 = new YearnUSDCeLenderStrategyWrapper();
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation7),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy Yearn Lender USDCe")),
-                users.alice,
-                YEARN_USDCE_LENDER_YVAULT_POLYGON
-            )
-        );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "YearnUSDCeLender");
-        strategy7 = IStrategyWrapper(address(proxy));
-
-        // StrategyWrapper8(YearnUSDCe)
-        YearnUSDCeStrategyWrapper implementation8 = new YearnUSDCeStrategyWrapper();
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation8),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy Yearn USDCe")),
-                users.alice,
-                YEARN_USDCE_YVAULT_POLYGON
-            )
-        );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "YearnUSDCe");
-        strategy8 = IStrategyWrapper(address(proxy));
-
-        // StrategyWrapper9(YearnDAIStrategyWrapper)
-        YearnDAIStrategyWrapper implementation9 = new YearnDAIStrategyWrapper();
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation9),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy Yearn DAI<>USDCe")),
-                users.alice,
-                YEARN_DAI_YVAULT_POLYGON
-            )
-        );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "YearnDAIStrategy");
-        strategy9 = IStrategyWrapper(address(proxy));
-
-        // StrategyWrapper10(YearnDAILenderStrategyWrapper)
-        YearnDAILenderStrategyWrapper implementation10 = new YearnDAILenderStrategyWrapper();
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation10),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy Yearn Lender DAI<>USDCe")),
-                users.alice,
-                YEARN_DAI_LENDER_YVAULT_POLYGON
-            )
-        );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "YearnDAILenderStrategy");
-        strategy10 = IStrategyWrapper(address(proxy));
-
-        // StrategyWrapper11(YearnCompoundUSDCeLender)
-        YearnCompoundUSDCeLenderStrategyWrapper implementation11 = new YearnCompoundUSDCeLenderStrategyWrapper();
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation11),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy Yearn Compound Lender USDCe")),
-                users.alice,
-                YEARN_COMPOUND_USDC_LENDER_YVAULT_POLYGON
-            )
-        );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "YearnCompoundUSDCeLender");
-        strategy11 = IStrategyWrapper(address(proxy));
-
-        // StrategyWrapper12(BeefyMaBeefyCrvUSDUSDCeStrategyWrapperiUSDCeStrategyWrapper)
-        BeefyCrvUSDUSDCeStrategyWrapper implementation12 = new BeefyCrvUSDUSDCeStrategyWrapper();
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation12),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy CrvUSD<>USDCe Strategy")),
-                users.alice,
-                CURVE_CRVUSD_USDCE_POOL_POLYGON,
-                BEEFY_CRVUSD_USDCE_POLYGON
-            )
-        );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "BeefyCrvUSDUSDCeStrategy");
-        strategy12 = IStrategyWrapper(address(proxy));
-
-        // StrategyWrapper13(BeefyUSDCeDAIStrategyWrapper)
-        BeefyUSDCeDAIStrategyWrapper implementation13 = new BeefyUSDCeDAIStrategyWrapper();
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation13),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy USDCe<>DAI Strategy")),
-                users.alice,
-                GAMMA_USDCE_DAI_UNIPROXY_POLYGON,
-                GAMMA_USDCE_DAI_HYPERVISOR_POLYGON,
-                BEEFY_USDCE_DAI_POLYGON
-            )
-        );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "BeefyUSDCeDAIStrategy");
-        strategy13 = IStrategyWrapper(address(proxy));
-
-        // StrategyWrapper14(YearnAaveV3USDTLenderStrategyWrapper)
-        YearnAaveV3USDTLenderStrategyWrapper implementation14 = new YearnAaveV3USDTLenderStrategyWrapper();
-        _proxy = new TransparentUpgradeableProxy(
-            address(implementation14),
-            address(proxyAdmin),
-            abi.encodeWithSignature(
-                "initialize(address,address[],bytes32,address,address)",
-                address(vault),
-                keepers,
-                bytes32(abi.encode("MaxApy Yearn Strategy")),
-                users.alice,
-                YEARN_AAVE_V3_USDT_LENDER_YVAULT_POLYGON
-            )
-        );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "YearnAaveV3USDTLenderStrategy");
-        strategy14 = IStrategyWrapper(address(proxy));
-
-        address[] memory strategyList = new address[](14);
+        address[] memory strategyList = new address[](1);
 
         strategyList[0] = address(strategy1);
-        strategyList[1] = address(strategy2);
-        strategyList[2] = address(strategy3);
-        strategyList[3] = address(strategy4);
-        strategyList[4] = address(strategy5);
-        strategyList[5] = address(strategy6);
-        strategyList[6] = address(strategy7);
-        strategyList[7] = address(strategy8);
-        strategyList[8] = address(strategy9);
-        strategyList[9] = address(strategy10);
-        strategyList[10] = address(strategy11);
-        strategyList[11] = address(strategy12);
-        strategyList[12] = address(strategy13);
-        strategyList[13] = address(strategy14);
 
         // Add all the strategies
-        vault.addStrategy(address(strategy1), 700, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy2), 700, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy3), 700, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy4), 700, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy5), 700, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy6), 700, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy7), 700, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy8), 700, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy9), 700, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy10), 700, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy11), 700, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy12), 700, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy13), 700, type(uint72).max, 0, 0);
-        vault.addStrategy(address(strategy14), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy1), 9000, type(uint72).max, 0, 0);
 
         vm.label(address(USDCE_POLYGON), "USDCE");
         /// Alice approves vault for deposits
@@ -424,18 +133,6 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
         uint256 _keeperRole = strategy1.KEEPER_ROLE();
 
         strategy1.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy2.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy3.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy4.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy5.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy6.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy7.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy8.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy9.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy10.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy11.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy12.grantRoles(address(strategyFuzzer), _keeperRole);
-        strategy13.grantRoles(address(strategyFuzzer), _keeperRole);
     }
 
     function testFuzzMaxApyIntegrationPolygon__DepositAndRedeemWithoutHarvests(
