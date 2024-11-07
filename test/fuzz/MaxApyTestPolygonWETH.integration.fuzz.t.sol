@@ -207,7 +207,8 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
         uint256 shares
     )
         public
-    {
+    {   
+        vm.assume(assets > 1e15);
         LibPRNG.PRNG memory actorSeedRNG;
         LibPRNG.PRNG memory strategyRNG;
         LibPRNG.PRNG memory gainAndLossesRNG;

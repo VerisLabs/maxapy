@@ -177,7 +177,10 @@ contract BaseHopStrategy is BaseStrategy {
                 // Adjust computed lp amount by current lp balance
                 if gt(shares, _balance) { shares := _balance }
             }
-            uint256 withdrawn = hopPool.calculateRemoveLiquidityOneToken(address(this), shares, 0);
+            uint256 withdrawn;
+            if (shares > 0) {
+                withdrawn = hopPool.calculateRemoveLiquidityOneToken(address(this), shares, 0);
+            }
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
         liquidatedAmount = requestedAmount - loss;
