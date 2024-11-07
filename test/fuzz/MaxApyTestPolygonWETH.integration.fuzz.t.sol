@@ -199,7 +199,7 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
         vaultFuzzer.redeem(actorSeedRNG, shares);
     }
 
-    function testFuzzMaxApyIntegrationPolygon__DepositAndRedeemWithGainsAndLossesWithoutHarvests(
+    function testFuzzMaxApyIntegrationPolygon__DepositAndRedeemWithGainsAndLossesWithoutHarvests_banana(
         uint256 actorSeed,
         uint256 strategySeed,
         uint256 gainsAndLossesSeed,
@@ -211,7 +211,7 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
         LibPRNG.PRNG memory actorSeedRNG;
         LibPRNG.PRNG memory strategyRNG;
         LibPRNG.PRNG memory gainAndLossesRNG;
-
+        
         actorSeedRNG.seed(actorSeed);
         strategyFuzzer.harvest(strategyRNG);
         strategyFuzzer.harvest(strategyRNG);

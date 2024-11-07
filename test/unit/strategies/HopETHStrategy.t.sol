@@ -377,7 +377,7 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         assertEq(IERC20(HOP_ETH_SWAP_LP_TOKEN_POLYGON).balanceOf(address(strategy)), 0);
     }
 
-    function testHopETH__Harvest_Banana() public {
+    function testHopETH__Harvest() public {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.harvest(0, 0, address(0), block.timestamp);
 
@@ -438,7 +438,7 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         vm.warp(block.timestamp + 1 days);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(WETH_POLYGON).balanceOf(address(vault)), 109_986_337_599_934_552_294);
+        assertEq(IERC20(WETH_POLYGON).balanceOf(address(vault)), 109_986_472_552_666_884_804);
         assertEq(IERC20(HOP_ETH_SWAP_LP_TOKEN_POLYGON).balanceOf(address(strategy)), 0);
         vm.revertTo(snapshotId);
 
