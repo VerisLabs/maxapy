@@ -53,7 +53,7 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
                 "initialize(address,address[],bytes32,address,address,address)",
                 address(vault),
                 keepers,
-                abi.encode("MaxApy WETH Strategy"),
+                bytes32("MaxApy WETH Strategy"),
                 users.alice,
                 HOP_ETH_SWAP_POLYGON,
                 HOP_ETH_SWAP_LP_TOKEN_POLYGON
