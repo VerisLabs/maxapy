@@ -101,6 +101,31 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
     }
 
     ////////////////////////////////////////////////////////////////
+    ///                    VIEW FUNCTIONS                        ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @notice This function is meant to be called from the vault
+    /// @dev calculates estimated the @param requestedAmount the vault has to request to this strategy
+    /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
+    /// @return requestedAmount
+    function previewLiquidateExact(uint256 liquidatedAmount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 requestedAmount)
+    {
+        uint256 underlyingBalance = _underlyingBalance();
+        if (underlyingBalance < liquidatedAmount) {
+            unchecked {
+                liquidatedAmount = liquidatedAmount - underlyingBalance;
+            }
+            requestedAmount = _shareValue(yVault.previewWithdraw(liquidatedAmount)) * 101 / 100;
+        }
+        return requestedAmount + underlyingBalance;
+    }
+
+    ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
     /// @notice unwind extra staking rewards before preparing return
@@ -186,7 +211,6 @@ contract YearnMaticUSDCStakingStrategy is BaseYearnV3Strategy {
     /// @return liquidatedAmount the actual liquidated amount
     /// @return loss difference between the expected amount needed to reach `amountNeeded` and the actual liquidated
     /// amount
-
     function _liquidatePosition(uint256 amountNeeded)
         internal
         override

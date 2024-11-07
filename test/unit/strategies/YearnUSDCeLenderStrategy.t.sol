@@ -611,4 +611,77 @@ contract YearnUSDCeLenderStrategyTest is BaseTest, StrategyEvents {
 
         strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
+
+    // function testYearnUSDCeLender__PreviewLiquidate__FUZZY(uint256 amount) public {
+    //     vm.assume(amount > 1 * _1_USDC && amount < 1_000_000 * _1_USDC);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+
+    //     vm.stopPrank();
+    //     uint256 expected = strategy.previewLiquidate(amount / 3);
+    //     vm.startPrank(address(vault));
+
+    //     uint256 loss = strategy.liquidate(amount / 3);
+
+    //     assertLe(expected, amount / 3 - loss);
+    // }
+
+    // function testYearnUSDCeLender__PreviewLiquidateExact_FUZZY(uint256 amount) public {
+    //     vm.assume(amount > 1 * _1_USDC && amount < 1_000_000 * _1_USDC);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+    //     vm.stopPrank();
+    //     uint256 requestedAmount = strategy.previewLiquidateExact(amount / 3);
+    //     vm.startPrank(address(vault));
+    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+    //     strategy.liquidateExact(amount / 3);
+    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+    //     // withdraw exactly what requested
+    //     assertGe(withdrawn, amount / 3);
+    //     // losses are equal or fewer than expected
+    //     assertLe(withdrawn - amount / 3, requestedAmount - amount / 3);
+    // }
+
+    // function testYearnUSDCeLender__maxLiquidateExact_FUZZY(uint256 amount) public {
+    //     vm.assume(amount > 1 * _1_USDC && amount < 1_000_000 * _1_USDC);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+    //     vm.stopPrank();
+    //     uint256 maxLiquidateExact = strategy.maxLiquidateExact();
+    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+    //     uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
+    //     vm.startPrank(address(vault));
+    //     uint256 losses = strategy.liquidateExact(maxLiquidateExact);
+    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+    //     // withdraw exactly what requested
+    //     assertGe(withdrawn, maxLiquidateExact);
+    //     // losses are equal or fewer than expected
+    //     assertApproxEq(losses, requestedAmount - maxLiquidateExact, 1);
+    // }
+
+    // function testYearnUSDCeLender__MaxLiquidate_FUZZY(uint256 amount) public {
+    //     vm.assume(amount > 1 * _1_USDC && amount < 1_000_000 * _1_USDC);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+    //     vm.stopPrank();
+    //     uint256 maxWithdraw = strategy.maxLiquidate();
+    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+    //     vm.startPrank(address(vault));
+    //     strategy.liquidate(maxWithdraw);
+    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+    //     assertLe(withdrawn, maxWithdraw);
+    // }
 }

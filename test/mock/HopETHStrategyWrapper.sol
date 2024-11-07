@@ -45,11 +45,11 @@ contract HopETHStrategyWrapper is HopETHStrategy {
     }
 
     function shareValue(uint256 shares) external view returns (uint256) {
-        return _shareValue(shares);
+        return _lpValue(shares);
     }
 
     function sharesForAmount(uint256 amount) external view returns (uint256) {
-        return _sharesForAmount(amount);
+        return _lpForAmount(amount);
     }
 
     function shareBalance() external view returns (uint256) {

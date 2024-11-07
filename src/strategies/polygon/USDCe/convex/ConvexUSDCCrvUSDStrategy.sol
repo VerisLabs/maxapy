@@ -328,7 +328,7 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
 
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
-        liquidatedAmount = requestedAmount - loss;
+        liquidatedAmount = (requestedAmount - loss) * 9995 / 10_000;
     }
 
     ////////////////////////////////////////////////////////////////

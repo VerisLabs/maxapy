@@ -6,6 +6,7 @@ gas_reports = ['*']
 # needed to test de Morpho Eth Maximizer
 evm_version = "shanghai"
 solc_version = "0.8.20"
+via_ir = true
 
 [profile.deploy]
 via_ir = true
