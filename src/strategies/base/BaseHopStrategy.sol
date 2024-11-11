@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { ISwap } from "src/interfaces/Hop/ISwap.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { ISwap } from "src/interfaces/Hop/ISwap.sol";
 import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 
 import { ERC20Burnable } from "openzeppelin/token/ERC20/extensions/ERC20Burnable.sol";
@@ -204,7 +204,7 @@ contract BaseHopStrategy is BaseStrategy {
             requestedAmount = previewLiquidate(requestedAmount) * 101 / 100;
             return requestedAmount + underlyingBalance;
         }
-        return liquidatedAmount;  
+        return liquidatedAmount;
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
