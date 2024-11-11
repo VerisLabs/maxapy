@@ -3,11 +3,11 @@ pragma solidity ^0.8.19;
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { IMaxApyVault } from "../../interfaces/IMaxApyVault.sol";
+import { IStrategy } from "../../interfaces/IStrategy.sol";
+import { Initializable } from "../../lib/Initializable.sol";
 import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { IStrategy } from "../../interfaces/IStrategy.sol";
-import { IMaxApyVault } from "../../interfaces/IMaxApyVault.sol";
-import { Initializable } from "../../lib/Initializable.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 /// @title BaseStrategy
