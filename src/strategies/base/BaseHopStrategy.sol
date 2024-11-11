@@ -202,8 +202,9 @@ contract BaseHopStrategy is BaseStrategy {
             requestedAmount = liquidatedAmount - underlyingBalance;
             // increase 1% to be pessimistic
             requestedAmount = previewLiquidate(requestedAmount) * 101 / 100;
+            return requestedAmount + underlyingBalance;
         }
-        return requestedAmount + underlyingBalance;
+        return liquidatedAmount;  
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
