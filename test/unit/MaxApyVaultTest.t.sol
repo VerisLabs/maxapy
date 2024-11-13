@@ -7,9 +7,10 @@ import { MaxApyVault, StrategyData } from "src/MaxApyVault.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { USDC_MAINNET, _1_USDC } from "test/helpers/Tokens.sol";
 
-import { MockStrategy } from "../mock/MockStrategy.sol";
+import { IERC1820Registry, MockERC777 } from "../mock/MockERC777.sol";
 import { MockLossyUSDCStrategy } from "../mock/MockLossyUSDCStrategy.sol";
-import { MockERC777, IERC1820Registry } from "../mock/MockERC777.sol";
+import { MockStrategy } from "../mock/MockStrategy.sol";
+
 import { ReentrantERC777AttackerDeposit } from "../mock/ReentrantERC777AttackerDeposit.sol";
 import { ReentrantERC777AttackerWithdraw } from "../mock/ReentrantERC777AttackerWithdraw.sol";
 

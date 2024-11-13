@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
+import { ETHX_MAINNET, UNISWAP_V3_ROUTER_MAINNET } from "src/helpers/AddressBook.sol";
+import { IUniswapV3Router } from "src/interfaces/IUniswap.sol";
 import {
     BaseSommelierStrategy,
-    SafeTransferLib,
+    ICellar,
     IMaxApyVault,
-    ICellar
+    SafeTransferLib
 } from "src/strategies/base/BaseSommelierStrategy.sol";
-import { IUniswapV3Router } from "src/interfaces/IUniswap.sol";
-import { ETHX_MAINNET, UNISWAP_V3_ROUTER_MAINNET } from "src/helpers/AddressBook.sol";
 
 /// @title SommelierTurboEthXStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol

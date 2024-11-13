@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { IStrategyHandler } from "../interfaces/IStrategyHandler.sol";
+import { IStrategyWrapper } from "../interfaces/IStrategyWrapper.sol";
+import { MockYVaultV2 } from "../mock/MockYVaultV2.sol";
 import {
     BaseYearnV2StrategyHandler,
     BaseYearnV2StrategyWrapper,
     MockERC20
 } from "./handlers/BaseYearnV2StrategyHandler.t.sol";
-import { MaxApyVaultHandler, MaxApyVault } from "./handlers/MaxApyVaultHandler.t.sol";
+import { MaxApyVault, MaxApyVaultHandler } from "./handlers/MaxApyVaultHandler.t.sol";
+import { SetUp } from "./helpers/SetUp.t.sol";
 import { StdInvariant } from "forge-std/StdInvariant.sol";
 import { Test } from "forge-std/Test.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
-import { MockYVaultV2 } from "../mock/MockYVaultV2.sol";
-import { SetUp } from "./helpers/SetUp.t.sol";
-import { IStrategyHandler } from "../interfaces/IStrategyHandler.sol";
-import { IStrategyWrapper } from "../interfaces/IStrategyWrapper.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract BaseYearnV2StrategyInvariants is SetUp {
     function setUp() public {

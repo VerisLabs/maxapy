@@ -1,28 +1,32 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
-import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+
 import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 
-import { MaxApyVault } from "src/MaxApyVault.sol";
-import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { ConvexdETHFrxETHStrategyEvents } from "../../helpers/ConvexdETHFrxETHStrategyEvents.sol";
-import "src/helpers/AddressBook.sol";
+
+import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
 import { ConvexCrvUSDWethCollateralStrategyWrapper } from "../../mock/ConvexCrvUSDWethCollateralStrategyWrapper.sol";
 import { MockConvexBooster } from "../../mock/MockConvexBooster.sol";
 import { MockCurvePool } from "../../mock/MockCurvePool.sol";
-import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { _1_USDC } from "test/helpers/Tokens.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
 import "src/helpers/AddressBook.sol";
+
+import "src/helpers/AddressBook.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { _1_USDC } from "test/helpers/Tokens.sol";
 
 contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     address public TREASURY;

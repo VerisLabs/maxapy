@@ -2,29 +2,33 @@
 pragma solidity ^0.8.19;
 
 // helpers
-import "forge-std/Script.sol";
+
 import { console2 } from "../../test/base/BaseTest.t.sol";
 import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
+import "forge-std/Script.sol";
 import "src/helpers/AddressBook.sol";
 
 // proxies
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
+
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 // interfaces
-import { IStrategy } from "src/interfaces/IStrategy.sol";
+
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { IStrategy } from "src/interfaces/IStrategy.sol";
 import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
 
 //// Strategies
 import { BaseHopStrategy } from "src/strategies/base/BaseHopStrategy.sol";
 
 //// Vault
-import { StrategyData } from "src/helpers/VaultTypes.sol";
+
 import { MaxApyVault, OwnableRoles } from "src/MaxApyVault.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
 
 /// @notice this is a simple test deployment of a polygon USDCe vault in a local rpc
 contract PolygonDeploymentScript is Script, OwnableRoles {
@@ -33,8 +37,8 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
     ////////////////////////////////////////////////////////////////
     // **********STRATS******************
     // USDCE
-    IStrategy public strategy1; 
-    
+    IStrategy public strategy1;
+
     // **********ROLES*******************
     address[] keepers;
 
@@ -107,7 +111,7 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         strategy1 = IStrategy(address(proxy));
         strategy1.grantRoles(strategyAdmin, strategy1.ADMIN_ROLE());
         strategy1.grantRoles(strategyEmergencyAdmin, strategy1.EMERGENCY_ADMIN_ROLE());
-    
+
         console2.log("***************************DEPLOYMENT ADDRESSES**********************************");
         console2.log(" VAULT ");
         console2.log("[MAXAPY]Vault :", address(vault));

@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { IStrategyHandler } from "../interfaces/IStrategyHandler.sol";
+import { IStrategyWrapper } from "../interfaces/IStrategyWrapper.sol";
+import { MockCellar } from "../mock/MockCellar.sol";
 import {
     BaseSommelierStrategyHandler, BaseSommelierStrategyWrapper
 } from "./handlers/BaseSommelierStrategyHandler.t.sol";
-import { MaxApyVaultHandler, MaxApyVault, ERC4626 } from "./handlers/MaxApyVaultHandler.t.sol";
+import { ERC4626, MaxApyVault, MaxApyVaultHandler } from "./handlers/MaxApyVaultHandler.t.sol";
 import { SetUp } from "./helpers/SetUp.t.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
-import { MockCellar } from "../mock/MockCellar.sol";
-import { IStrategyHandler } from "../interfaces/IStrategyHandler.sol";
-import { IStrategyWrapper } from "../interfaces/IStrategyWrapper.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract BaseSommelierStrategyInvariants is SetUp {
     function setUp() public {

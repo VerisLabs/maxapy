@@ -1,22 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
-import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
-import { YearnAjnaUSDCStrategyWrapper } from "../../mock/YearnAjnaUSDCStrategyWrapper.sol";
-import { MaxApyVault } from "src/MaxApyVault.sol";
-import { StrategyData } from "src/helpers/VaultTypes.sol";
+
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
+import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
+import { YearnAjnaUSDCStrategyWrapper } from "../../mock/YearnAjnaUSDCStrategyWrapper.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { _1_USDC } from "test/helpers/Tokens.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
+
 import "src/helpers/AddressBook.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+
+import { _1_USDC } from "test/helpers/Tokens.sol";
 
 contract YearnAjnaUSDCStrategyTest is BaseTest, StrategyEvents {
     using SafeTransferLib for address;

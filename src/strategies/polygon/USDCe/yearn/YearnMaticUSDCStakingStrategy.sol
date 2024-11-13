@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    BaseYearnV3Strategy, SafeTransferLib, IMaxApyVault, IYVaultV3
-} from "src/strategies/base/BaseYearnV3Strategy.sol";
+import { UNISWAP_V3_ROUTER_POLYGON, WPOL_POLYGON } from "src/helpers/AddressBook.sol";
 import { IStakingRewardsMulti } from "src/interfaces/IStakingRewardsMulti.sol";
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
-import { WPOL_POLYGON, UNISWAP_V3_ROUTER_POLYGON } from "src/helpers/AddressBook.sol";
+import {
+    BaseYearnV3Strategy, IMaxApyVault, IYVaultV3, SafeTransferLib
+} from "src/strategies/base/BaseYearnV3Strategy.sol";
 
 /// @title YearnMaticUSDCStakingStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol

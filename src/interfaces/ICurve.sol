@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { IERC4626 } from "openzeppelin/interfaces/IERC4626.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 
 interface ICurveLpPool is IERC20 {
     function get_dy(int128 i, int128 j, uint256 dx) external view returns (uint256);

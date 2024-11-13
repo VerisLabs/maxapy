@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseHandler, console2 } from "./base/BaseHandler.t.sol";
-import { MaxApyVault, ERC4626 } from "src/MaxApyVault.sol";
 import { MockERC20 } from "../../mock/MockERC20.sol";
+import { BaseHandler, console2 } from "./base/BaseHandler.t.sol";
+import { ERC4626, MaxApyVault } from "src/MaxApyVault.sol";
 
 contract MaxApyVaultHandler is BaseHandler {
     MaxApyVault vault;

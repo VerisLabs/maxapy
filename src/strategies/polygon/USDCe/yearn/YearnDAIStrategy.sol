@@ -2,11 +2,12 @@
 pragma solidity ^0.8.19;
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import {
-    IYVaultV3, BaseYearnV3Strategy, IMaxApyVault, SafeTransferLib
-} from "src/strategies/base/BaseYearnV3Strategy.sol";
+
+import { CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON, DAI_POLYGON } from "src/helpers/AddressBook.sol";
 import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
-import { DAI_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON } from "src/helpers/AddressBook.sol";
+import {
+    BaseYearnV3Strategy, IMaxApyVault, IYVaultV3, SafeTransferLib
+} from "src/strategies/base/BaseYearnV3Strategy.sol";
 
 /// @title YearnDAIStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol

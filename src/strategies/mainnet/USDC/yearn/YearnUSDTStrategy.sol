@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    Math,
-    IYVault,
-    IERC20Metadata,
-    BaseYearnV2Strategy,
-    IMaxApyVault,
-    SafeTransferLib
-} from "src/strategies/base/BaseYearnV2Strategy.sol";
 import { CURVE_3POOL_POOL_MAINNET, USDT_MAINNET } from "src/helpers/AddressBook.sol";
 import { ICurveTriPool } from "src/interfaces/ICurve.sol";
+import {
+    BaseYearnV2Strategy,
+    IERC20Metadata,
+    IMaxApyVault,
+    IYVault,
+    Math,
+    SafeTransferLib
+} from "src/strategies/base/BaseYearnV2Strategy.sol";
 
 /// @title YearnUSDTStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol

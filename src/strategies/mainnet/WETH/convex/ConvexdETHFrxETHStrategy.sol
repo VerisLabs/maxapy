@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import {
+    CONVEX_BOOSTER_MAINNET,
+    CONVEX_DETH_FRXETH_CONVEX_POOL_ID_MAINNET,
+    CRV_MAINNET,
+    CURVE_CVX_WETH_POOL_MAINNET,
+    CVX_MAINNET,
+    FRXETH_MAINNET
+} from "src/helpers/AddressBook.sol";
+import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
+import { IConvexRewards } from "src/interfaces/IConvexRewards.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
+import { IWETH } from "src/interfaces/IWETH.sol";
 import {
     BaseConvexStrategy, BaseStrategy, IMaxApyVault, SafeTransferLib
 } from "src/strategies/base/BaseConvexStrategy.sol";
-import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
-import { IConvexRewards } from "src/interfaces/IConvexRewards.sol";
-import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
-import { ICurveLpPool } from "src/interfaces/ICurve.sol";
-import { IWETH } from "src/interfaces/IWETH.sol";
-import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import {
-    CRV_MAINNET,
-    CVX_MAINNET,
-    FRXETH_MAINNET,
-    CONVEX_BOOSTER_MAINNET,
-    CURVE_CVX_WETH_POOL_MAINNET,
-    CONVEX_DETH_FRXETH_CONVEX_POOL_ID_MAINNET
-} from "src/helpers/AddressBook.sol";
 
 /// @title ConvexdETHFrxETHStrategy
 /// @author MaxApy

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import {
+    BaseYearnV2Strategy,
+    IERC20Metadata,
     IMaxApyVault,
     IYVault,
-    BaseYearnV2Strategy,
-    SafeTransferLib,
-    IERC20Metadata
+    SafeTransferLib
 } from "src/strategies/base/BaseYearnV2Strategy.sol";
-import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
     using SafeTransferLib for address;

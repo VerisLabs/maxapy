@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseStrategyHandler } from "./BaseStrategyHandler.t.sol";
 import { AddressSet, LibAddressSet } from "../../../helpers/AddressSet.sol";
 import { IStrategyWrapper } from "../../../interfaces/IStrategyWrapper.sol";
-import { MaxApyVault, ERC4626 } from "src/MaxApyVault.sol";
+
 import { MockERC20 } from "../../../mock/MockERC20.sol";
+import { BaseStrategyHandler } from "./BaseStrategyHandler.t.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { ERC4626, MaxApyVault } from "src/MaxApyVault.sol";
 
 contract BaseERC4626StrategyHandler is BaseStrategyHandler {
     MaxApyVault vault;

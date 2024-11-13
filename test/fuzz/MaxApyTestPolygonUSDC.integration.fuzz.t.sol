@@ -23,7 +23,9 @@ import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
 
 //// Strategies
-import { HopETHStrategyWrapper } from "../mock/HopETHStrategyWrapper.sol";
+import { BeefyCrvUSDUSDCeStrategyWrapper } from "../mock/BeefyCrvUSDUSDCeStrategyWrapper.sol";
+import { BeefyMaiUSDCeStrategyWrapper } from "../mock/BeefyMaiUSDCeStrategyWrapper.sol";
+import { BeefyUSDCeDAIStrategyWrapper } from "../mock/BeefyUSDCeDAIStrategyWrapper.sol";
 
 //// Vault
 
@@ -50,6 +52,8 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
     // **********STRATS******************
     // USDCE
     IStrategyWrapper public strategy1;
+    IStrategyWrapper public strategy2;
+    IStrategyWrapper public strategy3;
 
     // Vault Fuzzer
     MaxApyVaultFuzzer public vaultFuzzer;
@@ -63,7 +67,6 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
     IMaxApyVault public vault;
 
     // Proxies
-    ITransparentUpgradeableProxy proxy;
     ProxyAdmin proxyAdmin;
 
     ////////////////////////////////////////////////////////////////
@@ -80,7 +83,7 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
         TREASURY = makeAddr("treasury");
 
         /// Deploy MaxApyVault
-        MaxApyVault vaultDeployment = new MaxApyVault(users.alice, WETH_POLYGON, "MaxApyWETHVault", "maxApy", TREASURY);
+        MaxApyVault vaultDeployment = new MaxApyVault(users.alice, USDCE_POLYGON, "MaxApyWETHVault", "maxApy", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
         /// Deploy transparent upgradeable proxy admin
@@ -93,9 +96,7 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
         ///                        STRATEGIES                                 ///
         /////////////////////////////////////////////////////////////////////////
         /// Deploy transparent upgradeable proxy admin
-        proxyAdmin = new ProxyAdmin(users.alice);
-
-        HopETHStrategyWrapper implementation1 = new HopETHStrategyWrapper();
+        BeefyCrvUSDUSDCeStrategyWrapper implementation1 = new BeefyCrvUSDUSDCeStrategyWrapper();
         TransparentUpgradeableProxy _proxy = new TransparentUpgradeableProxy(
             address(implementation1),
             address(proxyAdmin),
@@ -103,39 +104,78 @@ contract MaxApyPolygonIntegrationTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address,address)",
                 address(vault),
                 keepers,
-                abi.encode("MaxApy HOP WETH"),
+                bytes32("MaxApy CrvUSD<>USDCe Strategy"),
                 users.alice,
-                HOP_ETH_SWAP_POLYGON,
-                HOP_ETH_SWAP_LP_TOKEN_POLYGON
+                CURVE_CRVUSD_USDCE_POOL_POLYGON,
+                BEEFY_CRVUSD_USDCE_POLYGON
             )
         );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
-        vm.label(address(proxy), "HopStrategy");
-        strategy1 = IStrategyWrapper(address(proxy));
 
-        address[] memory strategyList = new address[](1);
+        strategy1 = IStrategyWrapper(address(_proxy));
+
+        BeefyMaiUSDCeStrategyWrapper implementation2 = new BeefyMaiUSDCeStrategyWrapper();
+
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation2),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address,address)",
+                address(vault),
+                keepers,
+                bytes32("MaxApy MAI<>USDCe Strategy"),
+                users.alice,
+                CURVE_MAI_USDCE_POOL_POLYGON,
+                BEEFY_MAI_USDCE_POLYGON
+            )
+        );
+
+        strategy2 = IStrategyWrapper(address(_proxy));
+
+        BeefyUSDCeDAIStrategyWrapper implementation3 = new BeefyUSDCeDAIStrategyWrapper();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation3),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address,address,address)",
+                address(vault),
+                keepers,
+                bytes32("MaxApy USDCe<>DAI Strategy"),
+                users.alice,
+                GAMMA_USDCE_DAI_UNIPROXY_POLYGON,
+                GAMMA_USDCE_DAI_HYPERVISOR_POLYGON,
+                BEEFY_USDCE_DAI_POLYGON
+            )
+        );
+
+        strategy3 = IStrategyWrapper(address(_proxy));
+
+        address[] memory strategyList = new address[](3);
 
         strategyList[0] = address(strategy1);
+        strategyList[1] = address(strategy2);
+        strategyList[2] = address(strategy3);
 
         // Add all the strategies
         vault.addStrategy(address(strategy1), 9000, type(uint72).max, 0, 0);
 
-        vm.label(address(WETH_POLYGON), "WETH");
+        vm.label(address(USDCE_POLYGON), "USDCe");
         /// Alice approves vault for deposits
-        IERC20(WETH_POLYGON).approve(address(vault), type(uint256).max);
+        IERC20(USDCE_POLYGON).approve(address(vault), type(uint256).max);
         vm.startPrank(users.bob);
-        IERC20(WETH_POLYGON).approve(address(vault), type(uint256).max);
+        IERC20(USDCE_POLYGON).approve(address(vault), type(uint256).max);
         vm.stopPrank();
         vm.startPrank(users.alice);
 
         // deploy fuzzers
-        strategyFuzzer = new StrategyFuzzer(strategyList, vault, WETH_POLYGON);
-        vaultFuzzer = new MaxApyVaultFuzzer(vault, WETH_POLYGON);
+        strategyFuzzer = new StrategyFuzzer(strategyList, vault, USDCE_POLYGON);
+        vaultFuzzer = new MaxApyVaultFuzzer(vault, USDCE_POLYGON);
 
         vault.grantRoles(address(strategyFuzzer), vault.ADMIN_ROLE());
         uint256 _keeperRole = strategy1.KEEPER_ROLE();
 
         strategy1.grantRoles(address(strategyFuzzer), _keeperRole);
+        strategy2.grantRoles(address(strategyFuzzer), _keeperRole);
+        strategy3.grantRoles(address(strategyFuzzer), _keeperRole);
     }
 
     function testFuzzMaxApyIntegrationPolygon__DepositAndRedeemWithoutHarvests(

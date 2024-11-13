@@ -2,18 +2,21 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
+
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BaseTest, IERC20, Vm, console2 } from "../../test/base/BaseTest.t.sol";
+
+import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
 import { IStrategyWrapper } from "../../test/interfaces/IStrategyWrapper.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { MaxApyVault, OwnableRoles } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
-import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 
 // Convex strategies

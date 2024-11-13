@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
 import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 
 /// @title BaseBeefyStrategy

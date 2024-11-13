@@ -3,10 +3,12 @@ pragma solidity ^0.8.19;
 
 import { AddressSet, LibAddressSet } from "../../helpers/AddressSet.sol";
 import { BaseYearnV2StrategyWrapper } from "../../mock/BaseYearnV2StrategyWrapper.sol";
-import { MaxApyVault } from "src/MaxApyVault.sol";
+
 import { MockERC20 } from "../../mock/MockERC20.sol";
-import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+
 import { BaseStrategyHandler } from "./base/BaseStrategyHandler.t.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
 
 contract BaseYearnV2StrategyHandler is BaseStrategyHandler {
     MaxApyVault vault;

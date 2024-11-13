@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import "forge-std/Script.sol";
-import { MaxApyHarvester } from "../../src/periphery/MaxApyHarvester.sol";
 import { IMaxApyVault } from "../../src/interfaces/IMaxApyVault.sol";
 import { IStrategy } from "../../src/interfaces/IStrategy.sol";
+import { MaxApyHarvester } from "../../src/periphery/MaxApyHarvester.sol";
+import "forge-std/Script.sol";
 
 contract MaxApyHarvesterDeployment is Script {
     IMaxApyVault public vault;

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import {
-    IYVaultV3, BaseYearnV3Strategy, IMaxApyVault, SafeTransferLib
+    BaseYearnV3Strategy, IMaxApyVault, IYVaultV3, SafeTransferLib
 } from "src/strategies/base/BaseYearnV3Strategy.sol";
 
 /// @title YearnAjnaUSDCStrategy

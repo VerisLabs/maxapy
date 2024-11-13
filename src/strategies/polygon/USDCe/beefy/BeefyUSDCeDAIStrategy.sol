@@ -1,24 +1,27 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import "solady/utils/SafeCastLib.sol";
-import { IUniProxy } from "src/interfaces/IUniProxy.sol";
-import { OracleLibrary } from "src/lib/OracleLibrary.sol";
-import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
-import { IHypervisor } from "src/interfaces/IHypervisor.sol";
-import { IAlgebraPool } from "src/interfaces/IAlgebraPool.sol";
-import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
-import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
-import { LiquidityRangePool } from "src/lib/LiquidityRangePool.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import { BaseBeefyStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
+import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
+import "solady/utils/SafeCastLib.sol";
+
 import {
-    USDCE_POLYGON,
-    DAI_POLYGON,
+    ALGEBRA_POOL,
     CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON,
+    DAI_POLYGON,
     GAMMA_USDCE_DAI_HYPERVISOR_POLYGON,
-    ALGEBRA_POOL
+    USDCE_POLYGON
 } from "src/helpers/AddressBook.sol";
+import { IAlgebraPool } from "src/interfaces/IAlgebraPool.sol";
+import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
+import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
+import { IHypervisor } from "src/interfaces/IHypervisor.sol";
+import { IUniProxy } from "src/interfaces/IUniProxy.sol";
+
+import { LiquidityRangePool } from "src/lib/LiquidityRangePool.sol";
+import { OracleLibrary } from "src/lib/OracleLibrary.sol";
+
+import { BaseBeefyStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
 
 /// @title BeefyUSDCeDAIStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol

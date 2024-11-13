@@ -2,43 +2,50 @@
 pragma solidity ^0.8.19;
 
 // helpers
-import "forge-std/Script.sol";
+
 import { console2 } from "../../test/base/BaseTest.t.sol";
 import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
+import "forge-std/Script.sol";
 import "src/helpers/AddressBook.sol";
 
 // proxies
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
+
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 // interfaces
-import { IStrategy } from "src/interfaces/IStrategy.sol";
+
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { IStrategy } from "src/interfaces/IStrategy.sol";
 import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
 
 //// Strategies
 import { BeefyMaiUSDCeStrategy } from "src/strategies/polygon/USDCe/beefy/BeefyMaiUSDCeStrategy.sol";
 import { ConvexUSDCCrvUSDStrategy } from "src/strategies/polygon/USDCe/convex/ConvexUSDCCrvUSDStrategy.sol";
 import { ConvexUSDTCrvUSDStrategy } from "src/strategies/polygon/USDCe/convex/ConvexUSDTCrvUSDStrategy.sol";
-import { YearnMaticUSDCStakingStrategy } from "src/strategies/polygon/USDCe/yearn/YearnMaticUSDCStakingStrategy.sol";
+
 import { YearnAjnaUSDCStrategy } from "src/strategies/polygon/USDCe/yearn/YearnAjnaUSDCStrategy.sol";
-import { YearnUSDTStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDTStrategy.sol";
-import { YearnUSDCeLenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDCeLenderStrategy.sol";
-import { YearnUSDCeStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDCeStrategy.sol";
-import { YearnDAIStrategy } from "src/strategies/polygon/USDCe/yearn/YearnDAIStrategy.sol";
-import { YearnDAILenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnDAILenderStrategy.sol";
+
 import { YearnCompoundUSDCeLenderStrategy } from
     "src/strategies/polygon/USDCe/yearn/YearnCompoundUSDCeLenderStrategy.sol";
+import { YearnDAILenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnDAILenderStrategy.sol";
+import { YearnDAIStrategy } from "src/strategies/polygon/USDCe/yearn/YearnDAIStrategy.sol";
+import { YearnMaticUSDCStakingStrategy } from "src/strategies/polygon/USDCe/yearn/YearnMaticUSDCStakingStrategy.sol";
+import { YearnUSDCeLenderStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDCeLenderStrategy.sol";
+import { YearnUSDCeStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDCeStrategy.sol";
+import { YearnUSDTStrategy } from "src/strategies/polygon/USDCe/yearn/YearnUSDTStrategy.sol";
 
 //// Vault
-import { StrategyData } from "src/helpers/VaultTypes.sol";
+
 import { MaxApyRouter } from "src/MaxApyRouter.sol";
-import { MaxApyVaultFactory } from "src/MaxApyVaultFactory.sol";
-import { MaxApyHarvester } from "src/periphery/MaxApyHarvester.sol";
+
 import { MaxApyVault, OwnableRoles } from "src/MaxApyVault.sol";
+import { MaxApyVaultFactory } from "src/MaxApyVaultFactory.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { MaxApyHarvester } from "src/periphery/MaxApyHarvester.sol";
 
 /// @notice this is a simple test deployment of a polygon USDCe vault in a local rpc
 contract PolygonDeploymentScript is Script, OwnableRoles {

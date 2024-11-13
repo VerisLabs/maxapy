@@ -2,8 +2,9 @@
 pragma solidity ^0.8.19;
 
 import "./Constants.sol";
-import "solady/utils/SafeCastLib.sol";
+
 import "solady/utils/FixedPointMathLib.sol";
+import "solady/utils/SafeCastLib.sol";
 
 /// @title Functions based on Q64.96 sqrt price and liquidity
 /// @notice Contains the math that uses square root of price as a Q64.96 and liquidity to compute deltas

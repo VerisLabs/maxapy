@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { OracleLibrary } from "./OracleLibrary.sol";
 import { LiquidityTokenMath } from "./LiquidityTokenMath.sol";
+import { OracleLibrary } from "./OracleLibrary.sol";
 
 library LiquidityRangePool {
     function computeTokenAmountsForLiquidity(

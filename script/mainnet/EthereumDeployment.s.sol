@@ -2,29 +2,35 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
+
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { IERC20, console2 } from "../../test/base/BaseTest.t.sol";
-import { IStrategy } from "src/interfaces/IStrategy.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+
+import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
 import { MaxApyVault, OwnableRoles } from "src/MaxApyVault.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
-import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { IStrategy } from "src/interfaces/IStrategy.sol";
+
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 
 //// WETH
 // Convex strategies
 import { ConvexdETHFrxETHStrategy } from "src/strategies/mainnet/WETH/convex/ConvexdETHFrxETHStrategy.sol";
 // Yearn strategies
-import { YearnWETHStrategy } from "src/strategies/mainnet/WETH/yearn/YearnWETHStrategy.sol";
+
 import { YearnCompoundV3WETHLenderStrategy } from
     "src/strategies/mainnet/WETH/yearn/YearnCompoundV3WETHLenderStrategy.sol";
 import { YearnV3WETHStrategy } from "src/strategies/mainnet/WETH/yearn/YearnV3WETHStrategy.sol";
+import { YearnWETHStrategy } from "src/strategies/mainnet/WETH/yearn/YearnWETHStrategy.sol";
 // Sommelier strategies
+
+import "src/helpers/AddressBook.sol";
 import { SommelierMorphoEthMaximizerStrategy } from
     "src/strategies/mainnet/WETH/sommelier/SommelierMorphoEthMaximizerStrategy.sol";
 import { SommelierStEthDepositTurboStEthStrategy } from
@@ -36,7 +42,6 @@ import { SommelierTurboEzEthStrategy } from "src/strategies/mainnet/WETH/sommeli
 import { SommelierTurboRsEthStrategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboRsEthStrategy.sol";
 import { SommelierTurboStEthStrategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboStEthStrategy.sol";
 import { SommelierTurboSwEthStrategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboSwEthStrategy.sol";
-import "src/helpers/AddressBook.sol";
 
 //// USDC
 import { SommelierTurboGHOStrategy } from "src/strategies/mainnet/USDC/sommelier/SommelierTurboGHOStrategy.sol";

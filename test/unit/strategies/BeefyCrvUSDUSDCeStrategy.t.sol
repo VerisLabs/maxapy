@@ -1,24 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
-import { ICurveLpPool } from "src/interfaces/ICurve.sol";
-import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
 
-import { MaxApyVault } from "src/MaxApyVault.sol";
-import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+
 import { ConvexdETHFrxETHStrategyEvents } from "../../helpers/ConvexdETHFrxETHStrategyEvents.sol";
-import "src/helpers/AddressBook.sol";
+
 import { BeefyCrvUSDUSDCeStrategyWrapper } from "../../mock/BeefyCrvUSDUSDCeStrategyWrapper.sol";
-import { _1_USDCE } from "test/helpers/Tokens.sol";
+
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
+import "src/helpers/AddressBook.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+
+import { _1_USDCE } from "test/helpers/Tokens.sol";
 
 contract BeefyCrvUSDUSDCeStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     using SafeTransferLib for address;

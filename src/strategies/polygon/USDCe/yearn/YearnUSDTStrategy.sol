@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseYearnV3Strategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseYearnV3Strategy.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+
+import { CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON, USDT_POLYGON } from "src/helpers/AddressBook.sol";
 import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
 import { IYVaultV3 } from "src/interfaces/IYVaultV3.sol";
-import { USDT_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON } from "src/helpers/AddressBook.sol";
+import { BaseYearnV3Strategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseYearnV3Strategy.sol";
 
 /// @title YearnUSDTStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol

@@ -6,14 +6,16 @@ import { BaseVaultTest } from "../base/BaseVaultTest.t.sol";
 import { MaxApyVault, StrategyData } from "src/MaxApyVault.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 
-import { YearnWETHStrategyWrapper } from "../mock/YearnWETHStrategyWrapper.sol";
-import { SommelierTurboStEthStrategyWrapper } from "../mock/SommelierTurboStEthStrategyWrapper.sol";
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
-import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
 import { IStrategyWrapper } from "../interfaces/IStrategyWrapper.sol";
+import { SommelierTurboStEthStrategyWrapper } from "../mock/SommelierTurboStEthStrategyWrapper.sol";
+import { YearnWETHStrategyWrapper } from "../mock/YearnWETHStrategyWrapper.sol";
+
+import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
+
 import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 
 import { MaxApyHarvester } from "src/periphery/MaxApyHarvester.sol";
@@ -477,6 +479,6 @@ contract MaxApyHarvesterTest is BaseVaultTest {
 
         assertEq(vault.totalIdle(), 10 ether);
         assertEq(vault.strategies(address(strategy1)).strategyTotalDebt, 20 ether);
-        assertEq(vault.strategies(address(strategy2)).strategyTotalDebt, 69999999999999999999);
+        assertEq(vault.strategies(address(strategy2)).strategyTotalDebt, 69_999_999_999_999_999_999);
     }
 }

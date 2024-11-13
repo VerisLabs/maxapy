@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import { ERC20Permit, ERC20 } from "openzeppelin/token/ERC20/extensions/ERC20Permit.sol";
+import { ERC20, ERC20Permit } from "openzeppelin/token/ERC20/extensions/ERC20Permit.sol";
 
 contract MockWETH is ERC20Permit {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) ERC20Permit(name) { }

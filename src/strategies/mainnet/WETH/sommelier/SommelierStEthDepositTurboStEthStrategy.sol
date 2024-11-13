@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+
+import { CURVE_ETH_STETH_POOL_MAINNET, STETH_MAINNET } from "src/helpers/AddressBook.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
 import {
     BaseSommelierStrategy,
     ICellar,
-    IWETH,
     IMaxApyVault,
+    IWETH,
     SafeTransferLib
 } from "src/strategies/base/BaseSommelierStrategy.sol";
-import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import { ICurveLpPool } from "src/interfaces/ICurve.sol";
-import { STETH_MAINNET, CURVE_ETH_STETH_POOL_MAINNET } from "src/helpers/AddressBook.sol";
 
 /// @title SommelierStEthDepositTurboStEthStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol

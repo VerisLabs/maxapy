@@ -1,28 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import {
+    CONVEX_BOOSTER_POLYGON,
+    CRVUSD_USDT_CONVEX_POOL_ID_POLYGON,
+    CRV_POLYGON,
+    CRV_USD_POLYGON,
+    CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON,
+    CURVE_CRVUSD_USDT_POOL_POLYGON,
+    USDT_POLYGON,
+    WPOL_POLYGON
+} from "src/helpers/AddressBook.sol";
+import { IConvexBoosterPolygon } from "src/interfaces/IConvexBooster.sol";
+import { IConvexRewardsPolygon } from "src/interfaces/IConvexRewards.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
+import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 import {
     BaseConvexStrategyPolygon,
     BaseStrategy,
     IMaxApyVault,
     SafeTransferLib
 } from "src/strategies/base/BaseConvexStrategyPolygon.sol";
-import { IConvexBoosterPolygon } from "src/interfaces/IConvexBooster.sol";
-import { IConvexRewardsPolygon } from "src/interfaces/IConvexRewards.sol";
-import { ICurveLpPool } from "src/interfaces/ICurve.sol";
-import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
-import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import {
-    CRV_USD_POLYGON,
-    USDT_POLYGON,
-    WPOL_POLYGON,
-    CRV_POLYGON,
-    CONVEX_BOOSTER_POLYGON,
-    CRVUSD_USDT_CONVEX_POOL_ID_POLYGON,
-    CURVE_CRVUSD_USDT_POOL_POLYGON,
-    CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON
-} from "src/helpers/AddressBook.sol";
-import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 
 /// @title ConvexUSDTCrvUSDStrategy
 /// @author MaxApy

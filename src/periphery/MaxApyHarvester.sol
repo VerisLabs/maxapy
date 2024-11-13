@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { IStrategy } from "src/interfaces/IStrategy.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { StrategyData } from "../helpers/VaultTypes.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { IStrategy } from "src/interfaces/IStrategy.sol";
 
 /**
  * @title MaxHarvester
@@ -277,7 +277,6 @@ contract MaxApyHarvester is OwnableRoles {
                 simulationResults[i] = abi.encode(
                     expectedBalance, outputAfterInvestment, intendedInvest, actualInvest, intendedDivest, actualDivest
                 );
-
             }
             strategy.harvest(
                 harvests[i].minExpectedBalance,

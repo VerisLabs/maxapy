@@ -2,10 +2,10 @@
 pragma solidity ^0.8.19;
 
 import {
-    IYVault,
-    IERC20Metadata,
     BaseYearnV2Strategy,
+    IERC20Metadata,
     IMaxApyVault,
+    IYVault,
     SafeTransferLib
 } from "src/strategies/base/BaseYearnV2Strategy.sol";
 

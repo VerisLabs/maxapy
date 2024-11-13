@@ -1,22 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
+
+import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
-import { ICellar } from "src/interfaces/ICellar.sol";
 import { SommelierTurboEEthV2StrategyWrapper } from "../../mock/SommelierTurboEEthV2StrategyWrapper.sol";
 import { MaxApyVault } from "src/MaxApyVault.sol";
-import { StrategyData } from "src/helpers/VaultTypes.sol";
-import { SommelierTurboEEthV2Strategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboEEthV2Strategy.sol";
-import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import "src/helpers/AddressBook.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { ICellar } from "src/interfaces/ICellar.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+
+import { SommelierTurboEEthV2Strategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboEEthV2Strategy.sol";
 
 contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
     address public constant CELLAR_WETH_MAINNET = SOMMELIER_TURBO_EETHV2_CELLAR_MAINNET;
