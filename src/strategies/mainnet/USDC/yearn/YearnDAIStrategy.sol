@@ -77,7 +77,10 @@ contract YearnDAIStrategy is BaseYearnV2Strategy {
 
         uint256 balanceBefore = dai.balanceOf(address(this));
 
-        amount = Math.min(amount, maxSingleTrade);
+        uint256 scaledAmount = amount * 1e12;
+        uint256 minAmount = (Math.min(scaledAmount, maxSingleTrade));
+        // Scale back down to 6 decimals
+        amount = minAmount / 1e12;
 
         assembly {
             // Emit the `Invested` event
