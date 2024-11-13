@@ -388,7 +388,7 @@ contract BaseHopStrategy is BaseStrategy {
     /// but in terms of "Hop" shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal virtual returns (uint256 withdrawn) {
-        withdrawn = hopPool.removeLiquidityOneToken(shares, 0, 0, block.timestamp + 60);
+        withdrawn = hopPool.removeLiquidityOneToken(shares, 0, 0, block.timestamp + 600);
 
         assembly {
             // Emit the `Divested` event
