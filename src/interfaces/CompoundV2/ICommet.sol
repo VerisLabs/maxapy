@@ -32,4 +32,6 @@ interface ICommet {
 
     /// @dev uint64
     function supplyKink() external view returns (uint256);
+
+    function baseTrackingAccrued(address account) external view returns (uint64);
 }
