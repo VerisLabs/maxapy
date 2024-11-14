@@ -15,7 +15,14 @@ import {OracleLibrary} from "src/lib/OracleLibrary.sol";
 
 import {console2} from "forge-std/console2.sol";
 
-import {COMP_MAINNET, UNISWAP_V3_COMP_WETH_POOL_MAINNET, USDC_MAINNET, USDT_MAINNET, WETH_MAINNET} from "src/helpers/AddressBook.sol";
+import {
+    COMP_MAINNET,
+    UNISWAP_V3_COMP_WETH_POOL_MAINNET,
+    UNISWAP_V3_WETH_USDC_POOL_MAINNET,
+    USDC_MAINNET,
+    USDT_MAINNET,
+    WETH_MAINNET
+} from "src/helpers/AddressBook.sol";
 
 contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     using SafeTransferLib for address;
@@ -32,7 +39,13 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     /// @notice Router to perform COMP-WETH-USDT swaps
     IRouter public router;
     /// @notice Address of Uniswap V3 COMP-WETH pool
-    address public constant pool = UNISWAP_V3_COMP_WETH_POOL_MAINNET;
+    address public constant poolA = UNISWAP_V3_COMP_WETH_POOL_MAINNET;
+    /// @notice Address of Uniswap V3 WETH-USDC pool
+    address public constant poolB = UNISWAP_V3_WETH_USDC_POOL_MAINNET;
+    /// @notice the reward accrued for an account on a Comet deployment
+    uint256 public totalAccruedReward;
+    /// @notice The minimum amount of base asset to be supplied for rewards to accrue
+    uint256 public constant baseMinForRewards = 1e11;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -51,18 +64,14 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
         address _strategist,
         ICommet _commet,
         ICommetRewards _commetRewards,
-        address _tokenSupplyAddress,
+        address _baseAssetAddress,
         IRouter _router
-    ) public virtual initializer {
-        super.initialize(
-            _vault,
-            _keepers,
-            _strategyName,
-            _strategist,
-            _commet,
-            _commetRewards,
-            _tokenSupplyAddress
-        );
+    )
+        public
+        virtual
+        initializer
+    {
+        super.initialize(_vault, _keepers, _strategyName, _strategist, _commet, _commetRewards, _baseAssetAddress);
 
         underlyingAsset.safeApprove(address(triPool), type(uint256).max);
         usdt.safeApprove(address(triPool), type(uint256).max);
@@ -102,9 +111,14 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
         }
     }
 
-    /// @notice Invests `amount` of underlying, depositing it in the Yearn Vault
+
+    ////////////////////////////////////////////////////////////////
+    ///                 INTERNAL CORE FUNCTIONS                  ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @notice Invests `amount` of underlying, depositing it in the Compound Vault
     /// @param amount The amount of underlying to be deposited in the vault
-    /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Yearn receipt tokens)
+    /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Compound receipt tokens)
     /// @return depositedAmount The amount of shares received, in terms of underlying
     function _invest(
         uint256 amount,
@@ -115,6 +129,15 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
 
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
+
+        // check if it's the first ever investment in compound V2 USDT
+        if (_totalInvestedBaseAsset() == 0 && _convertUsdcTobaseAsset(amount) < baseMinForRewards) {
+            assembly ("memory-safe") {
+                // throw the `InitialInvestmentTooLow` error
+                mstore(0x00, 0xbffb2b0e)
+                revert(0x1c, 0x04)
+            }
+        }
 
         uint256 balanceBefore = usdt.balanceOf(address(this));
 
@@ -140,10 +163,8 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     /// @dev care should be taken, as the `amount` parameter is *not* in terms of underlying,
     /// but in terms of yvault amount
     /// @return withdrawn the total amount divested, in terms of base asset of compoundV3
-    function _divest(
-        uint256 amount,
-        bool reinvestRewards
-    ) internal virtual override returns (uint256 withdrawn) {
+    function _divest(uint256 amount, uint256 rewardstoWithdraw, bool reinvestRemainigRewards) internal virtual override returns (uint256 withdrawn) {
+        
         uint256 _before = IERC20(tokenSupplyAddress).balanceOf(address(this));
         commet.withdraw(tokenSupplyAddress, amount);
         uint256 _after = IERC20(tokenSupplyAddress).balanceOf(address(this));
@@ -157,17 +178,16 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
         commetRewards.claim(address(commet), address(this), true);
         uint256 _rewardAfter = IERC20(reward.token).balanceOf(address(this));
 
-        if (reinvestRewards) {
-            uint256 wethAmount = swapTokens(
-                COMP_MAINNET,
-                WETH_MAINNET,
-                _rewardAfter - _rewardBefore
-            );
-            uint256 usdtAmount = swapTokens(
-                WETH_MAINNET,
-                USDT_MAINNET,
-                wethAmount
-            );
+        if (rewardstoWithdraw > 0) {
+            uint256 wethAmount = swapTokens(COMP_MAINNET, WETH_MAINNET, rewardstoWithdraw);
+            uint256 usdcAmount = swapTokens(WETH_MAINNET, USDC_MAINNET, wethAmount);
+            withdrawn = withdrawn + usdcAmount;
+            _rewardAfter = IERC20(reward.token).balanceOf(address(this));
+        }
+
+        if (reinvestRemainigRewards) {
+            uint256 wethAmount = swapTokens(COMP_MAINNET, WETH_MAINNET, _rewardAfter - _rewardBefore);
+            uint256 usdtAmount = swapTokens(WETH_MAINNET, USDT_MAINNET, wethAmount);
             commet.supply(tokenSupplyAddress, usdtAmount);
         } else {
             uint256 wethAmount = swapTokens(
@@ -213,6 +233,7 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
             COMP_MAINNET,
             WETH_MAINNET,
             reward.toUint128(),
+            poolA,
             1800
         );
 
@@ -220,16 +241,18 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
             WETH_MAINNET,
             USDC_MAINNET,
             rewardWETH.toUint128(),
+            poolB,
             1800
         );
         return rewardsUSDC;
     }
 
-    function totalInvestedAmount(
-        address account
-    ) public view returns (uint256) {
-        return commet.userBasic(account).principal.toUint256();
-        // ICommet.UserBasic memory userDetails =return userDetails.principal.toUint256();
+    function _totalInvestedBaseAsset() public override view returns (uint256 investedAmount) {
+        investedAmount =  commet.userBasic(address(this)).principal.toUint256();
+    }
+
+    function _totalInvestedValue() public override view returns (uint256) {
+        return triPool.get_dy(2, 1, _totalInvestedBaseAsset());
     }
 
     ////////////////////////////////////////////////////////////////
@@ -251,14 +274,15 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
             unchecked {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
-            uint256 investedBaseAsset = totalInvestedAmount(address(this));
-            // If underlying assest invest currently by strategy is not enough to cover
+
+            uint256 totalInvestedValue = _totalInvestedValue();
+            // If underlying assest invested currently by strategy is not enough to cover
             // the requested amount, we divest from the Compound rewards
-            if (amountToWithdraw > investedBaseAsset) {
+            if (amountToWithdraw > totalInvestedValue) {
                 unchecked {
-                    amountToWithdraw = amountToWithdraw - investedBaseAsset;
+                    amountToWithdraw = amountToWithdraw - totalInvestedValue;
                 }
-                uint256 rewardsUSDC = accruedRewardsValue();
+                uint256 rewardsUSDC = _accruedRewardValue();
                 assembly {
                     // if withdrawn < amountToWithdraw
                     if gt(amountToWithdraw, rewardsUSDC) {
@@ -306,6 +330,7 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
         address tokenIn,
         address tokenOut,
         uint128 amountIn,
+        address pool,
         uint32 secondsAgo
     ) internal view returns (uint256 amountOut) {
         // Code copied from OracleLibrary.sol, consult()
@@ -340,5 +365,19 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
             tokenIn,
             tokenOut
         );
+    }
+
+    // @notice Converts USDC to USDT
+    /// @param usdcAmount Amount of USDC
+    /// @return Equivalent amount in USDT
+    function _convertUsdcTobaseAsset(uint256 usdcAmount) internal view returns (uint256) {
+        return triPool.get_dy(1, 2, usdcAmount);
+    }
+
+    // @notice Converts USDC to USDT
+    /// @param usdcAmount Amount of USDC
+    /// @return Equivalent amount in USDT
+    function _convertUsdcTobaseAsset(uint256 usdcAmount) internal view returns (uint256) {
+        return triPool.get_dy(1, 2, usdcAmount);
     }
 }

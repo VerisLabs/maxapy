@@ -7,6 +7,9 @@ import { RewardOwed, ICommetRewards } from "src/interfaces/CompoundV2/ICommetRew
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 
+import { IUniswapV3Pool, IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
+import { OracleLibrary } from "src/lib/OracleLibrary.sol";
+
 /// @title BaseCompoundV2Strategy
 /// @author MaxApy
 /// @notice `BaseCompoundV2Strategy` sets the base functionality to be implemented by MaxApy CompoundV2 strategies.
@@ -18,12 +21,16 @@ contract BaseCompoundV3Strategy is BaseStrategy {
     ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
     uint256 internal constant DEGRADATION_COEFFICIENT = 10 ** 18;
+    /// @notice the reward accrued for an account on a Comet deployment
+    uint256 public totalAccruedReward;
 
     ////////////////////////////////////////////////////////////////
     ///                         ERRORS                           ///
     ////////////////////////////////////////////////////////////////
     error NotEnoughFundsToInvest();
     error InvalidZeroAddress();
+    error InitialInvestmentTooLow();
+
 
     ////////////////////////////////////////////////////////////////
     ///                         EVENTS                           ///
@@ -173,12 +180,18 @@ contract BaseCompoundV3Strategy is BaseStrategy {
             unchecked {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
-
-            uint256 shares = _sharesForAmount(amountToWithdraw);
-            uint256 withdrawn = _shareValue(shares);
-            assembly {
-                // if withdrawn < amountToWithdraw
-                if lt(withdrawn, amountToWithdraw) { loss := sub(amountToWithdraw, withdrawn) }
+            uint256 investedUnderlyingAsset = _totalInvestedValue();
+            // If underlying assest invest currently by strategy is not enough to cover
+            // the requested amount, we divest from the Compound rewards
+            if (amountToWithdraw > investedUnderlyingAsset) {
+                unchecked {
+                    amountToWithdraw = amountToWithdraw - investedUnderlyingAsset;
+                }
+                uint256 rewardsUsdc = _accruedRewardValue();
+                assembly {
+                    // if withdrawn < amountToWithdraw
+                    if gt(amountToWithdraw, rewardsUsdc) { loss := sub(amountToWithdraw, rewardsUsdc) }
+                }
             }
         }
         liquidatedAmount = requestedAmount - loss;
@@ -274,19 +287,33 @@ contract BaseCompoundV3Strategy is BaseStrategy {
 
             // Cannot repay all debt if it does not have enough assets
             uint256 amountToWithdraw = Math.min(debtOutstanding, _estimatedTotalAssets_);
+            uint256 withdrawn;
 
             // Check if underlying funds held in the strategy are enough to cover withdrawal.
-            // If not, divest from Cellar
+            // If not, divest from Compound Vault
             if (amountToWithdraw > underlyingBalance) {
                 uint256 expectedAmountToWithdraw = amountToWithdraw - underlyingBalance;
 
-                // We cannot withdraw more than actual balance or maxSingleTrade
-                expectedAmountToWithdraw =
-                    Math.min(Math.min(expectedAmountToWithdraw, _shareValue(_shareBalance())), maxSingleTrade);
-
-                uint256 sharesToWithdraw = _sharesForAmount(expectedAmountToWithdraw);
-
-                uint256 withdrawn = _divest(sharesToWithdraw, false);
+                uint256 totalInvestedValue = _totalInvestedValue();
+                // If underlying assest invested currently by strategy is not enough to cover
+                // the requested amount, we divest from the Compound rewards
+                if (expectedAmountToWithdraw > totalInvestedValue) {
+                    uint256 expectedAmountLeftToWithdraw;
+                    unchecked {
+                        expectedAmountLeftToWithdraw = expectedAmountToWithdraw - totalInvestedValue;
+                    }
+                    uint256 rewardsUsdc = _accruedRewardValue();
+                    if (expectedAmountLeftToWithdraw > rewardsUsdc) {
+                        withdrawn = _divest(_totalInvestedBaseAsset(), totalAccruedReward, false);
+                    } else {
+                        unchecked {
+                            expectedAmountLeftToWithdraw = rewardsUsdc - expectedAmountLeftToWithdraw;
+                        }
+                        withdrawn = _divest(_totalInvestedBaseAsset(), _convertUsdcTobaseAsset(expectedAmountLeftToWithdraw), true);
+                    } 
+                } else {
+                    withdrawn = _divest(_convertUsdcTobaseAsset(expectedAmountToWithdraw), 0, true);
+                }
 
                 // Overwrite underlyingBalance with the proper amount after withdrawing
                 underlyingBalance = _underlyingBalance();
@@ -403,33 +430,56 @@ contract BaseCompoundV3Strategy is BaseStrategy {
         override
         returns (uint256 liquidatedAmount, uint256 loss)
     {
-        // uint256 underlyingBalance = _underlyingBalance();
-        // // If underlying balance currently held by strategy is not enough to cover
-        // // the requested amount, we divest from the Compound Vault
-        // if (underlyingBalance < amountNeeded) {
-        //     uint256 amountToWithdraw;
-        //     unchecked {
-        //         amountToWithdraw = amountNeeded - underlyingBalance;
-        //     }
-        //     uint256 shares = _sharesForAmount(amountToWithdraw);
-        //     if (shares == 0) return (0, 0);
-        //     uint256 withdrawn = _divest(shares);
-        //     assembly {
-        //         // if withdrawn < amountToWithdraw
-        //         if lt(withdrawn, amountToWithdraw) { loss := sub(amountToWithdraw, withdrawn) }
-        //     }
-        // }
-        // // liquidatedAmount = amountNeeded - loss;
-        // assembly {
-        //     liquidatedAmount := sub(amountNeeded, loss)
-        // }
+        uint256 underlyingBalance = _underlyingBalance();
+        // If underlying balance currently held by strategy is not enough to cover
+        // the requested amount, we divest from the Compound Vault
+        if (amountNeeded > underlyingBalance) {
+                uint256 withdrawn;
+                uint256 expectedAmountToWithdraw = amountNeeded - underlyingBalance;
+
+                uint256 totalInvestedValue = _totalInvestedValue();
+                // If underlying assest invested currently by strategy is not enough to cover
+                // the requested amount, we divest from the Compound rewards
+                if (expectedAmountToWithdraw > totalInvestedValue) {
+                    uint256 expectedAmountLeftToWithdraw;
+                    unchecked {
+                        expectedAmountLeftToWithdraw = expectedAmountToWithdraw - totalInvestedValue;
+                    }
+                    uint256 rewardsUsdc = _accruedRewardValue();
+                    if (expectedAmountLeftToWithdraw > rewardsUsdc) {
+                        withdrawn = _divest(_totalInvestedBaseAsset(), totalAccruedReward, false);
+                    } else {
+                        unchecked {
+                            expectedAmountLeftToWithdraw = rewardsUsdc - expectedAmountLeftToWithdraw;
+                        }
+                        withdrawn = _divest(_totalInvestedBaseAsset(), _convertUsdcTobaseAsset(expectedAmountLeftToWithdraw), true);
+                    } 
+                } else {
+                    withdrawn = _divest(_convertUsdcTobaseAsset(expectedAmountToWithdraw), 0, true);
+                }
+
+                assembly ("memory-safe") {
+                    if lt(underlyingBalance, minExpectedBalance) {
+                        // throw the `MinExpectedBalanceNotReached` error
+                        mstore(0x00, 0xbd277fff)
+                        revert(0x1c, 0x04)
+                    }
+
+                    if lt(withdrawn, expectedAmountToWithdraw) { loss := sub(expectedAmountToWithdraw, withdrawn) }
+                }
+
+                // liquidatedAmount = amountNeeded - loss;
+                assembly {
+                    liquidatedAmount := sub(amountNeeded, loss)
+                }
+            }
     }
 
     /// @notice Liquidates everything and returns the amount that got freed.
     /// @dev This function is used during emergency exit instead of `_prepareReturn()` to
     /// liquidate all of the Strategy's positions back to the MaxApy Vault.
     function _liquidateAllPositions() internal override returns (uint256 amountFreed) {
-        _divest(_shareBalance(), true);
+        _divest(_totalInvestedValue(), true);
         amountFreed = _underlyingBalance();
     }
 
@@ -437,30 +487,60 @@ contract BaseCompoundV3Strategy is BaseStrategy {
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
 
-    /// @notice Determines the current value of `shares`.
-    /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
-    /// @return returns the estimated amount of underlying computed from shares `shares`
-    function _shareValue(uint256 shares) internal view virtual returns (uint256) {
-   
+    function _accruedRewardValue() public virtual view returns (uint256) {
     }
 
-    /// @notice Determines how many shares depositor of `amount` of underlying would receive.
-    /// @return shares returns the estimated amount of shares computed in exchange for the underlying `amount`
-    function _sharesForAmount(uint256 amount) internal view virtual returns (uint256 shares) {
-  
+    function _totalInvestedBaseAsset() public override view returns (uint256 investedAmount) {
     }
 
-
-    /// @notice Returns the current strategy's amount of Compound vault shares
-    /// @return _balance balance the strategy's balance of Compound vault shares
-    function _shareBalance() internal view returns (uint256 _balance) {
-       
+    function _totalInvestedValue() public virtual view returns (uint256) {
     }
 
     /// @notice Returns the real time estimation of the value in assets held by the strategy
     /// @return the strategy's total assets(idle + investment positions)
     function _estimatedTotalAssets() internal view override returns (uint256) {
-        return _underlyingBalance() + _shareValue(_shareBalance());
+        return _underlyingBalance() + _accruedRewardValue() + _totalInvestedValue();
+    }
+
+    /// @notice returns the estimated result of a Uniswap V3 swap
+    /// @dev use TWAP oracle for more safety
+    function _estimateAmountOut(
+        address tokenIn,
+        address tokenOut,
+        uint128 amountIn,
+        address pool,
+        uint32 secondsAgo
+    )
+        internal
+        view
+        returns (uint256 amountOut)
+    {
+        // Code copied from OracleLibrary.sol, consult()
+        uint32[] memory secondsAgos = new uint32[](2);
+        secondsAgos[0] = secondsAgo;
+        secondsAgos[1] = 0;
+
+        // int56 since tick * time = int24 * uint32
+        // 56 = 24 + 32
+        (int56[] memory tickCumulatives,) = IUniswapV3Pool(pool).observe(secondsAgos);
+
+        int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
+
+        // int56 / uint32 = int24
+        int24 tick = int24(int256(tickCumulativesDelta) / int256(int32(secondsAgo)));
+        // Always round to negative infinity
+
+        if (tickCumulativesDelta < 0 && (int256(tickCumulativesDelta) % int256(int32(secondsAgo)) != 0)) {
+            tick--;
+        }
+
+        amountOut = OracleLibrary.getQuoteAtTick(tick, amountIn, tokenIn, tokenOut);
+    }
+
+    // @notice Converts USDC to base asset
+    /// @param usdcAmount Amount of USDC
+    /// @return Equivalent amount in base asset
+    function _convertUsdcTobaseAsset(uint256 usdcAmount) internal view returns (uint256) {
     }
 
     ////////////////////////////////////////////////////////////////
@@ -577,7 +657,8 @@ contract BaseCompoundV3Strategy is BaseStrategy {
             mstore(0x40, m) // Restore the free memory pointer
         }
         intendedInvest = _underlyingBalance();
-        uint256 sharesBalanceBefore = _shareBalance();
+        // uint256 sharesBalanceBefore = _shareBalance();
+        uint256 sharesBalanceBefore = _totalInvestedValue() + accruedRewardsValue();
         // Check if vault transferred underlying and re-invest it
         _adjustPosition(debtOutstanding, 0);
         outputAfterInvestment = _shareBalance() - sharesBalanceBefore;
