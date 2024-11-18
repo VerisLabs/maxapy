@@ -42,8 +42,6 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     address public constant poolA = UNISWAP_V3_COMP_WETH_POOL_MAINNET;
     /// @notice Address of Uniswap V3 WETH-USDC pool
     address public constant poolB = UNISWAP_V3_WETH_USDC_POOL_MAINNET;
-    /// @notice the reward accrued for an account on a Comet deployment
-    uint256 public totalAccruedReward;
     /// @notice The minimum amount of base asset to be supplied for rewards to accrue
     uint256 public constant baseMinForRewards = 1e11;
 
@@ -148,8 +146,6 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
 
         commet.supply(tokenSupplyAddress, amount);
 
-        commet.balanceOf(address(this));
-
         console2.log(
             "###   ~ file: CompoundV3USDTStrategy.sol:150 ~ commet.balanceOf(address(this));:",
             commet.balanceOf(address(this))
@@ -170,6 +166,14 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
         uint256 _after = IERC20(tokenSupplyAddress).balanceOf(address(this));
         withdrawn = _after - _before;
 
+        withdrawn = withdrawn + _unwindRewards(commetRewards, rewardstoWithdraw, reinvestRemainigRewards);
+
+    }
+
+
+    /// @notice Claims rewards, converting them to `underlyingAsset`.
+    /// @dev MinOutputAmounts are left as 0 and properly asserted globally on `harvest()`.
+    function _unwindRewards(ICommetRewards rewardPool, uint256 rewardstoWithdraw, bool reinvestRemainigRewards) internal virtual override returns (uint256 withdrawn) {
         RewardOwed memory reward = commetRewards.getRewardOwed(
             address(commet),
             address(this)
@@ -179,55 +183,56 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
         uint256 _rewardAfter = IERC20(reward.token).balanceOf(address(this));
 
         if (rewardstoWithdraw > 0) {
-            uint256 wethAmount = swapTokens(COMP_MAINNET, WETH_MAINNET, rewardstoWithdraw);
-            uint256 usdcAmount = swapTokens(WETH_MAINNET, USDC_MAINNET, wethAmount);
+            uint256 usdcAmount = swapTokens(COMP_MAINNET, WETH_MAINNET, USDC_MAINNET, rewardstoWithdraw);
             withdrawn = withdrawn + usdcAmount;
             _rewardAfter = IERC20(reward.token).balanceOf(address(this));
         }
 
         if (reinvestRemainigRewards) {
-            uint256 wethAmount = swapTokens(COMP_MAINNET, WETH_MAINNET, _rewardAfter - _rewardBefore);
-            uint256 usdtAmount = swapTokens(WETH_MAINNET, USDT_MAINNET, wethAmount);
+            uint256 usdtAmount = swapTokens(COMP_MAINNET, WETH_MAINNET, USDT_MAINNET, _rewardAfter - _rewardBefore);
             commet.supply(tokenSupplyAddress, usdtAmount);
         } else {
-            uint256 wethAmount = swapTokens(
+            uint256 usdcAmount = swapTokens(
                 COMP_MAINNET,
                 WETH_MAINNET,
-                _rewardAfter - _rewardBefore
-            );
-            uint256 usdcAmount = swapTokens(
-                WETH_MAINNET,
                 USDC_MAINNET,
-                wethAmount
+                _rewardAfter - _rewardBefore
             );
             withdrawn = withdrawn + usdcAmount;
         }
+        
     }
 
     function swapTokens(
         address tokenIn,
+        address intermediaryToken,
         address tokenOut,
         uint256 amount
     ) internal returns (uint256) {
-        // Swap the COMP rewards to WETH (intermediate token)
-        uint256 amountOut = router.exactInputSingle(
-            IRouter.ExactInputSingleParams({
-                tokenIn: tokenIn,
-                tokenOut: tokenOut,
-                fee: 100, // 0.01% fee
-                recipient: address(this),
-                deadline: block.timestamp,
-                amountIn: amount,
-                amountOutMinimum: 0,
-                sqrtPriceLimitX96: 0
-            })
-        );
+
+        bytes memory path = abi.encodePacked(
+                tokenIn,
+                uint24(2500), // 0.25%
+                intermediaryToken,
+                uint24(2500), // 0.25%
+                tokenOut
+            );
+
+        uint256 amountOut = router.exactInput(
+                IRouter.ExactInputParams({
+                    path: path,
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: amount,
+                    amountOutMinimum: 0
+                })
+            );
 
         return amountOut;
     }
 
     function accruedRewardsValue() public view returns (uint256) {
-        uint256 reward = _estimateRewardAmount();
+        uint256 reward = commet.userBasic(address(this)).baseTrackingAccrued;
 
         uint256 rewardWETH = _estimateAmountOut(
             COMP_MAINNET,
@@ -245,10 +250,6 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
             1800
         );
         return rewardsUSDC;
-    }
-
-    function _totalInvestedBaseAsset() public override view returns (uint256 investedAmount) {
-        investedAmount =  commet.userBasic(address(this)).principal.toUint256();
     }
 
     function _totalInvestedValue() public override view returns (uint256) {
@@ -297,33 +298,6 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
-    /// @notice Estimates the unclaimed reward amount for this strategy
-    /// @dev Uses the same reward calculation logic as Compound's CometRewards contract
-    /// This is a conservative estimate as it doesn't include rewards accrued since the last interaction
-    /// @return The estimated unclaimed reward amount in COMP tokens (18 decimals)
-    /// The returned value:
-    /// - If accrued > claimed: returns (accrued - claimed)
-    /// - If accrued <= claimed or the difference is dust: returns 0
-    function _estimateRewardAmount() internal view returns (uint256) {
-        uint256 baseTracking = commet.baseTrackingAccrued(address(this));
-        (, uint64 rescaleFactor, bool shouldUpscale) = commetRewards
-            .rewardConfig(address(commet));
-
-        uint256 accrued;
-        if (shouldUpscale) {
-            accrued = baseTracking * rescaleFactor;
-        } else {
-            accrued = baseTracking / rescaleFactor;
-        }
-
-        uint256 claimed = commetRewards.rewardsClaimed(
-            address(commet),
-            address(this)
-        );
-        
-        return accrued > claimed ? accrued - claimed : 0;
-    }
-
     /// @notice returns the estimated result of a Uniswap V3 swap
     /// @dev use TWAP oracle for more safety
     function _estimateAmountOut(
@@ -332,7 +306,7 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
         uint128 amountIn,
         address pool,
         uint32 secondsAgo
-    ) internal view returns (uint256 amountOut) {
+    ) internal view override returns (uint256 amountOut) {
         // Code copied from OracleLibrary.sol, consult()
         uint32[] memory secondsAgos = new uint32[](2);
         secondsAgos[0] = secondsAgo;
@@ -370,14 +344,8 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     // @notice Converts USDC to USDT
     /// @param usdcAmount Amount of USDC
     /// @return Equivalent amount in USDT
-    function _convertUsdcTobaseAsset(uint256 usdcAmount) internal view returns (uint256) {
+    function _convertUsdcTobaseAsset(uint256 usdcAmount) internal view override returns (uint256) {
         return triPool.get_dy(1, 2, usdcAmount);
     }
 
-    // @notice Converts USDC to USDT
-    /// @param usdcAmount Amount of USDC
-    /// @return Equivalent amount in USDT
-    function _convertUsdcTobaseAsset(uint256 usdcAmount) internal view returns (uint256) {
-        return triPool.get_dy(1, 2, usdcAmount);
-    }
 }
