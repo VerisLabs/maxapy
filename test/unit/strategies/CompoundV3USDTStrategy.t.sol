@@ -467,8 +467,6 @@ contract CompoundV3USDTStrategyTest is BaseTest, StrategyEvents {
     }
 
     function testCompoundV3USDT__PreviewLiquidate() public {
-        uint256 snapshotId = vm.snapshot();
-
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDC, users.alice);
         vm.startPrank(users.keeper);
@@ -480,37 +478,24 @@ contract CompoundV3USDTStrategyTest is BaseTest, StrategyEvents {
 
         assertLe(expected, 30 * _1_USDC - loss);
 
-        vm.revertTo(snapshotId);
-
-        // vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-        // vault.deposit(100 * _1_USDC, users.alice);
-        // vm.startPrank(users.keeper);
-        // strategy.harvest(0, 0, address(0), block.timestamp);
-
-        // vm.warp(block.timestamp + 2 days);
-        // strategy.harvest(0, 0, address(0), block.timestamp);
-        // vm.stopPrank();
-        // uint256 expected = strategy.previewLiquidate(45 * _1_USDC);
-        // vm.startPrank(address(vault));
-        // uint256 loss = strategy.liquidate(45 * _1_USDC);
     }
 
-    // function testCompoundV3USDT__PreviewLiquidateExact() public {
-    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-    //     vault.deposit(100 * _1_USDC, users.alice);
-    //     vm.startPrank(users.keeper);
-    //     strategy.harvest(0, 0, address(0), block.timestamp);
-    //     vm.stopPrank();
-    //     uint256 requestedAmount = strategy.previewLiquidateExact(30 * _1_USDC);
-    //     vm.startPrank(address(vault));
-    //     uint256 balanceBefore = IERC20(USDC_MAINNET).balanceOf(address(vault));
-    //     strategy.liquidateExact(30 * _1_USDC);
-    //     uint256 withdrawn = IERC20(USDC_MAINNET).balanceOf(address(vault)) - balanceBefore;
-    //     // withdraw exactly what requested
-    //     assertEq(withdrawn, 30 * _1_USDC);
-    //     // losses are equal or fewer than expected
-    //     assertLe(withdrawn - 30 * _1_USDC, requestedAmount - 30 * _1_USDC);
-    // }
+    function testCompoundV3USDT__PreviewLiquidateExact() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDC, users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+        vm.stopPrank();
+        uint256 requestedAmount = strategy.previewLiquidateExact(30 * _1_USDC);
+        vm.startPrank(address(vault));
+        uint256 balanceBefore = IERC20(USDC_MAINNET).balanceOf(address(vault));
+        strategy.liquidateExact(30 * _1_USDC);
+        uint256 withdrawn = IERC20(USDC_MAINNET).balanceOf(address(vault)) - balanceBefore;
+        // withdraw exactly what requested
+        assertEq(withdrawn, 30 * _1_USDC);
+        // losses are equal or fewer than expected
+        assertLe(withdrawn - 30 * _1_USDC, requestedAmount - 30 * _1_USDC);
+    }
 
     function testCompoundV3USDT__maxLiquidateExact() public {
         vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
