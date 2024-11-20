@@ -10,7 +10,6 @@ import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src
 import { IUniswapV3Pool, IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 import { OracleLibrary } from "src/lib/OracleLibrary.sol";
 
-import { console2 } from "forge-std/console2.sol";
 import { COMPOUND_USDT_V3_COMMET_MAINNET } from "src/helpers/AddressBook.sol";
 
 /// @title BaseCompoundV2Strategy

@@ -63,7 +63,7 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
 
     function setUp() public {
         super._setUp("MAINNET");
-        vm.rollFork(19_425_883);
+        vm.rollFork(20_790_660);
 
         TREASURY = makeAddr("treasury");
 
@@ -125,7 +125,7 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
         strategy1.grantRoles(address(strategyFuzzer), _keeperRole);
     }
 
-    function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithoutHarvests_banana(
+    function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithoutHarvests(
         uint256 actorSeed,
         uint256 assets,
         uint256 shares
