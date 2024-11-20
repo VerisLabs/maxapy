@@ -284,6 +284,9 @@ contract CompoundV3USDTStrategyTest is BaseTest, StrategyEvents {
         deal({ token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC });
         uint256 expectedUSDCAmount = strategy.convertUsdcToBaseAsset(10 * _1_USDC);
 
+        vm.expectRevert(abi.encodeWithSignature("InitialInvestmentTooLow()"));
+        returned = strategy.invest(1, 0);
+
         vm.expectEmit();
         emit Invested(address(strategy), 10 * _1_USDC);
         uint256 investedUSDCAmount = strategy.invest(10 * _1_USDC, 0);
