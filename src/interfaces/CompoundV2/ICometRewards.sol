@@ -12,23 +12,15 @@ struct RewardConfig {
     bool shouldUpscale;
 }
 
-interface ICommetRewards {
-    function getRewardOwed(
-        address comet,
-        address account
-    ) external returns (RewardOwed memory);
+interface ICometRewards {
+    function getRewardOwed(address comet, address account) external returns (RewardOwed memory);
 
     function claim(address comet, address src, bool shouldAccrue) external;
 
-    function rewardConfig(
-        address comet
-    )
+    function rewardConfig(address comet)
         external
         view
         returns (address token, uint64 rescaleFactor, bool shouldUpscale);
 
-    function rewardsClaimed(
-        address comet,
-        address account
-    ) external view returns (uint256);
+    function rewardsClaimed(address comet, address account) external view returns (uint256);
 }

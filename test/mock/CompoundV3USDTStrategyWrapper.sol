@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { CompoundV3USDTStrategy, SafeTransferLib } from "src/strategies/mainnet/USDC/compoundV3/CompoundV3USDTStrategy.sol";
+import {
+    CompoundV3USDTStrategy, SafeTransferLib
+} from "src/strategies/mainnet/USDC/compoundV3/CompoundV3USDTStrategy.sol";
 
 contract CompoundV3USDTStrategyWrapper is CompoundV3USDTStrategy {
     using SafeTransferLib for address;
@@ -32,8 +34,15 @@ contract CompoundV3USDTStrategyWrapper is CompoundV3USDTStrategy {
         return _invest(amount, minOutputAfterInvestment);
     }
 
-    function divest(uint256 shares, bool reinvestRewards) external returns (uint256) {
-        return _divest(shares, reinvestRewards);
+    function divest(
+        uint256 amount,
+        uint256 rewardstoWithdraw,
+        bool reinvestRemainigRewards
+    )
+        external
+        returns (uint256)
+    {
+        return _divest(amount, rewardstoWithdraw, reinvestRemainigRewards);
     }
 
     function liquidatePosition(uint256 amountNeeded) external returns (uint256, uint256) {
@@ -44,16 +53,44 @@ contract CompoundV3USDTStrategyWrapper is CompoundV3USDTStrategy {
         return _liquidateAllPositions();
     }
 
-    function shareValue(uint256 shares) external view returns (uint256) {
-        return _shareValue(shares);
+    function unwindRewards(
+        uint256 rewardstoWithdraw,
+        bool reinvestRemainigRewards
+    )
+        internal
+        virtual
+        returns (uint256 withdrawn)
+    {
+        return _unwindRewards(rewardstoWithdraw, reinvestRemainigRewards);
     }
 
-    function sharesForAmount(uint256 amount) external view returns (uint256) {
-        return _sharesForAmount(amount);
+    function totalInvestedValue() public view virtual returns (uint256) {
+        return _totalInvestedValue();
     }
 
-    function shareBalance() external view returns (uint256) {
-        return _shareBalance();
+    function accruedRewardValue() public view virtual returns (uint256) {
+        return _accruedRewardValue();
     }
 
+    function totalInvestedBaseAsset() public view virtual returns (uint256 investedAmount) {
+        return _totalInvestedBaseAsset();
+    }
+
+    function convertUsdcToBaseAsset(uint256 usdcAmount) public view virtual returns (uint256) {
+        return _convertUsdcToBaseAsset(usdcAmount);
+    }
+
+    function estimateAmountOut(
+        address tokenIn,
+        address tokenOut,
+        uint128 amountIn,
+        address pool,
+        uint32 secondsAgo
+    )
+        internal
+        view
+        returns (uint256 amountOut)
+    {
+        _estimateAmountOut(tokenIn, tokenOut, amountIn, pool, secondsAgo);
+    }
 }

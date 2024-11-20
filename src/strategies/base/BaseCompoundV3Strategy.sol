@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import "openzeppelin/interfaces/IERC20.sol";
-import "solady/utils/SafeCastLib.sol";
-import { ICommet } from "src/interfaces/CompoundV2/ICommet.sol";
-import { RewardOwed, ICommetRewards } from "src/interfaces/CompoundV2/ICommetRewards.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+import { IComet } from "src/interfaces/CompoundV2/IComet.sol";
+import { ICometRewards, RewardOwed } from "src/interfaces/CompoundV2/ICometRewards.sol";
 import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 
 import { IUniswapV3Pool, IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 import { OracleLibrary } from "src/lib/OracleLibrary.sol";
+
+import { console2 } from "forge-std/console2.sol";
+import { COMPOUND_USDT_V3_COMMET_MAINNET } from "src/helpers/AddressBook.sol";
 
 /// @title BaseCompoundV2Strategy
 /// @author MaxApy
@@ -35,7 +37,6 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     error InvalidZeroAddress();
     error InitialInvestmentTooLow();
 
-
     ////////////////////////////////////////////////////////////////
     ///                         EVENTS                           ///
     ////////////////////////////////////////////////////////////////
@@ -43,8 +44,8 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     /// @notice Emitted when underlying asset is deposited into the Compound Vault
     event Invested(address indexed strategy, uint256 amountInvested);
 
-    /// @notice Emitted when the `requestedShares` are divested from the Compound Vault
-    event Divested(address indexed strategy, uint256 requestedShares, uint256 amountDivested);
+    /// @notice Emitted when the `requestedAmount` are divested from the Compound Vault
+    event Divested(address indexed strategy, uint256 requestedAmount, uint256 amountDivested);
 
     /// @notice Emitted when the strategy's min single trade value is updated
     event MinSingleTradeUpdated(uint256 minSingleTrade);
@@ -77,8 +78,8 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice The Compound Vault the strategy interacts with
-    ICommet public commet;
-    ICommetRewards public commetRewards;
+    IComet public comet;
+    ICometRewards public cometRewards;
     address public tokenSupplyAddress;
     /// @notice Minimun trade size within the strategy
     uint256 public minSingleTrade;
@@ -94,24 +95,27 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
-    /// @param _commet The Compound Finance vault this strategy will interact with
+    /// @param _comet The Compound Finance vault this strategy will interact with
     function initialize(
         IMaxApyVault _vault,
         address[] calldata _keepers,
         bytes32 _strategyName,
         address _strategist,
-        ICommet _commet,
-        ICommetRewards _commetRewards,
-        address _tokenSupplyAddress
+        IComet _comet,
+        ICometRewards _cometRewards,
+        address _tokenSupplyAddress,
+        IRouter _router
     )
         public
         virtual
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        commet = _commet;
-        commetRewards = _commetRewards;
+        comet = _comet;
+        cometRewards = _cometRewards;
         tokenSupplyAddress = _tokenSupplyAddress;
+
+        tokenSupplyAddress.safeApprove(address(comet), type(uint256).max);
 
         /// Mininmum single trade is 0.01 token units
         minSingleTrade = 10 ** IERC20Metadata(underlyingAsset).decimals() / 100;
@@ -315,10 +319,12 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
                         unchecked {
                             expectedAmountLeftToWithdraw = rewardsUsdc - expectedAmountLeftToWithdraw;
                         }
-                        withdrawn = _divest(_totalInvestedBaseAsset(), _convertUsdcTobaseAsset(expectedAmountLeftToWithdraw), true);
-                    } 
+                        withdrawn = _divest(
+                            _totalInvestedBaseAsset(), _convertUsdcToBaseAsset(expectedAmountLeftToWithdraw), true
+                        );
+                    }
                 } else {
-                    withdrawn = _divest(_convertUsdcTobaseAsset(expectedAmountToWithdraw), 0, true);
+                    withdrawn = _divest(_convertUsdcToBaseAsset(expectedAmountToWithdraw), 0, true);
                 }
 
                 // Overwrite underlyingBalance with the proper amount after withdrawing
@@ -367,6 +373,7 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     /// was made is available for reinvestment. This number could be 0, and this scenario should be handled accordingly.
     function _adjustPosition(uint256, uint256 minOutputAfterInvestment) internal virtual override {
         uint256 toInvest = _underlyingBalance();
+
         if (toInvest > minSingleTrade) {
             _invest(toInvest, minOutputAfterInvestment);
         }
@@ -390,9 +397,8 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
 
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
-        
-        commet.supply(tokenSupplyAddress, amount);
 
+        comet.supply(tokenSupplyAddress, amount);
     }
 
     /// @notice Divests amount `amount` from Compound Vault
@@ -402,21 +408,21 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     /// @dev care should be taken, as the `amount` parameter is *not* in terms of underlying,
     /// but in terms of yvault amount
     /// @return withdrawn the total amount divested, in terms of base asset of compoundV3
-    function _divest(uint256 amount, uint256 rewardstoWithdraw, bool reinvestRemainigRewards) internal virtual returns (uint256 withdrawn) {
-
-        RewardOwed memory reward = commetRewards.getRewardOwed(address(commet), address(this));
-        uint256 _rewardBefore = IERC20(reward.token).balanceOf(address(this));
-        commetRewards.claim(address(commet), address(this), true);
-        uint256 _rewardAfter = IERC20(reward.token).balanceOf(address(this));
-
-        uint256 rewardsWithdrawn = _rewardAfter - _rewardBefore;
-
-        // TODO - swap the COMP reward into USDT 
-
-        uint256 _before = IERC20(tokenSupplyAddress).balanceOf(address(this));
-        commet.withdraw(tokenSupplyAddress, amount);
-        uint256 _after = IERC20(tokenSupplyAddress).balanceOf(address(this));
+    function _divest(
+        uint256 amount,
+        uint256 rewardstoWithdraw,
+        bool reinvestRemainigRewards
+    )
+        internal
+        virtual
+        returns (uint256 withdrawn)
+    {
+        uint256 _before = tokenSupplyAddress.balanceOf(address(this));
+        comet.withdraw(tokenSupplyAddress, amount);
+        uint256 _after = tokenSupplyAddress.balanceOf(address(this));
         withdrawn = _after - _before;
+
+        withdrawn = withdrawn + _unwindRewards(rewardstoWithdraw, reinvestRemainigRewards);
     }
 
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
@@ -440,65 +446,70 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
         // If underlying balance currently held by strategy is not enough to cover
         // the requested amount, we divest from the Compound Vault
         if (amountNeeded > underlyingBalance) {
-                uint256 withdrawn;
-                uint256 expectedAmountToWithdraw = amountNeeded - underlyingBalance;
+            uint256 withdrawn;
+            uint256 expectedAmountToWithdraw = amountNeeded - underlyingBalance;
 
-                uint256 totalInvestedValue = _totalInvestedValue();
-                // If underlying assest invested currently by strategy is not enough to cover
-                // the requested amount, we divest from the Compound rewards
-                if (expectedAmountToWithdraw > totalInvestedValue) {
-                    uint256 expectedAmountLeftToWithdraw;
-                    unchecked {
-                        expectedAmountLeftToWithdraw = expectedAmountToWithdraw - totalInvestedValue;
-                    }
-                    uint256 rewardsUsdc = _accruedRewardValue();
-                    if (expectedAmountLeftToWithdraw > rewardsUsdc) {
-                        withdrawn = _divest(_totalInvestedBaseAsset(), totalAccruedReward, false);
-                    } else {
-                        unchecked {
-                            expectedAmountLeftToWithdraw = rewardsUsdc - expectedAmountLeftToWithdraw;
-                        }
-                        withdrawn = _divest(_totalInvestedBaseAsset(), _convertUsdcTobaseAsset(expectedAmountLeftToWithdraw), true);
-                    } 
+            uint256 totalInvestedValue = _totalInvestedValue();
+            // If underlying assest invested currently by strategy is not enough to cover
+            // the requested amount, we divest from the Compound rewards
+            if (expectedAmountToWithdraw > totalInvestedValue) {
+                uint256 expectedAmountLeftToWithdraw;
+                unchecked {
+                    expectedAmountLeftToWithdraw = expectedAmountToWithdraw - totalInvestedValue;
+                }
+                uint256 rewardsUsdc = _accruedRewardValue();
+                if (expectedAmountLeftToWithdraw > rewardsUsdc) {
+                    withdrawn = _divest(_totalInvestedBaseAsset(), totalAccruedReward, false);
                 } else {
-                    withdrawn = _divest(_convertUsdcTobaseAsset(expectedAmountToWithdraw), 0, true);
+                    unchecked {
+                        expectedAmountLeftToWithdraw = rewardsUsdc - expectedAmountLeftToWithdraw;
+                    }
+                    withdrawn =
+                        _divest(_totalInvestedBaseAsset(), _convertUsdcToBaseAsset(expectedAmountLeftToWithdraw), true);
                 }
-
-                assembly ("memory-safe") {
-                    if lt(withdrawn, expectedAmountToWithdraw) { loss := sub(expectedAmountToWithdraw, withdrawn) }
-                }
-
-                // liquidatedAmount = amountNeeded - loss;
-                assembly {
-                    liquidatedAmount := sub(amountNeeded, loss)
-                }
+            } else {
+                withdrawn = _divest(_convertUsdcToBaseAsset(expectedAmountToWithdraw), 0, true);
             }
+
+            assembly ("memory-safe") {
+                if lt(withdrawn, expectedAmountToWithdraw) { loss := sub(expectedAmountToWithdraw, withdrawn) }
+            }
+        }
+
+        // liquidatedAmount = amountNeeded - loss;
+        assembly {
+            liquidatedAmount := sub(amountNeeded, loss)
+        }
     }
 
     /// @notice Liquidates everything and returns the amount that got freed.
     /// @dev This function is used during emergency exit instead of `_prepareReturn()` to
     /// liquidate all of the Strategy's positions back to the MaxApy Vault.
     function _liquidateAllPositions() internal override returns (uint256 amountFreed) {
-        _divest(_totalInvestedValue(), 0, true);
+        _divest(_totalInvestedBaseAsset(), 0, false);
         amountFreed = _underlyingBalance();
     }
 
     /// @notice Claims rewards, converting them to `underlyingAsset`.
     /// @dev MinOutputAmounts are left as 0 and properly asserted globally on `harvest()`.
-    function _unwindRewards(ICommetRewards rewardPool, uint256 rewardstoWithdraw, bool reinvestRemainigRewards) internal virtual returns (uint256 withdrawn);
+    function _unwindRewards(
+        uint256 rewardstoWithdraw,
+        bool reinvestRemainigRewards
+    )
+        internal
+        virtual
+        returns (uint256 withdrawn);
 
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
 
-    function _totalInvestedValue() public virtual view returns (uint256);
-    
-    function _accruedRewardValue() public virtual view returns (uint256) {
-        return commet.userBasic(address(this)).baseTrackingAccrued.toUint256();
-    }
+    function _accruedRewardValue() public view virtual returns (uint256);
 
-    function _totalInvestedBaseAsset() public virtual view returns (uint256 investedAmount) {
-        investedAmount =  commet.userBasic(address(this)).principal.toUint256();
+    function _totalInvestedValue() public view virtual returns (uint256);
+
+    function _totalInvestedBaseAsset() public view virtual returns (uint256 investedAmount) {
+        investedAmount = COMPOUND_USDT_V3_COMMET_MAINNET.balanceOf(address(this));
     }
 
     /// @notice Returns the real time estimation of the value in assets held by the strategy
@@ -545,8 +556,7 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     // @notice Converts USDC to base asset
     /// @param usdcAmount Amount of USDC
     /// @return Equivalent amount in base asset
-    function _convertUsdcTobaseAsset(uint256 usdcAmount) internal view returns (uint256) {
-    }
+    function _convertUsdcToBaseAsset(uint256 usdcAmount) internal view virtual returns (uint256);
 
     ////////////////////////////////////////////////////////////////
     ///                      SIMULATION                          ///
@@ -666,7 +676,7 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
         uint256 _investmentBefore = _totalInvestedValue();
         // Check if vault transferred underlying and re-invest it
         _adjustPosition(debtOutstanding, 0);
-        outputAfterInvestment = commet.balanceOf(address(this));
+        outputAfterInvestment = comet.balanceOf(address(this));
         actualInvest = _totalInvestedValue() - _investmentBefore;
         _snapshotEstimatedTotalAssets();
 
