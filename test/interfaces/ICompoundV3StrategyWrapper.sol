@@ -18,7 +18,7 @@ interface ICompoundV3StrategyWrapper is IStrategy {
     function divest(
         uint256 amount,
         uint256 rewardstoWithdraw,
-        bool reinvestRemainigRewards
+        bool reinvestRemainingRewards
     )
         external
         returns (uint256);

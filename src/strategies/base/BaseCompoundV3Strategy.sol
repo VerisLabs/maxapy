@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { OracleLibrary } from "src/lib/OracleLibrary.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { IComet } from "src/interfaces/CompoundV2/IComet.sol";
+import { COMPOUND_USDT_V3_COMMET_MAINNET } from "src/helpers/AddressBook.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { ICometRewards, RewardOwed } from "src/interfaces/CompoundV2/ICometRewards.sol";
+import { IUniswapV3Pool, IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 
-import { IUniswapV3Pool, IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
-import { OracleLibrary } from "src/lib/OracleLibrary.sol";
-
-import { COMPOUND_USDT_V3_COMMET_MAINNET } from "src/helpers/AddressBook.sol";
 
 /// @title BaseCompoundV2Strategy
 /// @author MaxApy
@@ -410,7 +409,7 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     function _divest(
         uint256 amount,
         uint256 rewardstoWithdraw,
-        bool reinvestRemainigRewards
+        bool reinvestRemainingRewards
     )
         internal
         virtual
@@ -421,7 +420,7 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
         uint256 _after = tokenSupplyAddress.balanceOf(address(this));
         withdrawn = _after - _before;
 
-        withdrawn = withdrawn + _unwindRewards(rewardstoWithdraw, reinvestRemainigRewards);
+        withdrawn = withdrawn + _unwindRewards(rewardstoWithdraw, reinvestRemainingRewards);
     }
 
     /// @notice Liquidate up to `amountNeeded` of MaxApy Vault's `underlyingAsset` of this strategy's positions,
@@ -493,7 +492,7 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     /// @dev MinOutputAmounts are left as 0 and properly asserted globally on `harvest()`.
     function _unwindRewards(
         uint256 rewardstoWithdraw,
-        bool reinvestRemainigRewards
+        bool reinvestRemainingRewards
     )
         internal
         virtual

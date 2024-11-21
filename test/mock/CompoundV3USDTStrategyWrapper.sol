@@ -37,12 +37,12 @@ contract CompoundV3USDTStrategyWrapper is CompoundV3USDTStrategy {
     function divest(
         uint256 amount,
         uint256 rewardstoWithdraw,
-        bool reinvestRemainigRewards
+        bool reinvestRemainingRewards
     )
         external
         returns (uint256)
     {
-        return _divest(amount, rewardstoWithdraw, reinvestRemainigRewards);
+        return _divest(amount, rewardstoWithdraw, reinvestRemainingRewards);
     }
 
     function liquidatePosition(uint256 amountNeeded) external returns (uint256, uint256) {
@@ -55,13 +55,13 @@ contract CompoundV3USDTStrategyWrapper is CompoundV3USDTStrategy {
 
     function unwindRewards(
         uint256 rewardstoWithdraw,
-        bool reinvestRemainigRewards
+        bool reinvestRemainingRewards
     )
         internal
         virtual
         returns (uint256 withdrawn)
     {
-        return _unwindRewards(rewardstoWithdraw, reinvestRemainigRewards);
+        return _unwindRewards(rewardstoWithdraw, reinvestRemainingRewards);
     }
 
     function totalInvestedValue() public view virtual returns (uint256) {

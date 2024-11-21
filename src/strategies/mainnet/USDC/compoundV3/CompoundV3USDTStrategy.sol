@@ -3,11 +3,10 @@ pragma solidity ^0.8.19;
 
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 import { IComet } from "src/interfaces/CompoundV2/IComet.sol";
-
 import { ICometRewards, RewardOwed } from "src/interfaces/CompoundV2/ICometRewards.sol";
 import { ICurveTriPool } from "src/interfaces/ICurve.sol";
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
-import { BaseCompoundV3Strategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseCompoundV3Strategy.sol";
+import { BaseCompoundV3Strategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseCompoundV3Strategy.sol";
 
 import {
     COMP_MAINNET,
@@ -76,27 +75,23 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
         router = _router;
 
         COMP_MAINNET.safeApprove(address(router), type(uint256).max);
-        // WETH_MAINNET.safeApprove(address(router), type(uint256).max);
 
-        // Approve tokens
+        /// Mininmum single trade is 0.01 token units
+        minSingleTrade = 10 ** IERC20Metadata(underlyingAsset).decimals() / 100;
 
-        // /// min single trade by default
-        // minSingleTrade = 10e6;
-        // /// Unlimited max single trade by default
-        // maxSingleTrade = 100_000e6;
+        /// Unlimited max single trade by default
+        maxSingleTrade = type(uint256).max;
     }
 
     /// @notice Sets the new router
-    /// @dev Approval for CRV will be granted to the new router if it was not already granted
+    /// @dev Approval for COMP will be granted to the new router if it was not already granted
     /// @param _newRouter The new router address
     function setRouter(address _newRouter) external checkRoles(ADMIN_ROLE) {
         // Remove previous router allowance
         COMP_MAINNET.safeApprove(address(router), 0);
-        WETH_MAINNET.safeApprove(address(router), 0);
 
         // Set new router allowance
         COMP_MAINNET.safeApprove(address(_newRouter), type(uint256).max);
-        WETH_MAINNET.safeApprove(address(_newRouter), type(uint256).max);
 
         assembly ("memory-safe") {
             sstore(router.slot, _newRouter) // set the new router in storage
@@ -163,7 +158,7 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     function _divest(
         uint256 amount,
         uint256 rewardstoWithdraw,
-        bool reinvestRemainigRewards
+        bool reinvestRemainingRewards
     )
         internal
         virtual
@@ -183,7 +178,7 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
         triPool.exchange(2, 1, tokenDivested, 1);
         uint256 amountUsdc = USDC_MAINNET.balanceOf(address(this)) - balanceBefore;
 
-        withdrawn = amountUsdc + _unwindRewards(rewardstoWithdraw, reinvestRemainigRewards);
+        withdrawn = amountUsdc + _unwindRewards(rewardstoWithdraw, reinvestRemainingRewards);
 
         emit Divested(address(this), amount, withdrawn);
     }
@@ -192,7 +187,7 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     /// @dev MinOutputAmounts are left as 0 and properly asserted globally on `harvest()`.
     function _unwindRewards(
         uint256 rewardstoWithdraw,
-        bool reinvestRemainigRewards
+        bool reinvestRemainingRewards
     )
         internal
         virtual
@@ -212,7 +207,7 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
                 _rewardAfter = reward.token.balanceOf(address(this));
             }
 
-            if (reinvestRemainigRewards) {
+            if (reinvestRemainingRewards) {
                 uint256 usdtAmount = swapTokens(COMP_MAINNET, WETH_MAINNET, USDT_MAINNET, _rewardAfter - _rewardBefore);
                 comet.supply(tokenSupplyAddress, usdtAmount);
             } else {
@@ -230,7 +225,7 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     )
         internal
         returns (uint256)
-    {
+    {   
         bytes memory path = abi.encodePacked(
             tokenIn,
             uint24(3000), // 0.3%
