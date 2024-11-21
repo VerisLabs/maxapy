@@ -2,17 +2,12 @@
 pragma solidity ^0.8.19;
 
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-
 import { IComet } from "src/interfaces/CompoundV2/IComet.sol";
+
 import { ICometRewards, RewardOwed } from "src/interfaces/CompoundV2/ICometRewards.sol";
 import { ICurveTriPool } from "src/interfaces/ICurve.sol";
+import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 import { BaseCompoundV3Strategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseCompoundV3Strategy.sol";
-
-import { IUniswapV3Pool, IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
-import { OracleLibrary } from "src/lib/OracleLibrary.sol";
-
-import { console2 } from "forge-std/console2.sol";
-import "openzeppelin/interfaces/IERC20.sol";
 
 import {
     COMP_MAINNET,
