@@ -193,7 +193,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
             uint256 withdrawn = _shareValue(shares);
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
-        liquidatedAmount = (requestedAmount - loss) * 997 / 1000;
+        liquidatedAmount = (requestedAmount - loss) * 99 / 100;
     }
 
     /// @notice This function is meant to be called from the vault
@@ -209,7 +209,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     {
         // we cannot predict losses so return as if there were not
         // increase 1% to be pessimistic
-        return previewLiquidate(liquidatedAmount) * 1005 / 1000;
+        return previewLiquidate(liquidatedAmount) * 101 / 100;
     }
 
     ////////////////////////////////////////////////////////////////
