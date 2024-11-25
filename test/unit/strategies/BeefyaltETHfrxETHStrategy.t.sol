@@ -198,17 +198,17 @@ contract BeefyaltETHfrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEven
     }
 
     /*==================STRATEGY CORE LOGIC TESTS==================*/
-    // function testBeefyaltETHfrxETH__InvestmentSlippage() public {
-    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+    function testBeefyaltETHfrxETH__InvestmentSlippage() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
 
-    //     vault.deposit(100 ether, users.alice);
+        vault.deposit(100 ether, users.alice);
 
-    //     vm.startPrank(users.keeper);
+        vm.startPrank(users.keeper);
 
-    //     // Expect revert if output amount is gt amount obtained
-    //     vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
-    //     strategy.harvest(0, type(uint256).max, address(0), block.timestamp);
-    // }
+        // Expect revert if output amount is gt amount obtained
+        vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
+        strategy.harvest(0, type(uint256).max, address(0), block.timestamp);
+    }
 
     function testBeefyaltETHfrxETH__PrepareReturn() public {
         uint256 snapshotId = vm.snapshot();
