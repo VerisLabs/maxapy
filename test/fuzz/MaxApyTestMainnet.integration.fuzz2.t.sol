@@ -319,7 +319,7 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
         vaultFuzzer.withdraw(actorSeedRNG, assets);
     }
 
-    function testFuzzMaxApyIntegrationMainnet__MintAndWithdrawGainsAndLossesWithHarvests_banana(
+    function testFuzzMaxApyIntegrationMainnet__MintAndWithdrawGainsAndLossesWithHarvests(
         uint256 actorSeed,
         uint256 strategySeed,
         uint256 gainsAndLossesSeed,
