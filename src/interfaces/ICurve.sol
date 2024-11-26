@@ -116,3 +116,8 @@ interface ICurveAtriCryptoZapper {
     function exchange_underlying(uint256 i, uint256 j, uint256 _dx, uint256 _min_dy, address _receiver) external;
     function get_dy_underlying(uint256 i, uint256 j, uint256 _dx) external view returns (uint256);
 }
+
+interface ICurve3pool {
+    function add_liquidity(uint256[3] calldata amounts, uint256 min_mint_amount) external;
+    function remove_liquidity_one_coin(uint256 token_amount, int128 i, uint256 min_amount) external;
+}
