@@ -10,7 +10,7 @@ import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { IStrategy } from "src/interfaces/IStrategy.sol";
-
+import {console2} from "forge-std/console2.sol";
 /*KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 KKKKK0OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO0KKKKKKK
 KK0dcclllllllllllllllllllllllllllllccccccccccccccccccclx0KKK
@@ -1207,10 +1207,14 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         }
         // Calculate assets from shares
         assets = convertToAssets(shares);
+        console2.log("###   ~ file: MaxApyVault.sol:1210 ~ _redeem ~ assets:", assets);
+
         // Cache underlying asset
         address underlying = asset();
 
         uint256 vaultBalance = totalIdle;
+        console2.log("###   ~ file: MaxApyVault.sol:1216 ~ _redeem ~ vaultBalance:", vaultBalance);
+
         // Check if value to withdraw exceeds vault balance
         if (assets > vaultBalance) {
             // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals
@@ -1265,6 +1269,8 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Use try/catch logic to avoid DoS
                 try IStrategy(strategy).liquidate(amountRequested) returns (uint256 _loss) {
                     loss = _loss;
+                    console2.log("###   ~ file: MaxApyVault.sol:1272 ~ tryIStrategy ~ loss:", loss);
+
                     withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
                 } catch {
                     unchecked {

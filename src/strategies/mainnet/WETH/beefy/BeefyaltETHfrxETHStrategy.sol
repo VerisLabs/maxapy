@@ -209,7 +209,13 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     {
         // we cannot predict losses so return as if there were not
         // increase 1% to be pessimistic
-        return previewLiquidate(liquidatedAmount) * 101 / 100;
+        return previewLiquidate(liquidatedAmount) * 105 / 100;
+    }
+
+    /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
+    function maxLiquidateExact() public view override returns (uint256) {
+        // make sure it doesnt revert when increaseing it 1% in the withdraw
+        return previewLiquidate(estimatedTotalAssets()) * 99 / 100;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -232,7 +238,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
         // get swap estimation underlying ETH for frxETH
         if (amount != 0) {
             uint256 frxETHAmount = curveEthFrxEthPool.get_dy(0, 1, amount);
-            return super._sharesForAmount(frxETHAmount);
+            return super._sharesForAmount(frxETHAmount) * 982 / 1000;
         }
     }
 

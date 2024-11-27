@@ -184,7 +184,7 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
         vaultFuzzer.redeem(actorSeedRNG, shares);
     }
 
-    function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithGainsAndLossesWithoutHarvests(
+    function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithGainsAndLossesWithoutHarvests_banana(
         uint256 actorSeed,
         uint256 strategySeed,
         uint256 gainsAndLossesSeed,
@@ -217,10 +217,15 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
         strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
         strategyFuzzer.harvest(strategyRNG);
         strategyFuzzer.harvest(strategyRNG);
+        console2.log("1");
         strategyFuzzer.harvest(strategyRNG);
+        console2.log("2");
         vaultFuzzer.redeem(actorSeedRNG, shares);
+        console2.log("3");
         vaultFuzzer.redeem(actorSeedRNG, shares);
     }
+        
+
 
     function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithGainsAndLossesWithHarvests(
         uint256 actorSeed,

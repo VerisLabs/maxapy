@@ -289,11 +289,14 @@ contract BeefyaltETHfrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEven
 
         deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
-        
+        console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.t.sol:292 ~ testBeefyaltETHfrxETH__Invest ~ expectedShares:", expectedShares);
 
+        
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
         strategy.invest(10 ether, 0);
+        console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.t.sol:304 ~ testBeefyaltETHfrxETH__Invest ~ IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)):", IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)));
+
 
         assertApproxEq(
             expectedShares, IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)), expectedShares / 10
@@ -494,12 +497,17 @@ contract BeefyaltETHfrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEven
 
         vm.stopPrank();
         uint256 expected = strategy.previewLiquidate(30 ether);
+        console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.t.sol:513 ~ testBeefyaltETHfrxETH__PreviewLiquidate ~ expected:", expected);
+
         vm.startPrank(address(vault));
 
         uint256 loss = strategy.liquidate(30 ether);
+        console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.t.sol:522 ~ testBeefyaltETHfrxETH__PreviewLiquidate ~ 30 ether - loss:", 30 ether - loss);
 
         assertLe(expected, 30 ether - loss);
     }
+        
+
 
     function testBeefyaltETHfrxETH__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
@@ -508,6 +516,8 @@ contract BeefyaltETHfrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEven
         strategy.harvest(0, 0, address(0), block.timestamp);
         vm.stopPrank();
         uint256 requestedAmount = strategy.previewLiquidateExact(30 ether);
+        console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.t.sol:527 ~ testBeefyaltETHfrxETH__PreviewLiquidateExact ~ requestedAmount:", requestedAmount);
+
 
         vm.startPrank(address(vault));
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
@@ -561,79 +571,88 @@ contract BeefyaltETHfrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEven
         strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
 
-    // function testBeefyaltETHfrxETH__PreviewLiquidate__FUZZY(uint256 amount) public {
-    //     vm.assume(amount > 1 ether && amount < 100 ether);
-    //     deal(WETH_MAINNET, users.alice, amount);
-    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-    //     vault.deposit(amount, users.alice);
-    //     vm.startPrank(users.keeper);
+    function testBeefyaltETHfrxETH__PreviewLiquidate__FUZZY(uint256 amount) public {
+        vm.assume(amount > 0.0001 ether && amount < 400 ether);
+        deal(WETH_MAINNET, users.alice, amount);
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(amount, users.alice);
+        vm.startPrank(users.keeper);
 
-    //     strategy.harvest(0, 0, address(0), block.timestamp);
+        strategy.harvest(0, 0, address(0), block.timestamp);
 
-    //     vm.stopPrank();
-    //     uint256 expected = strategy.previewLiquidate(amount / 3);
-    //     vm.startPrank(address(vault));
+        vm.stopPrank();
+        uint256 expected = strategy.previewLiquidate(amount / 3);
+        vm.startPrank(address(vault));
 
-    //     uint256 loss = strategy.liquidate(amount / 3);
+        uint256 loss = strategy.liquidate(amount / 3);
 
-    //     assertLe(expected, amount / 3 - loss);
-    // }
+        assertLe(expected, amount / 3 - loss);
+    }
 
-    // function testBeefyaltETHfrxETH__PreviewLiquidateExact__FUZZY(uint256 amount) public {
-    //     vm.assume(amount > 1 ether && amount < 100 ether);
-    //     deal(WETH_MAINNET, users.alice, amount);
-    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
-    //     vault.deposit(amount, users.alice);
-    //     vm.startPrank(users.keeper);
-    //     strategy.harvest(0, 0, address(0), block.timestamp);
-    //     vm.stopPrank();
-    //     uint256 requestedAmount = strategy.previewLiquidateExact(amount / 3);
+    function testBeefyaltETHfrxETH__PreviewLiquidateExact__FUZZY(uint256 amount) public {
+        vm.assume(amount > 0.0001 ether && amount < 400 ether);
+        deal(WETH_MAINNET, users.alice, amount);
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(amount, users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+        vm.stopPrank();
+        uint256 requestedAmount = strategy.previewLiquidateExact(amount / 3);
+        console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.t.sol:614 ~ testBeefyaltETHfrxETH__PreviewLiquidateExact__FUZZY ~ requestedAmount:", requestedAmount);
 
-    //     vm.startPrank(address(vault));
-    //     uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
 
-    //     strategy.liquidateExact(amount / 3);
-    //     uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
+        vm.startPrank(address(vault));
+        uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
 
-    //     // withdraw exactly what requested
-    //     assertGe(withdrawn, amount / 3);
-    //     // losses are equal or fewer than expected
-    //     assertLe(withdrawn - (amount / 3), requestedAmount - (amount / 3));
-    // }
+        strategy.liquidateExact(amount / 3);
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
 
-    // function testBeefyaltETHfrxETH__maxLiquidateExact_FUZZY(uint256 amount) public {
-    //     vm.assume(amount > 1 ether && amount < 100 ether);
-    //     deal(WETH_MAINNET, users.alice, amount);
-    //     vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
-    //     vault.deposit(amount, users.alice);
-    //     vm.startPrank(users.keeper);
-    //     strategy.harvest(0, 0, address(0), block.timestamp);
-    //     vm.stopPrank();
-    //     uint256 maxLiquidateExact = strategy.maxLiquidateExact();
-    //     uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
-    //     uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
-    //     vm.startPrank(address(vault));
-    //     uint256 losses = strategy.liquidateExact(maxLiquidateExact);
-    //     uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
-    //     // withdraw exactly what requested
-    //     assertGe(withdrawn, maxLiquidateExact);
-    //     // losses are equal or fewer than expected
-    //     assertLe(losses, requestedAmount - maxLiquidateExact);
-    // }
+        // withdraw exactly what requested
+        assertGe(withdrawn, amount / 3);
+        // losses are equal or fewer than expected
+        assertLe(withdrawn - (amount / 3), requestedAmount - (amount / 3));
+    }
 
-    // function testBeefyaltETHfrxETH__MaxLiquidate_FUZZY(uint256 amount) public {
-    //     vm.assume(amount > 1 ether && amount < 100 ether);
-    //     deal(WETH_MAINNET, users.alice, amount);
-    //     vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
-    //     vault.deposit(amount, users.alice);
-    //     vm.startPrank(users.keeper);
-    //     strategy.harvest(0, 0, address(0), block.timestamp);
-    //     vm.stopPrank();
-    //     uint256 maxWithdraw = strategy.maxLiquidate();
-    //     uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
-    //     vm.startPrank(address(vault));
-    //     strategy.liquidate(maxWithdraw);
-    //     uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
-    //     assertLe(withdrawn, maxWithdraw);
-    // }
+    function testBeefyaltETHfrxETH__maxLiquidateExact__FUZZY(uint256 amount) public {
+        vm.assume(amount > 0.0001 ether && amount < 270 ether);
+
+        console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.t.sol:648 ~ testBeefyaltETHfrxETH__maxLiquidateExact__FUZZY ~ amount:", amount);
+        
+        deal(WETH_MAINNET, users.alice, amount);
+        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+        vault.deposit(amount, users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+        vm.stopPrank();
+        uint256 maxLiquidateExact = strategy.maxLiquidateExact();
+        console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.t.sol:641 ~ testBeefyaltETHfrxETH__maxLiquidateExact__FUZZY ~ maxLiquidateExact:", maxLiquidateExact);
+
+        uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
+        uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
+        console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.t.sol:645 ~ testBeefyaltETHfrxETH__maxLiquidateExact__FUZZY ~ requestedAmount:", requestedAmount);
+
+        vm.startPrank(address(vault));
+        uint256 losses = strategy.liquidateExact(maxLiquidateExact);
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
+        // withdraw exactly what requested
+        assertGe(withdrawn, maxLiquidateExact);
+        // losses are equal or fewer than expected
+        assertLe(losses, requestedAmount - maxLiquidateExact);
+    }
+        
+    function testBeefyaltETHfrxETH__MaxLiquidate_FUZZY(uint256 amount) public {
+        vm.assume(amount > 0.0001 ether && amount < 400 ether);
+        deal(WETH_MAINNET, users.alice, amount);
+        vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+        vault.deposit(amount, users.alice);
+        vm.startPrank(users.keeper);
+        strategy.harvest(0, 0, address(0), block.timestamp);
+        vm.stopPrank();
+        uint256 maxWithdraw = strategy.maxLiquidate();
+        uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
+        vm.startPrank(address(vault));
+        strategy.liquidate(maxWithdraw);
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
+        assertLe(withdrawn, maxWithdraw);
+    }
 }

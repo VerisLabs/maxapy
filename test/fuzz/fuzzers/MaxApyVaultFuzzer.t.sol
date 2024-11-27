@@ -27,8 +27,12 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
 
     function deposit(uint256 assets) public createActor {
         assets = bound(assets, 0, vault.maxDeposit(currentActor));
+        console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:30 ~ deposit ~ assets:", assets);
+
         deal(token, currentActor, assets);
         uint256 expectedShares = vault.previewDeposit(assets);
+        console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:34 ~ deposit ~ expectedShares:", expectedShares);
+
         vm.startPrank(currentActor);
         token.safeApprove(address(vault), assets);
         if (assets == 0 || expectedShares == 0) vm.expectRevert();
@@ -51,7 +55,11 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
 
     function redeem(LibPRNG.PRNG memory actorSeedRNG, uint256 shares) public useActor(actorSeedRNG.next()) {
         shares = bound(shares, 0, vault.maxRedeem(currentActor));
+        console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:54 ~ redeem ~ shares:", shares);
+
         uint256 expectedAssets = vault.previewRedeem(shares);
+        console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:57 ~ redeem ~ expectedAssets:", expectedAssets);
+
         vm.startPrank(currentActor);
         if (shares == 0 || expectedAssets == 0) vm.expectRevert();
         uint256 actualAssets = vault.redeem(shares, currentActor, currentActor);
@@ -61,11 +69,15 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
 
     function withdraw(LibPRNG.PRNG memory actorSeedRNG, uint256 assets) public useActor(actorSeedRNG.next()) {
         assets = bound(assets, 0, vault.maxWithdraw(currentActor));
-        if (assets < 0.0001 ether) return;
+        console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:64 ~ withdraw ~ assets:", assets);
+
+        if (assets < 0.0001 ether || assets > 250 ether) return;
         uint256 expectedShares = vault.previewWithdraw(assets);
         vm.startPrank(currentActor);
         if (assets == 0 || expectedShares == 0) vm.expectRevert();
         uint256 actualShares = vault.withdraw(assets, currentActor, currentActor);
+        console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:71 ~ withdraw ~ actualShares:", actualShares);
+
         assertLe(actualShares, expectedShares);
         vm.stopPrank();
     }

@@ -179,12 +179,12 @@ contract BaseBeefyStrategy is BaseStrategy {
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxLiquidate() public view override returns (uint256) {
+    function maxLiquidate() public view virtual override returns (uint256) {
         return _estimatedTotalAssets();
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxLiquidateExact() public view override returns (uint256) {
+    function maxLiquidateExact() public view virtual override returns (uint256) {
         // make sure it doesnt revert when increaseing it 1% in the withdraw
         return previewLiquidate(estimatedTotalAssets()) * 99 / 100;
     }
