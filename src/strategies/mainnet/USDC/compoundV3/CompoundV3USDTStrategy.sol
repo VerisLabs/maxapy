@@ -2,19 +2,21 @@
 pragma solidity ^0.8.19;
 
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { IComet } from "src/interfaces/CompoundV2/IComet.sol";
-import { ICometRewards, RewardOwed } from "src/interfaces/CompoundV2/ICometRewards.sol";
+import { IComet } from "src/interfaces/CompoundV3/IComet.sol";
+import { ICometRewards, RewardOwed } from "src/interfaces/CompoundV3/ICometRewards.sol";
 import { ICurveTriPool } from "src/interfaces/ICurve.sol";
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
-import { BaseCompoundV3Strategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseCompoundV3Strategy.sol";
+import {
+    BaseCompoundV3Strategy,
+    IERC20Metadata,
+    IMaxApyVault,
+    SafeTransferLib
+} from "src/strategies/base/BaseCompoundV3Strategy.sol";
 
 import {
     COMP_MAINNET,
     CURVE_3POOL_POOL_MAINNET,
-    UNISWAP_V3_COMP_WETH_POOL_MAINNET,
-    UNISWAP_V3_WETH_USDC_POOL_MAINNET,
     USDC_MAINNET,
-    USDT_MAINNET,
     USDT_MAINNET,
     WETH_MAINNET
 } from "src/helpers/AddressBook.sol";
@@ -32,10 +34,6 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
 
     /// @notice Router to perform COMP-WETH-USDT swaps
     IRouter public router;
-    /// @notice Address of Uniswap V3 COMP-WETH pool
-    address public constant poolA = UNISWAP_V3_COMP_WETH_POOL_MAINNET;
-    /// @notice Address of Uniswap V3 WETH-USDC pool
-    address public constant poolB = UNISWAP_V3_WETH_USDC_POOL_MAINNET;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -46,6 +44,9 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
+    /// @param _comet The Compound Finance vault this strategy will interact with
+    /// @param _cometRewards The Compound Rewards contract this strategy will interact with to withdraw rewards
+    /// @param _tokenSupplyAddress The address of the base coin to be supplied to the comet contract
     /// @param _router The router address to perform swaps
     function initialize(
         IMaxApyVault _vault,
@@ -59,7 +60,6 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     )
         public
         virtual
-        override
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
@@ -212,7 +212,7 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
                 comet.supply(tokenSupplyAddress, usdtAmount);
             } else {
                 uint256 usdcAmount = swapTokens(COMP_MAINNET, WETH_MAINNET, USDC_MAINNET, _rewardAfter - _rewardBefore);
-                withdrawn = usdcAmount;
+                withdrawn += usdcAmount;
             }
         }
     }
@@ -225,7 +225,7 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     )
         internal
         returns (uint256)
-    {   
+    {
         bytes memory path = abi.encodePacked(
             tokenIn,
             uint24(3000), // 0.3%
@@ -295,19 +295,10 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
 
-    function _accruedRewardValue() public view override returns (uint256) {
-        uint256 reward = uint256(comet.userBasic(address(this)).baseTrackingAccrued);
-
-        uint256 rewardWETH = _estimateAmountOut(COMP_MAINNET, WETH_MAINNET, reward.toUint128(), poolA, 1800);
-
-        uint256 rewardsUSDC = _estimateAmountOut(WETH_MAINNET, USDC_MAINNET, rewardWETH.toUint128(), poolB, 1800);
-        return rewardsUSDC;
-    }
-
     function _totalInvestedValue() public view override returns (uint256 totalInvestedValue) {
         uint256 totalInvestedAsset = _totalInvestedBaseAsset();
         if (totalInvestedAsset > 0) {
-            totalInvestedValue = triPool.get_dy(2, 1, _totalInvestedBaseAsset());
+            totalInvestedValue = triPool.get_dy(2, 1, totalInvestedAsset);
         }
     }
 
