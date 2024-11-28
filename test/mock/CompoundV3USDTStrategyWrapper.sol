@@ -68,12 +68,12 @@ contract CompoundV3USDTStrategyWrapper is CompoundV3USDTStrategy {
         return _totalInvestedValue();
     }
 
-    function accruedRewardValue() public view virtual returns (uint256) {
-        return _accruedRewardValue();
+    function totalInvestedBaseAsset() public view virtual returns (uint256) {
+        return _totalInvestedBaseAsset();
     }
 
-    function totalInvestedBaseAsset() public view virtual returns (uint256 investedAmount) {
-        return _totalInvestedBaseAsset();
+    function accruedRewardValue() public view virtual returns (uint256) {
+        return _accruedRewardValue();
     }
 
     function convertUsdcToBaseAsset(uint256 usdcAmount) public view virtual returns (uint256) {
@@ -91,6 +91,6 @@ contract CompoundV3USDTStrategyWrapper is CompoundV3USDTStrategy {
         view
         returns (uint256 amountOut)
     {
-        _estimateAmountOut(tokenIn, tokenOut, amountIn, pool, secondsAgo);
+        return _estimateAmountOut(tokenIn, tokenOut, amountIn, pool, secondsAgo);
     }
 }
