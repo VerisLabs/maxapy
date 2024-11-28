@@ -401,6 +401,7 @@ contract BaseBeefyStrategy is BaseStrategy {
     /// amount
     function _liquidatePosition(uint256 amountNeeded)
         internal
+        virtual
         override
         returns (uint256 liquidatedAmount, uint256 loss)
     {
