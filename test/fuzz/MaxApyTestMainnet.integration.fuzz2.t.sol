@@ -191,11 +191,23 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
         uint256 assets,
         uint256 shares
     )
+        
         public
     {
         LibPRNG.PRNG memory actorSeedRNG;
         LibPRNG.PRNG memory strategyRNG;
         LibPRNG.PRNG memory gainAndLossesRNG;
+
+        console2.log("###   ~ file: MaxApyTestMainnet.integration.fuzz2.t.sol:194 ~ shares:", shares);
+
+        console2.log("###   ~ file: MaxApyTestMainnet.integration.fuzz2.t.sol:194 ~ assets:", assets);
+
+        console2.log("###   ~ file: MaxApyTestMainnet.integration.fuzz2.t.sol:194 ~ gainsAndLossesSeed:", gainsAndLossesSeed);
+
+        console2.log("###   ~ file: MaxApyTestMainnet.integration.fuzz2.t.sol:194 ~ strategySeed:", strategySeed);
+
+        console2.log("###   ~ file: MaxApyTestMainnet.integration.fuzz2.t.sol:194 ~ actorSeed:", actorSeed);
+
 
         actorSeedRNG.seed(actorSeed);
         strategyFuzzer.harvest(strategyRNG);

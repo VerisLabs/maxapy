@@ -60,12 +60,17 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
         uint256 expectedAssets = vault.previewRedeem(shares);
         console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:57 ~ redeem ~ expectedAssets:", expectedAssets);
 
+        console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:70 ~ redeem ~ vault.convertToAssets(shares):", vault.convertToAssets(shares));
+
         vm.startPrank(currentActor);
         if (shares == 0 || expectedAssets == 0) vm.expectRevert();
         uint256 actualAssets = vault.redeem(shares, currentActor, currentActor);
+        console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:68 ~ redeem ~ actualAssets:", actualAssets);
+
         assertGe(actualAssets, expectedAssets);
         vm.stopPrank();
     }
+        
 
     function withdraw(LibPRNG.PRNG memory actorSeedRNG, uint256 assets) public useActor(actorSeedRNG.next()) {
         assets = bound(assets, 0, vault.maxWithdraw(currentActor));

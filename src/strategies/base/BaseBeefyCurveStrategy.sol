@@ -6,7 +6,7 @@ import {IBeefyVault} from "src/interfaces/IBeefyVault.sol";
 import {ICurveLpPool} from "src/interfaces/ICurve.sol";
 
 import {BaseBeefyStrategy, IMaxApyVault, SafeTransferLib} from "src/strategies/base/BaseBeefyStrategy.sol";
-
+import {console2} from "forge-std/console2.sol";
 /// @title BaseBeefyCurveStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `BaseBeefyCurveStrategy` supplies an underlying token into a generic Beefy Vault,
@@ -175,9 +175,12 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
             let scale := 0xde0b6b3a7640000 // This is 1e18 in hexadecimal
             lpTokenAmount := div(mul(amount, scale), lpPrice)
         }
+        console2.log("\n#########   ~ file: BaseBeefyCurveStrategy.sol:180 ~ )internalviewvirtualoverridereturns ~ lpTokenAmount:", lpTokenAmount);
+
+
         shares = super._sharesForAmount(lpTokenAmount);
     }
-
+        
     /// @notice Returns the estimated price for the strategy's curve's LP token
     /// @return returns the estimated lp token price
     function _lpPrice() internal view returns (uint256) {

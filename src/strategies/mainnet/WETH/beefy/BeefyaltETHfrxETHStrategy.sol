@@ -188,34 +188,49 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     /// @dev calculates the estimated real output of a withdrawal(including losses) for a @param requestedAmount
     /// for the vault to be able to provide an accurate amount when calling `previewRedeem`
     /// @return liquidatedAmount output in assets
-    function previewLiquidate(
-        uint256 requestedAmount
-    ) public view virtual override returns (uint256 liquidatedAmount) {
-        uint256 loss;
-        uint256 underlyingBalance = _underlyingBalance();
+    // function previewLiquidate(
+    //     uint256 requestedAmount
+    // ) public view virtual override returns (uint256 liquidatedAmount) {
 
-        if (underlyingBalance < requestedAmount) {
-            uint256 amountToWithdraw = requestedAmount - underlyingBalance;
+    //     console2.log("Before super.previewLiquidate");
+    //     super.previewLiquidate(requestedAmount);
+    //     console2.log("After super.previewLiquidate");
 
-            uint256 lpNeeded = _lpForAmount(amountToWithdraw);
-            uint256 availableLp = beefyVault.balanceOf(address(this));
+    //     uint256 loss;
+    //     uint256 underlyingBalance = _underlyingBalance();
 
-            lpNeeded = Math.min(lpNeeded, availableLp);
+    //     if (underlyingBalance < requestedAmount) {
+    //         uint256 amountToWithdraw = requestedAmount - underlyingBalance;
 
-            uint256 expectedOut = curveLpPool.calc_withdraw_one_coin(
-                lpNeeded,
-                1
-            );
+    //         uint256 lpNeeded = _lpForAmount(amountToWithdraw);      // lpNeeded seems to be in terms of curve lp
+    //         console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:201 ~ )viewvirtualoverridereturns ~ lpNeeded:", lpNeeded);
 
-            expectedOut = (expectedOut * 997) / 1000;
+    //         uint256 availableLp = beefyVault.balanceOf(address(this));      // availableLp is in terms of Beefy lp
+    //         console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:207 ~ )viewvirtualoverridereturns ~ availableLp:", availableLp);
 
-            if (expectedOut < amountToWithdraw) {
-                loss = amountToWithdraw - expectedOut;
-            }
-        }
 
-        liquidatedAmount = requestedAmount - loss;
-    }
+    //         lpNeeded = Math.min(lpNeeded, availableLp);
+
+    //         uint256 expectedOut = curveLpPool.calc_withdraw_one_coin(
+    //             lpNeeded,
+    //             1
+    //         );
+
+    //         expectedOut = (expectedOut * 997) / 1000;
+    //         console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:215 ~ )viewvirtualoverridereturns ~ expectedOut:", expectedOut);
+
+
+    //         if (expectedOut < amountToWithdraw) {
+    //             loss = amountToWithdraw - expectedOut;
+    //             console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:220 ~ )viewvirtualoverridereturns ~ loss:", loss);
+
+    //         }
+    //     }
+
+    //     liquidatedAmount = requestedAmount - loss;
+    //     console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:226 ~ )viewvirtualoverridereturns ~ liquidatedAmount:", liquidatedAmount);
+
+    // }
 
     /// @notice This function is meant to be called from the vault
     /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
@@ -259,7 +274,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
         // get swap estimation underlying ETH for frxETH
         if (amount != 0) {
             uint256 frxETHAmount = curveEthFrxEthPool.get_dy(0, 1, amount);
-            return (super._sharesForAmount(frxETHAmount) * 982) / 1000;
+            shares = (super._sharesForAmount(frxETHAmount) * 982) / 1000;
         }
     }
 

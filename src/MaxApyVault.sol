@@ -1251,6 +1251,10 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 }
                 // ask for the min between the needed amount and max withdraw of the strategy
                 amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidate());
+                console2.log("###   ~ file: MaxApyVault.sol:1254 ~ _redeem ~ IStrategy(strategy).maxLiquidate():", IStrategy(strategy).maxLiquidate());
+
+                console2.log("###   ~ file: MaxApyVault.sol:1254 ~ _redeem ~ amountRequested:", amountRequested);
+
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountRequested == 0) {
@@ -1272,6 +1276,8 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                     console2.log("###   ~ file: MaxApyVault.sol:1272 ~ tryIStrategy ~ loss:", loss);
 
                     withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
+                    console2.log("###   ~ file: MaxApyVault.sol:1279 ~ tryIStrategy ~ withdrawn:", withdrawn);
+
                 } catch {
                     unchecked {
                         ++i;
