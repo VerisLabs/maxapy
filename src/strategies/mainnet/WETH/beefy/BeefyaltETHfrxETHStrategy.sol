@@ -199,6 +199,8 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     //     uint256 loss;
     //     uint256 underlyingBalance = _underlyingBalance();
 
+    //     // WETH - ETH - frxETH - curve lp - beefy lp
+
     //     if (underlyingBalance < requestedAmount) {
     //         uint256 amountToWithdraw = requestedAmount - underlyingBalance;
 
@@ -271,10 +273,14 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     function _sharesForAmount(
         uint256 amount
     ) internal view virtual override returns (uint256 shares) {
+        console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:276 ~ amount:", amount);
+
         // get swap estimation underlying ETH for frxETH
         if (amount != 0) {
             uint256 frxETHAmount = curveEthFrxEthPool.get_dy(0, 1, amount);
-            shares = (super._sharesForAmount(frxETHAmount) * 982) / 1000;
+            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:281 ~ )internalviewvirtualoverridereturns ~ frxETHAmount:", frxETHAmount);
+
+            shares = (super._sharesForAmount(frxETHAmount) * 150 /100);
         }
     }
 
