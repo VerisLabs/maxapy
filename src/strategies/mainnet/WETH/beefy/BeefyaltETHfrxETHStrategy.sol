@@ -192,17 +192,28 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
 
         if (underlyingBalance < requestedAmount) {
             uint256 amountToWithdraw = requestedAmount - underlyingBalance;
-            uint256 expectedOut = curveEthFrxEthPool.get_dy(
+
+            uint256 lpNeeded = _lpForAmount(amountToWithdraw);
+            uint256 availableLp = beefyVault.balanceOf(address(this));
+            lpNeeded = Math.min(lpNeeded, availableLp);
+
+            uint256 expectedFrxEth = curveLpPool.calc_withdraw_one_coin(
+                lpNeeded,
+                1 // frxETH index
+            );
+
+            uint256 expectedEth = curveEthFrxEthPool.get_dy(
                 1,
                 0,
-                amountToWithdraw
+                expectedFrxEth
             );
-            if (expectedOut < amountToWithdraw) {
-                loss = amountToWithdraw - expectedOut;
+
+            if (expectedEth < amountToWithdraw) {
+                loss = amountToWithdraw - expectedEth;
             }
         }
 
-        return requestedAmount - loss;
+        liquidatedAmount = requestedAmount - loss;
     }
 
     /// @notice This function is meant to be called from the vault

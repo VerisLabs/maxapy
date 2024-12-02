@@ -475,7 +475,7 @@ contract BeefyaltETHfrxETHStrategyTest is
         );
     }
 
-    function testBeefyaltETHfrxETH__Harvest_BAN() public {
+    function testBeefyaltETHfrxETH__Harvest() public {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
         strategy.harvest(0, 0, address(0), block.timestamp);
 
@@ -601,8 +601,8 @@ contract BeefyaltETHfrxETHStrategyTest is
         strategy.harvest(0, 0, address(0), block.timestamp);
         StrategyData memory data = vault.strategies(address(strategy));
 
-        assertEq(vault.debtRatio(), 3012);
-        assertEq(data.strategyDebtRatio, 3012);
+        assertEq(vault.debtRatio(), 2994);
+        assertEq(data.strategyDebtRatio, 2994);
     }
 
     function testBeefyaltETHfrxETH__PreviewLiquidate() public {
