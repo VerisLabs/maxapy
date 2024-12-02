@@ -58,12 +58,17 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
         // shares = 69187;
         console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:54 ~ redeem ~ shares:", shares);
 
+        // comeca por vault.maxRedeem(currentActor) = 69187
+
+
         uint256 expectedAssets = vault.previewRedeem(shares);
         console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:57 ~ redeem ~ expectedAssets:", expectedAssets);
 
         console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:70 ~ redeem ~ vault.convertToAssets(shares):", vault.convertToAssets(shares));
 
         vm.startPrank(currentActor);
+        console2.log("SHARES:::::COMP:", shares);
+        console2.log("EXPECTED:::::COMP:", expectedAssets);
         if (shares == 0 || expectedAssets == 0) vm.expectRevert();
         uint256 actualAssets = vault.redeem(shares, currentActor, currentActor);
         console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:68 ~ redeem ~ actualAssets:", actualAssets);

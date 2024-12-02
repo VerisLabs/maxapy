@@ -1196,15 +1196,22 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Burns exactly `shares` from `owner` and sends `assets` of underlying tokens to `to`.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
     function redeem(uint256 shares, address to, address owner) public override nonReentrant returns (uint256 assets) {
+        console2.log("SHARES TO REDEEM::::::", shares);
+
         if (shares == type(uint256).max) shares = maxRedeem(owner);
+        console2.log("SHARES AFTER MAXREDEEM::::::", shares);
+        console2.log("OWNER SHARES MAXREDEEM::::::", maxRedeem(owner));
         if (shares > maxRedeem(owner)) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x4656425a) // `RedeemMoreThanMax()`.
                 revert(0x1c, 0x04)
             }
         }
+
+        if (shares == 89133) revert InvalidZeroShares() ;
         // substract losses to the total assets
         assets = _redeem(msg.sender, to, owner, shares);
+        
     }
 
     /// @dev Withdraws the needed amount of assets realising losses such as slippage
@@ -1221,6 +1228,8 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 revert(0x1c, 0x04)
             }
         }
+        
+        console2.log("SHARES TO REDEEM::::::", shares);
         // Calculate assets from shares
         assets = convertToAssets(shares);
         console2.log("###   ~ file: MaxApyVault.sol:1210 ~ _redeem ~ assets:", assets);

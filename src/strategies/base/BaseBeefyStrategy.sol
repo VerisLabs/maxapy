@@ -466,7 +466,9 @@ contract BaseBeefyStrategy is BaseStrategy {
             let vaultTotalSupply := mload(0x00)
 
             _assets := div(mul(shares, vaultBalance), vaultTotalSupply)
+            
         }
+        
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.

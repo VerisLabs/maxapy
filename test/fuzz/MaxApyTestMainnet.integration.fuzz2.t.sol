@@ -198,17 +198,6 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
         LibPRNG.PRNG memory strategyRNG;
         LibPRNG.PRNG memory gainAndLossesRNG;
 
-        console2.log("###   ~ file: MaxApyTestMainnet.integration.fuzz2.t.sol:194 ~ shares:", shares);
-
-        console2.log("###   ~ file: MaxApyTestMainnet.integration.fuzz2.t.sol:194 ~ assets:", assets);
-
-        console2.log("###   ~ file: MaxApyTestMainnet.integration.fuzz2.t.sol:194 ~ gainsAndLossesSeed:", gainsAndLossesSeed);
-
-        console2.log("###   ~ file: MaxApyTestMainnet.integration.fuzz2.t.sol:194 ~ strategySeed:", strategySeed);
-
-        console2.log("###   ~ file: MaxApyTestMainnet.integration.fuzz2.t.sol:194 ~ actorSeed:", actorSeed);
-
-
         actorSeedRNG.seed(actorSeed);
         strategyFuzzer.harvest(strategyRNG);
         strategyFuzzer.harvest(strategyRNG);
@@ -229,15 +218,10 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
         strategyFuzzer.loss(strategyRNG, gainAndLossesRNG.next());
         strategyFuzzer.harvest(strategyRNG);
         strategyFuzzer.harvest(strategyRNG);
-        console2.log("1");
         strategyFuzzer.harvest(strategyRNG);
-        console2.log("2");
         vaultFuzzer.redeem(actorSeedRNG, shares);
-        console2.log("3");
         vaultFuzzer.redeem(actorSeedRNG, shares);
     }
-        
-
 
     function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithGainsAndLossesWithHarvests(
         uint256 actorSeed,
