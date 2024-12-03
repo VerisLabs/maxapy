@@ -145,6 +145,15 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
 
         depositedAmount = comet.balanceOf(address(this));
 
+        assembly ("memory-safe") {
+            // if (shares < minOutputAfterInvestment)
+            if lt(depositedAmount, minOutputAfterInvestment) {
+                // throw the `MinOutputAmountNotReached` error
+                mstore(0x00, 0xf7c67a48)
+                revert(0x1c, 0x04)
+            }
+        }
+
         emit Invested(address(this), amount);
     }
 
@@ -294,6 +303,21 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
+
+    function _accruedRewardValue() public view override returns (uint256) {
+        uint256 reward = uint256(comet.userBasic(address(this)).baseTrackingAccrued);
+
+        uint256 rewardWETH = _estimateAmountOut(COMP_MAINNET, WETH_MAINNET, reward.toUint128(), poolA, 1800);
+
+        uint256 rewardsUSDC = _estimateAmountOut(WETH_MAINNET, USDC_MAINNET, rewardWETH.toUint128(), poolB, 1800);
+        return rewardsUSDC;
+    }
+
+    function _convertUsdcToCompRewards(uint256 amount) public view override returns (uint256) {
+        uint256 rewardWETH = _estimateAmountOut(USDC_MAINNET, WETH_MAINNET, amount.toUint128(), poolB, 1800);
+
+        return _estimateAmountOut(WETH_MAINNET, COMP_MAINNET, rewardWETH.toUint128(), poolA, 1800);
+    }
 
     function _totalInvestedValue() public view override returns (uint256 totalInvestedValue) {
         uint256 totalInvestedAsset = _totalInvestedBaseAsset();
