@@ -3,8 +3,6 @@ pragma solidity ^0.8.19;
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { COMPOUND_USDT_V3_COMMET_MAINNET } from "src/helpers/AddressBook.sol";
-
 import {
     COMP_MAINNET,
     UNISWAP_V3_COMP_WETH_POOL_MAINNET,
@@ -329,7 +327,7 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
                         unchecked {
                             expectedAmountLeftToWithdraw = rewardsUsdc - expectedAmountLeftToWithdraw;
                         }
-                        withdrawn = _divest( // TODO: below param must be in COMP token
+                        withdrawn = _divest(
                         _totalInvestedBaseAsset(), _convertUsdcToCompRewards(expectedAmountLeftToWithdraw), true);
                     }
                 } else {
@@ -408,6 +406,23 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
         comet.supply(tokenSupplyAddress, amount);
+
+        depositedAmount = comet.balanceOf(address(this));
+
+        assembly ("memory-safe") {
+            // if (shares < minOutputAfterInvestment)
+            if lt(depositedAmount, minOutputAfterInvestment) {
+                // throw the `MinOutputAmountNotReached` error
+                mstore(0x00, 0xf7c67a48)
+                revert(0x1c, 0x04)
+            }
+        }
+
+        assembly {
+            // Emit the `Invested` event
+            mstore(0x00, amount)
+            log2(0x00, 0x20, _INVESTED_EVENT_SIGNATURE, address())
+        }
     }
 
     /// @notice Divests amount `amount` from Compound Vault
@@ -477,8 +492,7 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
                     unchecked {
                         expectedAmountLeftToWithdraw = rewardsUsdc - expectedAmountLeftToWithdraw;
                     }
-                    withdrawn = // TODO: below param must be in COMP token
-                    _divest(_totalInvestedBaseAsset(), _convertUsdcToCompRewards(expectedAmountLeftToWithdraw), true);
+                    withdrawn = _divest(_totalInvestedBaseAsset(), _convertUsdcToCompRewards(expectedAmountLeftToWithdraw), true);
                 }
             } else {
                 withdrawn = _divest(_convertUsdcToBaseAsset(expectedAmountToWithdraw), 0, true);
@@ -517,14 +531,7 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
 
-    function _accruedRewardValue() public view virtual returns (uint256) {
-        uint256 reward = uint256(comet.userBasic(address(this)).baseTrackingAccrued);
-
-        uint256 rewardWETH = _estimateAmountOut(COMP_MAINNET, WETH_MAINNET, reward.toUint128(), poolA, 1800);
-
-        uint256 rewardsUSDC = _estimateAmountOut(WETH_MAINNET, USDC_MAINNET, rewardWETH.toUint128(), poolB, 1800);
-        return rewardsUSDC;
-    }
+    function _accruedRewardValue() public view virtual returns (uint256);
 
     function _totalInvestedValue() public view virtual returns (uint256);
 
@@ -532,11 +539,7 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
         investedAmount = comet.balanceOf(address(this));
     }
 
-    function _convertUsdcToCompRewards(uint256 amount) public view returns (uint256) {
-        uint256 rewardWETH = _estimateAmountOut(USDC_MAINNET, WETH_MAINNET, amount.toUint128(), poolB, 1800);
-
-        return _estimateAmountOut(WETH_MAINNET, COMP_MAINNET, rewardWETH.toUint128(), poolA, 1800);
-    }
+    function _convertUsdcToCompRewards(uint256 amount) public view virtual returns (uint256);
 
     /// @notice Returns the real time estimation of the value in assets held by the strategy
     /// @return the strategy's total assets(idle + investment positions)
@@ -698,7 +701,6 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
             mstore(0x40, m) // Restore the free memory pointer
         }
         intendedInvest = _underlyingBalance();
-        // uint256 sharesBalanceBefore = _shareBalance();
         uint256 _investmentBefore = _totalInvestedValue();
         // Check if vault transferred underlying and re-invest it
         _adjustPosition(debtOutstanding, 0);
