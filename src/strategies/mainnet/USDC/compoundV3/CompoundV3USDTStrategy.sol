@@ -12,9 +12,10 @@ import {
     IMaxApyVault,
     SafeTransferLib
 } from "src/strategies/base/BaseCompoundV3Strategy.sol";
-
 import {
     COMP_MAINNET,
+    UNISWAP_V3_COMP_WETH_POOL_MAINNET,
+    UNISWAP_V3_WETH_USDC_POOL_MAINNET,
     CURVE_3POOL_POOL_MAINNET,
     USDC_MAINNET,
     USDT_MAINNET,
@@ -31,6 +32,12 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     ////////////////////////////////////////////////////////////////
     ICurveTriPool public constant triPool = ICurveTriPool(CURVE_3POOL_POOL_MAINNET);
     address constant usdt = USDT_MAINNET;
+
+    
+    /// @notice Address of Uniswap V3 COMP-WETH pool
+    address public constant poolA = UNISWAP_V3_COMP_WETH_POOL_MAINNET;
+    /// @notice Address of Uniswap V3 WETH-USDC pool
+    address public constant poolB = UNISWAP_V3_WETH_USDC_POOL_MAINNET;
 
     /// @notice Router to perform COMP-WETH-USDT swaps
     IRouter public router;

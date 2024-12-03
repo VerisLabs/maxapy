@@ -3,13 +3,6 @@ pragma solidity ^0.8.19;
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import {
-    COMP_MAINNET,
-    UNISWAP_V3_COMP_WETH_POOL_MAINNET,
-    UNISWAP_V3_WETH_USDC_POOL_MAINNET,
-    USDC_MAINNET,
-    WETH_MAINNET
-} from "src/helpers/AddressBook.sol";
 import { IComet } from "src/interfaces/CompoundV3/IComet.sol";
 import { ICometRewards, RewardOwed } from "src/interfaces/CompoundV3/ICometRewards.sol";
 import { IUniswapV3Pool, IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
@@ -31,10 +24,6 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
     uint256 internal constant DEGRADATION_COEFFICIENT = 10 ** 18;
 
-    /// @notice Address of Uniswap V3 COMP-WETH pool
-    address public constant poolA = UNISWAP_V3_COMP_WETH_POOL_MAINNET;
-    /// @notice Address of Uniswap V3 WETH-USDC pool
-    address public constant poolB = UNISWAP_V3_WETH_USDC_POOL_MAINNET;
 
     ////////////////////////////////////////////////////////////////
     ///                         ERRORS                           ///
