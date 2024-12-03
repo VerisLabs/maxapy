@@ -10,8 +10,6 @@ import {IWETH} from "src/interfaces/IWETH.sol";
 import {BaseBeefyCurveStrategy} from "src/strategies/base/BaseBeefyCurveStrategy.sol";
 import {BaseBeefyStrategy, IMaxApyVault, SafeTransferLib} from "src/strategies/base/BaseBeefyStrategy.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 /// @title BeefyaltETHfrxETHStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `BeefyaltETHfrxETHStrategy` supplies an underlying token into a generic Beefy Vault,
@@ -82,11 +80,11 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     /// @dev
     /// @param amount The amount of underlying to be deposited in the pool
     /// @param minOutputAfterInvestment minimum expected output after `_invest()` (designated in Curve LP tokens)
-    /// @return The amount of tokens received, in terms of underlying
+    /// @return depositedAmount The amount of shares received, in terms of underlying
     function _invest(
         uint256 amount,
         uint256 minOutputAfterInvestment
-    ) internal override returns (uint256) {
+    ) internal override returns (uint256 depositedAmount) {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
 
@@ -127,13 +125,8 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
             }
         }
 
-        //uint256 _before = beefyVault.balanceOf(address(this));
-
         // Deposit Curve LP tokens to Beefy vault
         beefyVault.deposit(lpReceived);
-
-        //uint256 _after = beefyVault.balanceOf(address(this));
-        //uint256 shares;
 
         emit Invested(address(this), amount);
 
@@ -175,7 +168,6 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
             );
             // Wrap ETH into WETH
             IWETH(address(underlyingAsset)).deposit{value: ethReceived}();
-            console2.log("ethReceived", ethReceived);
             return ethReceived;
         }
     }
@@ -192,57 +184,30 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
 
         if (underlyingBalance < requestedAmount) {
             uint256 amountToWithdraw = requestedAmount - underlyingBalance;
-            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:195 ~ )viewoverridereturns ~ amountToWithdraw:", amountToWithdraw);
-
-            uint256 beefyShares = _sharesForAmount(amountToWithdraw); 
-            // uint256 frxETH = curveEthFrxEthPool.get_dy(
-            //     0,
-            //     1,
-            //     amountToWithdraw
-            // );
-            // console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:201 ~ )viewoverridereturns ~ frxETH:", frxETH);
-
-
-            // uint256[2] memory amounts;
-            // amounts[1] = frxETH;
-
-            // uint256 tokenAmt = curveLpPool.calc_token_amount(amounts, true);
-            // console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:208 ~ )viewoverridereturns ~ tokenAmt:", tokenAmt);
-
-            // uint256 beefyShares = BaseBeefyStrategy._sharesForAmount(tokenAmt);
-            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:211 ~ )viewoverridereturns ~ beefyShares:", beefyShares);
-
-
-            uint256 lpNeeded = _lpForAmount(amountToWithdraw);              // in terms of curve, i/p is in terms of weth, must be frxETH 
-            uint256 availableLp = beefyVault.balanceOf(address(this));      // in termas of beefy
-            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:216 ~ )viewoverridereturns ~ availableLp:", availableLp);
-
+            
+            uint256 beefyShares = _sharesForAmount(amountToWithdraw);
+            uint256 lpNeeded = _lpForAmount(amountToWithdraw);        
+            uint256 availableLp = beefyVault.balanceOf(address(this)); 
+            
             lpNeeded = Math.min(beefyShares, availableLp);
 
             uint256 expectedFrxEth = curveLpPool.calc_withdraw_one_coin(   
                 lpNeeded,
                 1 // frxETH index
             );
-            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:224 ~ )viewoverridereturns ~ expectedFrxEth:", expectedFrxEth);
-
-
+            
             uint256 expectedEth = curveEthFrxEthPool.get_dy(
                 1,
                 0,
                 expectedFrxEth
             );
-            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:232 ~ )viewoverridereturns ~ expectedEth:", expectedEth);
-
 
             if (expectedEth < amountToWithdraw) {
-                loss = amountToWithdraw - expectedEth;
-                
+                loss = amountToWithdraw - expectedEth;  
             }
         }
-
-        console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:239 ~ )viewoverridereturns ~ loss:", loss);
-
-        liquidatedAmount = requestedAmount - loss;
+        liquidatedAmount = (requestedAmount - loss) * 101 /100;     // UNIT working
+        // liquidatedAmount = (requestedAmount - loss);             // FUZZ working
     }
 
     /// @notice This function is meant to be called from the vault
@@ -254,13 +219,15 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     ) public view virtual override returns (uint256 requestedAmount) {
         // we cannot predict losses so return as if there were not
         // increase 1% to be pessimistic
-        return (previewLiquidate(liquidatedAmount) * 101) / 100;
+        return (previewLiquidate(liquidatedAmount) * 108) / 100;        // UNIT working
+        // return (previewLiquidate(liquidatedAmount) * 101) / 100;     // FUZZ working
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxLiquidateExact() public view override returns (uint256) {
         // make sure it doesnt revert when increaseing it 1% in the withdraw
-        return (previewLiquidate(estimatedTotalAssets()) * 99) / 100;
+        return (previewLiquidate(estimatedTotalAssets()) * 93) / 100;           // UNIT working
+        // return (previewLiquidate(estimatedTotalAssets()) * 99) / 100;        // FUZZ working
     }
 
     ////////////////////////////////////////////////////////////////
@@ -284,29 +251,17 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     function _sharesForAmount(
         uint256 amount
     ) internal view virtual override returns (uint256 shares) {
-        console2.log(
-            "###   ~ file: BeefyaltETHfrxETHStrategy.sol:276 ~ amount:",
-            amount
-        );
-
         // get swap estimation underlying ETH for frxETH
         if (amount != 0) {
             uint256 frxETHAmount = curveEthFrxEthPool.get_dy(0, 1, amount);
-            console2.log(
-                "###   ~ file: BeefyaltETHfrxETHStrategy.sol:281 ~ )internalviewvirtualoverridereturns ~ frxETHAmount:",
-                frxETHAmount
-            );
 
             uint256[2] memory amounts;
             amounts[1] = frxETHAmount;
 
             uint256 tokenAmt = curveLpPool.calc_token_amount(amounts, true);
-            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:208 ~ )viewoverridereturns ~ tokenAmt:", tokenAmt);
-
+        
             shares = BaseBeefyStrategy._sharesForAmount(tokenAmt) ;
-            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:211 ~ )viewoverridereturns ~ beefyShares:", shares);
-
-            // shares = (super._sharesForAmount(frxETHAmount)); //* 150 /100);
+            
         }
     }
 

@@ -55,11 +55,7 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
 
     function redeem(LibPRNG.PRNG memory actorSeedRNG, uint256 shares) public useActor(actorSeedRNG.next()) {
         shares = bound(shares, 0, vault.maxRedeem(currentActor));
-        // shares = 69187;
         console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:54 ~ redeem ~ shares:", shares);
-
-        // comeca por vault.maxRedeem(currentActor) = 69187
-
 
         uint256 expectedAssets = vault.previewRedeem(shares);
         console2.log("###   ~ file: MaxApyVaultFuzzer.t.sol:57 ~ redeem ~ expectedAssets:", expectedAssets);

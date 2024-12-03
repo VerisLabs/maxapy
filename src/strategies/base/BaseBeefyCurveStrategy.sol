@@ -6,7 +6,6 @@ import {IBeefyVault} from "src/interfaces/IBeefyVault.sol";
 import {ICurveLpPool} from "src/interfaces/ICurve.sol";
 
 import {BaseBeefyStrategy, IMaxApyVault, SafeTransferLib} from "src/strategies/base/BaseBeefyStrategy.sol";
-import {console2} from "forge-std/console2.sol";
 /// @title BaseBeefyCurveStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `BaseBeefyCurveStrategy` supplies an underlying token into a generic Beefy Vault,
@@ -175,9 +174,6 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
             let scale := 0xde0b6b3a7640000 // This is 1e18 in hexadecimal
             lpTokenAmount := div(mul(amount, scale), lpPrice)
         }
-        console2.log("\n#########   ~ file: BaseBeefyCurveStrategy.sol:180 ~ )internalviewvirtualoverridereturns ~ lpTokenAmount:", lpTokenAmount);
-
-
         shares = super._sharesForAmount(lpTokenAmount);
     }
         
@@ -202,38 +198,4 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
         return (lp * _lpPrice()) / 1e18;
     }
 
-    function _liquidatePosition(uint256 amountNeeded) internal virtual override returns (uint256 liquidatedAmount, uint256 loss) {
-    uint256 underlyingBalance = _underlyingBalance();
-    
-    if (underlyingBalance >= amountNeeded) {
-        return (amountNeeded, 0);
-    }
-
-    uint256 amountToWithdraw;
-    unchecked {
-        amountToWithdraw = amountNeeded - underlyingBalance;
-    }
-
-    uint256 lpNeeded = _lpForAmount(amountToWithdraw);
-    uint256 availableLp = beefyVault.balanceOf(address(this));
-    
-    if (lpNeeded > availableLp) {
-        lpNeeded = availableLp;
-    }
-
-    if (lpNeeded == 0) return (0, 0);
-
-    uint256 balanceBefore = underlyingAsset.balanceOf(address(this)); 
-    
-    uint256 withdrawn = _divest(lpNeeded);
-    
-    uint256 actualWithdrawn = underlyingAsset.balanceOf(address(this)) - balanceBefore;
-
-    // If we got less than requested, that's our loss
-    if (actualWithdrawn < amountToWithdraw) {
-        loss = amountToWithdraw - actualWithdrawn;
-    }
-
-    liquidatedAmount = amountNeeded - loss;
-}
 }
