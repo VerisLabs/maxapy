@@ -201,17 +201,12 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
         override
         returns (uint256 requestedAmount)
     {
-        // we cannot predict losses so return as if there were not
-        // increase 1% to be pessimistic
-        return (previewLiquidate(liquidatedAmount) * 108) / 100; // UNIT working
-            // return (previewLiquidate(liquidatedAmount) * 101) / 100;     // FUZZ working
+        return (previewLiquidate(liquidatedAmount) * 103) / 100;
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxLiquidateExact() public view override returns (uint256) {
-        // make sure it doesnt revert when increaseing it 1% in the withdraw
-        return (previewLiquidate(estimatedTotalAssets()) * 93) / 100; // UNIT working
-            // return (previewLiquidate(estimatedTotalAssets()) * 99) / 100;        // FUZZ working
+        return (previewLiquidate(estimatedTotalAssets()) * 96) / 100;
     }
 
     ////////////////////////////////////////////////////////////////
