@@ -683,7 +683,7 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         assertEq(data.strategyDebtRatio, 2996);
     }
 
-    function testConvexdETHFrxETH__PreviewLiquidate_BAN() public {
+    function testConvexdETHFrxETH__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
@@ -692,8 +692,6 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         uint256 expected = strategy.previewLiquidate(30 ether);
         vm.startPrank(address(vault));
         uint256 loss = strategy.liquidate(30 ether);
-        console2.log("Expected: ", expected);
-        console2.log("Loss: ", loss);
         assertEq(expected, 30 ether - loss);
     }
 
