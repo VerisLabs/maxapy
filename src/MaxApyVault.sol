@@ -1016,7 +1016,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
 
                 // ask for the min between the needed amount and max withdraw of the strategy
                 amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidate());
-                
+
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountRequested == 0) {
                     unchecked {
@@ -1191,7 +1191,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
 
         // substract losses to the total assets
         assets = _redeem(msg.sender, to, owner, shares);
-        
     }
 
     /// @dev Withdraws the needed amount of assets realising losses such as slippage
@@ -1208,7 +1207,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 revert(0x1c, 0x04)
             }
         }
-        
+
         // Calculate assets from shares
         assets = convertToAssets(shares);
 

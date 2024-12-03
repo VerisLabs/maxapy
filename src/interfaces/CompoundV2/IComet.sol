@@ -36,7 +36,7 @@ interface IComet {
     function baseTrackingAccrued(address account) external view returns (uint64);
 
     /// @dev uint64
-    function baseScale() external view returns (uint);
+    function baseScale() external view returns (uint256);
     /// @dev uint104
-    function baseMinForRewards() external view returns (uint);
+    function baseMinForRewards() external view returns (uint256);
 }

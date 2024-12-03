@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BeefyaltETHfrxETHStrategy, SafeTransferLib } from "src/strategies/mainnet/WETH/beefy/BeefyaltETHfrxETHStrategy.sol";
+import {
+    BeefyaltETHfrxETHStrategy, SafeTransferLib
+} from "src/strategies/mainnet/WETH/beefy/BeefyaltETHfrxETHStrategy.sol";
 
 contract BeefyaltETHfrxETHStrategyWrapper is BeefyaltETHfrxETHStrategy {
     using SafeTransferLib for address;

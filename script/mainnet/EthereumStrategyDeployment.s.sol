@@ -3,31 +3,35 @@ pragma solidity ^0.8.19;
 
 // helpers
 
-import {console2} from "../../test/base/BaseTest.t.sol";
-import {StrategyEvents} from "../../test/helpers/StrategyEvents.sol";
+import { console2 } from "../../test/base/BaseTest.t.sol";
+import { StrategyEvents } from "../../test/helpers/StrategyEvents.sol";
 import "forge-std/Script.sol";
 import "src/helpers/AddressBook.sol";
 
 // proxies
 
-import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
-import {ITransparentUpgradeableProxy, TransparentUpgradeableProxy} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 // interfaces
 
-import {IMaxApyVault} from "src/interfaces/IMaxApyVault.sol";
-import {IStrategy} from "src/interfaces/IStrategy.sol";
-import {IWrappedToken} from "src/interfaces/IWrappedToken.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { IStrategy } from "src/interfaces/IStrategy.sol";
+import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
 
 //// Strategies
-import {YearnUSDTStrategy} from "src/strategies/mainnet/USDC/yearn/YearnUSDTStrategy.sol";
-import {YearnDAIStrategy} from "src/strategies/mainnet/USDC/yearn/YearnDAIStrategy.sol";
-import {YearnAjnaDAIStakingStrategy} from "src/strategies/mainnet/USDC/yearn/YearnAjnaDAIStakingStrategy.sol";
+
+import { YearnAjnaDAIStakingStrategy } from "src/strategies/mainnet/USDC/yearn/YearnAjnaDAIStakingStrategy.sol";
+import { YearnDAIStrategy } from "src/strategies/mainnet/USDC/yearn/YearnDAIStrategy.sol";
+import { YearnUSDTStrategy } from "src/strategies/mainnet/USDC/yearn/YearnUSDTStrategy.sol";
 
 //// Vault
 
-import {MaxApyVault, OwnableRoles} from "src/MaxApyVault.sol";
-import {StrategyData} from "src/helpers/VaultTypes.sol";
+import { MaxApyVault, OwnableRoles } from "src/MaxApyVault.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
 
 /// @notice this is a simple test deployment of a polygon USDCe vault in a local rpc
 contract PolygonDeploymentScript is Script, OwnableRoles {
@@ -73,9 +77,7 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         keepers.push(vm.envAddress("KEEPER3_ADDRESS"));
 
         strategyAdmin = vm.envAddress("STRATEGY_ADMIN_ADDRESS");
-        strategyEmergencyAdmin = vm.envAddress(
-            "STRATEGY_EMERGENCY_ADMIN_ADDRESS"
-        );
+        strategyEmergencyAdmin = vm.envAddress("STRATEGY_EMERGENCY_ADMIN_ADDRESS");
         treasury = vm.envAddress("TREASURY_ADDRESS");
         bool isFork = vm.envBool("FORK");
 
@@ -96,47 +98,47 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         /// Deploy transparent upgradeable proxy admin
         proxyAdmin = new ProxyAdmin(strategyAdmin);
 
-//        YearnUSDTStrategy implementation1 = new YearnUSDTStrategy();
-//        TransparentUpgradeableProxy _proxy = new TransparentUpgradeableProxy(
-//            address(implementation1),
-//            address(proxyAdmin),
-//            abi.encodeWithSignature(
-//                "initialize(address,address[],bytes32,address,address)",
-//                address(vault),
-//                keepers,
-//                bytes32("MaxApy Yearn USDT<>USDC"),
-//                strategyAdmin,
-//                YEARN_USDT_YVAULT_MAINNET
-//            )
-//        );
-//        proxy = ITransparentUpgradeableProxy(address(_proxy));
-//        strategy1 = IStrategy(address(proxy));
-//        strategy1.grantRoles(strategyAdmin, strategy1.ADMIN_ROLE());
-//        strategy1.grantRoles(
-//            strategyEmergencyAdmin,
-//            strategy1.EMERGENCY_ADMIN_ROLE()
-//        );
-//
-//        YearnDAIStrategy implementation2 = new YearnDAIStrategy();
-//        _proxy = new TransparentUpgradeableProxy(
-//            address(implementation2),
-//            address(proxyAdmin),
-//            abi.encodeWithSignature(
-//                "initialize(address,address[],bytes32,address,address)",
-//                address(vault),
-//                keepers,
-//                bytes32("MaxApy Yearn DAI<>USDC"),
-//                strategyAdmin,
-//                YEARN_DAI_YVAULT_MAINNET
-//            )
-//        );
-//        proxy = ITransparentUpgradeableProxy(address(_proxy));
-//        strategy2 = IStrategy(address(proxy));
-//        strategy2.grantRoles(strategyAdmin, strategy2.ADMIN_ROLE());
-//        strategy2.grantRoles(
-//            strategyEmergencyAdmin,
-//            strategy2.EMERGENCY_ADMIN_ROLE()
-//        );
+        //        YearnUSDTStrategy implementation1 = new YearnUSDTStrategy();
+        //        TransparentUpgradeableProxy _proxy = new TransparentUpgradeableProxy(
+        //            address(implementation1),
+        //            address(proxyAdmin),
+        //            abi.encodeWithSignature(
+        //                "initialize(address,address[],bytes32,address,address)",
+        //                address(vault),
+        //                keepers,
+        //                bytes32("MaxApy Yearn USDT<>USDC"),
+        //                strategyAdmin,
+        //                YEARN_USDT_YVAULT_MAINNET
+        //            )
+        //        );
+        //        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        //        strategy1 = IStrategy(address(proxy));
+        //        strategy1.grantRoles(strategyAdmin, strategy1.ADMIN_ROLE());
+        //        strategy1.grantRoles(
+        //            strategyEmergencyAdmin,
+        //            strategy1.EMERGENCY_ADMIN_ROLE()
+        //        );
+        //
+        //        YearnDAIStrategy implementation2 = new YearnDAIStrategy();
+        //        _proxy = new TransparentUpgradeableProxy(
+        //            address(implementation2),
+        //            address(proxyAdmin),
+        //            abi.encodeWithSignature(
+        //                "initialize(address,address[],bytes32,address,address)",
+        //                address(vault),
+        //                keepers,
+        //                bytes32("MaxApy Yearn DAI<>USDC"),
+        //                strategyAdmin,
+        //                YEARN_DAI_YVAULT_MAINNET
+        //            )
+        //        );
+        //        proxy = ITransparentUpgradeableProxy(address(_proxy));
+        //        strategy2 = IStrategy(address(proxy));
+        //        strategy2.grantRoles(strategyAdmin, strategy2.ADMIN_ROLE());
+        //        strategy2.grantRoles(
+        //            strategyEmergencyAdmin,
+        //            strategy2.EMERGENCY_ADMIN_ROLE()
+        //        );
 
         YearnAjnaDAIStakingStrategy implementation3 = new YearnAjnaDAIStakingStrategy();
         TransparentUpgradeableProxy _proxy = new TransparentUpgradeableProxy(
@@ -154,14 +156,9 @@ contract PolygonDeploymentScript is Script, OwnableRoles {
         proxy = ITransparentUpgradeableProxy(address(_proxy));
         strategy3 = IStrategy(address(proxy));
         strategy3.grantRoles(strategyAdmin, strategy3.ADMIN_ROLE());
-        strategy3.grantRoles(
-            strategyEmergencyAdmin,
-            strategy3.EMERGENCY_ADMIN_ROLE()
-        );
+        strategy3.grantRoles(strategyEmergencyAdmin, strategy3.EMERGENCY_ADMIN_ROLE());
 
-        console2.log(
-            "***************************DEPLOYMENT ADDRESSES**********************************"
-        );
+        console2.log("***************************DEPLOYMENT ADDRESSES**********************************");
         console2.log(" VAULT ");
         console2.log("[MAXAPY]Vault :", address(vault));
 

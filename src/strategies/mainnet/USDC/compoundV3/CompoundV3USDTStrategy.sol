@@ -6,7 +6,12 @@ import { IComet } from "src/interfaces/CompoundV2/IComet.sol";
 import { ICometRewards, RewardOwed } from "src/interfaces/CompoundV2/ICometRewards.sol";
 import { ICurveTriPool } from "src/interfaces/ICurve.sol";
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
-import { BaseCompoundV3Strategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseCompoundV3Strategy.sol";
+import {
+    BaseCompoundV3Strategy,
+    IERC20Metadata,
+    IMaxApyVault,
+    SafeTransferLib
+} from "src/strategies/base/BaseCompoundV3Strategy.sol";
 
 import {
     COMP_MAINNET,
@@ -225,7 +230,7 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     )
         internal
         returns (uint256)
-    {   
+    {
         bytes memory path = abi.encodePacked(
             tokenIn,
             uint24(3000), // 0.3%

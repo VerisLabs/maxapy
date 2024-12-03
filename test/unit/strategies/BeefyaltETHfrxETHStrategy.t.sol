@@ -1,28 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {ProxyAdmin} from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
-import {ITransparentUpgradeableProxy, TransparentUpgradeableProxy} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-import {BaseTest, IERC20, Vm, console2} from "../../base/BaseTest.t.sol";
+import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
 
-import {IStrategyWrapper} from "../../interfaces/IStrategyWrapper.sol";
-import {ICurveLpPool} from "src/interfaces/ICurve.sol";
-import {IMaxApyVault} from "src/interfaces/IMaxApyVault.sol";
+import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 
-import {ConvexdETHFrxETHStrategyEvents} from "../../helpers/ConvexdETHFrxETHStrategyEvents.sol";
+import { ConvexdETHFrxETHStrategyEvents } from "../../helpers/ConvexdETHFrxETHStrategyEvents.sol";
 
-import {BeefyaltETHfrxETHStrategyWrapper} from "../../mock/BeefyaltETHfrxETHStrategyWrapper.sol";
+import { BeefyaltETHfrxETHStrategyWrapper } from "../../mock/BeefyaltETHfrxETHStrategyWrapper.sol";
 
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {MaxApyVault} from "src/MaxApyVault.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
 import "src/helpers/AddressBook.sol";
-import {StrategyData} from "src/helpers/VaultTypes.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
 
-contract BeefyaltETHfrxETHStrategyTest is
-    BaseTest,
-    ConvexdETHFrxETHStrategyEvents
-{
+contract BeefyaltETHfrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     using SafeTransferLib for address;
 
     address public TREASURY;
@@ -39,13 +39,7 @@ contract BeefyaltETHfrxETHStrategyTest is
 
         TREASURY = makeAddr("treasury");
 
-        vaultDeployment = new MaxApyVault(
-            users.alice,
-            WETH_MAINNET,
-            "MaxApyWETHVault",
-            "maxWETH",
-            TREASURY
-        );
+        vaultDeployment = new MaxApyVault(users.alice, WETH_MAINNET, "MaxApyWETHVault", "maxWETH", TREASURY);
 
         vault = IMaxApyVault(address(vaultDeployment));
 
@@ -79,13 +73,7 @@ contract BeefyaltETHfrxETHStrategyTest is
     /*==================INITIALIZATION TESTS==================*/
 
     function testBeefyaltETHfrxETH__Initialization() public {
-        MaxApyVault _vault = new MaxApyVault(
-            users.alice,
-            WETH_MAINNET,
-            "MaxApyUSDCEVault",
-            "maxUSDCE",
-            TREASURY
-        );
+        MaxApyVault _vault = new MaxApyVault(users.alice, WETH_MAINNET, "MaxApyUSDCEVault", "maxUSDCE", TREASURY);
 
         ProxyAdmin _proxyAdmin = new ProxyAdmin(users.alice);
         BeefyaltETHfrxETHStrategyWrapper _implementation = new BeefyaltETHfrxETHStrategyWrapper();
@@ -111,42 +99,17 @@ contract BeefyaltETHfrxETHStrategyTest is
         IStrategyWrapper _strategy = IStrategyWrapper(address(_proxy));
         assertEq(_strategy.vault(), address(_vault));
 
-        assertEq(
-            _strategy.hasAnyRole(address(_vault), _strategy.VAULT_ROLE()),
-            true
-        );
+        assertEq(_strategy.hasAnyRole(address(_vault), _strategy.VAULT_ROLE()), true);
         assertEq(_strategy.underlyingAsset(), WETH_MAINNET);
-        assertEq(
-            IERC20(WETH_MAINNET).allowance(address(_strategy), address(_vault)),
-            type(uint256).max
-        );
-        assertEq(
-            _strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()),
-            true
-        );
-        assertEq(
-            _strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()),
-            true
-        );
+        assertEq(IERC20(WETH_MAINNET).allowance(address(_strategy), address(_vault)), type(uint256).max);
+        assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
+        assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
 
         assertEq(_strategy.owner(), users.alice);
-        assertEq(
-            _strategy.strategyName(),
-            bytes32("MaxApy ALTETH<>FRXETH Strategy")
-        );
+        assertEq(_strategy.strategyName(), bytes32("MaxApy ALTETH<>FRXETH Strategy"));
 
-        assertEq(
-            _strategy.curveLpPool(),
-            CURVE_ALTETH_FRXETH_MAINNET,
-            "hereee"
-        );
-        assertEq(
-            IERC20(WETH_MAINNET).allowance(
-                address(_strategy),
-                CURVE_ALTETH_FRXETH_MAINNET
-            ),
-            type(uint256).max
-        );
+        assertEq(_strategy.curveLpPool(), CURVE_ALTETH_FRXETH_MAINNET, "hereee");
+        assertEq(IERC20(WETH_MAINNET).allowance(address(_strategy), CURVE_ALTETH_FRXETH_MAINNET), type(uint256).max);
 
         assertEq(_proxyAdmin.owner(), users.alice);
         vm.startPrank(address(_proxyAdmin));
@@ -205,14 +168,9 @@ contract BeefyaltETHfrxETHStrategyTest is
         assertEq(strategy.isActive(), true);
         vm.stopPrank();
 
-        strategy.divest(
-            IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy))
-        );
+        strategy.divest(IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)));
         vm.startPrank(address(strategy));
-        IERC20(WETH_MAINNET).transfer(
-            makeAddr("random"),
-            IERC20(WETH_MAINNET).balanceOf(address(strategy))
-        );
+        IERC20(WETH_MAINNET).transfer(makeAddr("random"), IERC20(WETH_MAINNET).balanceOf(address(strategy)));
         assertEq(strategy.isActive(), false);
 
         deal(WETH_MAINNET, address(strategy), 1 ether);
@@ -261,8 +219,7 @@ contract BeefyaltETHfrxETHStrategyTest is
 
         strategy.mockReport(0, 0, 0, TREASURY);
 
-        (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy
-            .prepareReturn(1 ether, 0);
+        (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment) = strategy.prepareReturn(1 ether, 0);
 
         assertEq(loss, 0);
         assertEq(debtPayment, 1 ether);
@@ -270,7 +227,7 @@ contract BeefyaltETHfrxETHStrategyTest is
         vm.revertTo(snapshotId);
 
         snapshotId = vm.snapshot();
-        deal({token: WETH_MAINNET, to: address(strategy), give: 60 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 60 ether });
 
         strategy.adjustPosition();
 
@@ -306,7 +263,7 @@ contract BeefyaltETHfrxETHStrategyTest is
 
         snapshotId = vm.snapshot();
 
-        deal({token: WETH_MAINNET, to: address(strategy), give: 80 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 80 ether });
 
         strategy.adjustPosition();
 
@@ -325,28 +282,23 @@ contract BeefyaltETHfrxETHStrategyTest is
     function testBeefyaltETHfrxETH__Invest() public {
         uint256 returned = strategy.invest(0, 0);
         assertEq(returned, 0);
-        assertEq(
-            IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)),
-            0
-        );
+        assertEq(IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)), 0);
         vm.expectRevert(abi.encodeWithSignature("NotEnoughFundsToInvest()"));
         returned = strategy.invest(1, 0);
 
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
 
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
         strategy.invest(10 ether, 0);
         assertApproxEq(
-            expectedShares,
-            IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)),
-            expectedShares / 10
+            expectedShares, IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)), expectedShares / 10
         );
     }
 
     function testBeefyaltETHfrxETH__Divest() public {
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 expectedShares = strategy.sharesForAmount(10 ether);
 
         vm.expectEmit();
@@ -354,29 +306,18 @@ contract BeefyaltETHfrxETHStrategyTest is
         strategy.invest(10 ether, 0);
 
         assertApproxEq(
-            expectedShares,
-            IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)),
-            expectedShares / 10
+            expectedShares, IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)), expectedShares / 10
         );
 
-        uint256 strategyBalanceBefore = IERC20(WETH_MAINNET).balanceOf(
-            address(strategy)
-        );
-        uint256 amountDivested = strategy.divest(
-            IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy))
-        );
+        uint256 strategyBalanceBefore = IERC20(WETH_MAINNET).balanceOf(address(strategy));
+        uint256 amountDivested = strategy.divest(IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)));
 
-        assertEq(
-            IERC20(WETH_MAINNET).balanceOf(address(strategy)),
-            strategyBalanceBefore + amountDivested
-        );
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
     }
 
     function testBeefyaltETHfrxETH__LiquidatePosition() public {
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
-        (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(
-            1 ether
-        );
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
+        (uint256 liquidatedAmount, uint256 loss) = strategy.liquidatePosition(1 ether);
         assertEq(liquidatedAmount, 1 ether);
         assertEq(loss, 0);
 
@@ -384,16 +325,16 @@ contract BeefyaltETHfrxETHStrategyTest is
         assertEq(liquidatedAmount, 10 ether);
         assertEq(loss, 0);
 
-        deal({token: WETH_MAINNET, to: address(strategy), give: 5 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 5 ether });
         uint256 invested = strategy.invest(5 ether, 0);
-        
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
 
         (liquidatedAmount, loss) = strategy.liquidatePosition(15 ether);
         assertGt(liquidatedAmount, 14.9 ether);
         assertLt(loss, 0.2 ether);
 
-        deal({token: WETH_MAINNET, to: address(strategy), give: 50 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 50 ether });
         invested = strategy.invest(50 ether, 0);
 
         (liquidatedAmount, loss) = strategy.liquidatePosition(50 ether);
@@ -405,64 +346,40 @@ contract BeefyaltETHfrxETHStrategyTest is
     function testBeefyaltETHfrxETH__LiquidateAllPositions() public {
         uint256 snapshotId = vm.snapshot();
 
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         uint256 shares = strategy.sharesForAmount(10 ether);
         vm.expectEmit();
         emit Invested(address(strategy), 10 ether);
         strategy.invest(10 ether, 0);
 
-        assertApproxEq(
-            IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)),
-            shares,
-            shares / 10
-        );
+        assertApproxEq(IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)), shares, shares / 10);
 
-        uint256 strategyBalanceBefore = IERC20(WETH_MAINNET).balanceOf(
-            address(strategy)
-        );
+        uint256 strategyBalanceBefore = IERC20(WETH_MAINNET).balanceOf(address(strategy));
         uint256 amountFreed = strategy.liquidateAllPositions();
 
         assertApproxEq(amountFreed, 10 ether, 3 ether / 100);
 
-        assertEq(
-            IERC20(WETH_MAINNET).balanceOf(address(strategy)),
-            strategyBalanceBefore + amountFreed
-        );
-        assertEq(
-            IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)),
-            0
-        );
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + amountFreed);
+        assertEq(IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)), 0);
 
         vm.revertTo(snapshotId);
 
-        deal({token: WETH_MAINNET, to: address(strategy), give: 100 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 100 ether });
         shares = strategy.sharesForAmount(100 ether);
 
         vm.expectEmit();
         emit Invested(address(strategy), 100 ether);
         strategy.invest(100 ether, 0);
 
-        assertApproxEq(
-            IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)),
-            shares,
-            2.5 ether
-        );
+        assertApproxEq(IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)), shares, 2.5 ether);
 
-        strategyBalanceBefore = IERC20(WETH_MAINNET).balanceOf(
-            address(strategy)
-        );
+        strategyBalanceBefore = IERC20(WETH_MAINNET).balanceOf(address(strategy));
         amountFreed = strategy.liquidateAllPositions();
 
         assertApproxEq(amountFreed, 100 ether, 2 ether);
 
-        assertEq(
-            IERC20(WETH_MAINNET).balanceOf(address(strategy)),
-            strategyBalanceBefore + amountFreed
-        );
-        assertEq(
-            IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)),
-            0
-        );
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + amountFreed);
+        assertEq(IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)), 0);
     }
 
     function testBeefyaltETHfrxETH__Harvest() public {
@@ -478,30 +395,18 @@ contract BeefyaltETHfrxETHStrategyTest is
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            0,
-            0,
-            0,
-            0,
-            0,
-            uint128(40 ether),
-            uint128(40 ether),
-            4000
-        );
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 ether), uint128(40 ether), 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
 
-        uint256 expectedStrategyShareBalance = strategy.sharesForAmount(
-            40 ether
-        );
+        uint256 expectedStrategyShareBalance = strategy.sharesForAmount(40 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 60 ether);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(strategy)), 0);
 
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         vm.warp(block.timestamp + 1 days);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
@@ -518,17 +423,7 @@ contract BeefyaltETHfrxETHStrategyTest is
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            0,
-            0,
-            0,
-            0,
-            0,
-            uint128(40 ether),
-            uint128(40 ether),
-            4000
-        );
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 ether), uint128(40 ether), 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
@@ -542,18 +437,12 @@ contract BeefyaltETHfrxETHStrategyTest is
 
         vm.startPrank(users.keeper);
 
-        deal({token: WETH_MAINNET, to: address(strategy), give: 10 ether});
+        deal({ token: WETH_MAINNET, to: address(strategy), give: 10 ether });
         vm.warp(block.timestamp + 1 days);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(
-            IERC20(WETH_MAINNET).balanceOf(address(vault)),
-            109956498446582789159
-        );
-        assertEq(
-            IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)),
-            0
-        );
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(vault)), 109_956_498_446_582_789_159);
+        assertEq(IERC20(BEEFY_ALTETH_FRXETH_MAINNET).balanceOf(address(strategy)), 0);
         vm.revertTo(snapshotId);
 
         vm.startPrank(users.alice);
@@ -566,17 +455,7 @@ contract BeefyaltETHfrxETHStrategyTest is
         vm.startPrank(users.keeper);
 
         vm.expectEmit();
-        emit StrategyReported(
-            address(strategy),
-            0,
-            0,
-            0,
-            0,
-            0,
-            uint128(40 ether),
-            uint128(40 ether),
-            4000
-        );
+        emit StrategyReported(address(strategy), 0, 0, 0, 0, 0, uint128(40 ether), uint128(40 ether), 4000);
 
         vm.expectEmit();
         emit Harvested(0, 0, 0, 0);
@@ -619,8 +498,7 @@ contract BeefyaltETHfrxETHStrategyTest is
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
 
         strategy.liquidateExact(30 ether);
-        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) -
-            balanceBefore;
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
 
         // withdraw exactly what requested
         assertEq(withdrawn, 30 ether);
@@ -636,13 +514,10 @@ contract BeefyaltETHfrxETHStrategyTest is
         vm.stopPrank();
         uint256 maxLiquidateExact = strategy.maxLiquidateExact();
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
-        uint256 requestedAmount = strategy.previewLiquidateExact(
-            maxLiquidateExact
-        );
+        uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
         vm.startPrank(address(vault));
         uint256 losses = strategy.liquidateExact(maxLiquidateExact);
-        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) -
-            balanceBefore;
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
         assertEq(withdrawn, maxLiquidateExact);
         // losses are equal or fewer than expected
@@ -659,8 +534,7 @@ contract BeefyaltETHfrxETHStrategyTest is
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
         vm.startPrank(address(vault));
         strategy.liquidate(maxWithdraw);
-        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) -
-            balanceBefore;
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
     }
 
@@ -668,25 +542,11 @@ contract BeefyaltETHfrxETHStrategyTest is
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 ether, users.alice);
         vm.startPrank(users.keeper);
-        (
-            uint256 expectedBalance,
-            uint256 outputAfterInvestment,
-            ,
-            ,
-            ,
-
-        ) = strategy.simulateHarvest();
-        strategy.harvest(
-            expectedBalance,
-            outputAfterInvestment,
-            address(0),
-            block.timestamp
-        );
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
+        strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
 
-    function testBeefyaltETHfrxETH__PreviewLiquidate__FUZZY(
-        uint256 amount
-    ) public {
+    function testBeefyaltETHfrxETH__PreviewLiquidate__FUZZY(uint256 amount) public {
         vm.assume(amount > 0.0001 ether && amount < 400 ether);
         deal(WETH_MAINNET, users.alice, amount);
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
@@ -704,9 +564,7 @@ contract BeefyaltETHfrxETHStrategyTest is
         assertLe(expected, amount / 3 - loss);
     }
 
-    function testBeefyaltETHfrxETH__PreviewLiquidateExact__FUZZY(
-        uint256 amount
-    ) public {
+    function testBeefyaltETHfrxETH__PreviewLiquidateExact__FUZZY(uint256 amount) public {
         vm.assume(amount > 0.0001 ether && amount < 400 ether);
         deal(WETH_MAINNET, users.alice, amount);
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
@@ -720,8 +578,7 @@ contract BeefyaltETHfrxETHStrategyTest is
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
 
         strategy.liquidateExact(amount / 3);
-        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) -
-            balanceBefore;
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
 
         // withdraw exactly what requested
         assertGe(withdrawn, amount / 3);
@@ -729,9 +586,7 @@ contract BeefyaltETHfrxETHStrategyTest is
         assertLe(withdrawn - (amount / 3), requestedAmount - (amount / 3));
     }
 
-    function testBeefyaltETHfrxETH__maxLiquidateExact__FUZZY(
-        uint256 amount
-    ) public {
+    function testBeefyaltETHfrxETH__maxLiquidateExact__FUZZY(uint256 amount) public {
         vm.assume(amount > 0.0001 ether && amount < 270 ether);
 
         deal(WETH_MAINNET, users.alice, amount);
@@ -743,14 +598,11 @@ contract BeefyaltETHfrxETHStrategyTest is
         uint256 maxLiquidateExact = strategy.maxLiquidateExact();
 
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
-        uint256 requestedAmount = strategy.previewLiquidateExact(
-            maxLiquidateExact
-        );
+        uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
 
         vm.startPrank(address(vault));
         uint256 losses = strategy.liquidateExact(maxLiquidateExact);
-        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) -
-            balanceBefore;
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
         // withdraw exactly what requested
         assertGe(withdrawn, maxLiquidateExact);
         // losses are equal or fewer than expected
@@ -769,8 +621,7 @@ contract BeefyaltETHfrxETHStrategyTest is
         uint256 balanceBefore = IERC20(WETH_MAINNET).balanceOf(address(vault));
         vm.startPrank(address(vault));
         strategy.liquidate(maxWithdraw);
-        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) -
-            balanceBefore;
+        uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
     }
 }

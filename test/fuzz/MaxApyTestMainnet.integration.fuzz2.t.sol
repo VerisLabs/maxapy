@@ -191,7 +191,6 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
         uint256 assets,
         uint256 shares
     )
-        
         public
     {
         LibPRNG.PRNG memory actorSeedRNG;

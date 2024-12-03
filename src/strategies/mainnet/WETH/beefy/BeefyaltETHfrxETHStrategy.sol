@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
-import {FRXETH_MAINNET} from "src/helpers/AddressBook.sol";
-import {IBeefyVault} from "src/interfaces/IBeefyVault.sol";
-import {ICurveLpPool} from "src/interfaces/ICurve.sol";
-import {IWETH} from "src/interfaces/IWETH.sol";
-import {BaseBeefyCurveStrategy} from "src/strategies/base/BaseBeefyCurveStrategy.sol";
-import {BaseBeefyStrategy, IMaxApyVault, SafeTransferLib} from "src/strategies/base/BaseBeefyStrategy.sol";
+import { FRXETH_MAINNET } from "src/helpers/AddressBook.sol";
+import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+import { IWETH } from "src/interfaces/IWETH.sol";
+import { BaseBeefyCurveStrategy } from "src/strategies/base/BaseBeefyCurveStrategy.sol";
+import { BaseBeefyStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
 
 /// @title BeefyaltETHfrxETHStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -30,7 +30,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
-    constructor() initializer {}
+    constructor() initializer { }
 
     /// @notice Initialize the Strategy
     /// @param _vault The address of the MaxApy Vault associated to the strategy
@@ -45,14 +45,12 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
         ICurveLpPool _curveLpPool,
         IBeefyVault _beefyVault,
         ICurveLpPool _curveEthFrxEthPool
-    ) public virtual initializer {
-        super.initialize(
-            _vault,
-            _keepers,
-            _strategyName,
-            _strategist,
-            _beefyVault
-        );
+    )
+        public
+        virtual
+        initializer
+    {
+        super.initialize(_vault, _keepers, _strategyName, _strategist, _beefyVault);
 
         // Curve init
         curveLpPool = _curveLpPool;
@@ -60,10 +58,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
         //CURVE_ETH_FRXETH_POOL_MAINNET
 
         underlyingAsset.safeApprove(address(curveLpPool), type(uint256).max);
-        address(curveLpPool).safeApprove(
-            address(beefyVault),
-            type(uint256).max
-        );
+        address(curveLpPool).safeApprove(address(beefyVault), type(uint256).max);
         frxETH.safeApprove(address(curveLpPool), type(uint256).max);
         frxETH.safeApprove(address(curveEthFrxEthPool), type(uint256).max);
 
@@ -84,7 +79,11 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     function _invest(
         uint256 amount,
         uint256 minOutputAfterInvestment
-    ) internal override returns (uint256 depositedAmount) {
+    )
+        internal
+        override
+        returns (uint256 depositedAmount)
+    {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
 
@@ -105,9 +104,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
         IWETH(address(underlyingAsset)).withdraw(amount);
 
         // Swap ETH for frxETH
-        uint256 frxEthReceivedAmount = curveEthFrxEthPool.exchange{
-            value: amount
-        }(0, 1, amount, 0);
+        uint256 frxEthReceivedAmount = curveEthFrxEthPool.exchange{ value: amount }(0, 1, amount, 0);
 
         uint256 lpReceived;
 
@@ -138,9 +135,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     /// Note that if minimum withdrawal amount is not reached, funds will not be divested, and this
     /// will be accounted as a loss later.
     /// @return amountDivested the total amount divested, in terms of underlying asset
-    function _divest(
-        uint256 amount
-    ) internal virtual override returns (uint256 amountDivested) {
+    function _divest(uint256 amount) internal virtual override returns (uint256 amountDivested) {
         if (amount == 0) return 0;
 
         uint256 _before = beefyVault.want().balanceOf(address(this));
@@ -160,14 +155,9 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
         );
         if (amountWithdrawn != 0) {
             // Swap frxETH for ETH
-            uint256 ethReceived = curveEthFrxEthPool.exchange(
-                1,
-                0,
-                amountWithdrawn,
-                0
-            );
+            uint256 ethReceived = curveEthFrxEthPool.exchange(1, 0, amountWithdrawn, 0);
             // Wrap ETH into WETH
-            IWETH(address(underlyingAsset)).deposit{value: ethReceived}();
+            IWETH(address(underlyingAsset)).deposit{ value: ethReceived }();
             return ethReceived;
         }
     }
@@ -176,9 +166,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     ///                    VIEW FUNCTIONS                        ///
     ////////////////////////////////////////////////////////////////
 
-    function previewLiquidate(
-        uint256 requestedAmount
-    ) public view override returns (uint256) {
+    function previewLiquidate(uint256 requestedAmount) public view override returns (uint256) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
 
@@ -188,21 +176,11 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
             uint256 beefySharesNeeded = _sharesForAmount(amountToWithdraw);
             uint256 availableBeefyShares = beefyVault.balanceOf(address(this));
 
-            uint256 beefyShares = Math.min(
-                beefySharesNeeded,
-                availableBeefyShares
-            );
+            uint256 beefyShares = Math.min(beefySharesNeeded, availableBeefyShares);
 
             uint256 expectedCurveLp = beefyShares * beefyVault.balance() / beefyVault.totalSupply();
-            uint256 expectedFrxEth = curveLpPool.calc_withdraw_one_coin(
-                expectedCurveLp,
-                1
-            );
-            uint256 expectedEth = curveEthFrxEthPool.get_dy(
-                1,
-                0,
-                expectedFrxEth
-            );
+            uint256 expectedFrxEth = curveLpPool.calc_withdraw_one_coin(expectedCurveLp, 1);
+            uint256 expectedEth = curveEthFrxEthPool.get_dy(1, 0, expectedFrxEth);
 
             if (expectedEth < amountToWithdraw) {
                 loss = amountToWithdraw - expectedEth;
@@ -216,20 +194,24 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     /// @dev calculates the estimated @param requestedAmount the vault has to request to this strategy
     /// in order to actually get @param liquidatedAmount assets when calling `previewWithdraw`
     /// @return requestedAmount
-    function previewLiquidateExact(
-        uint256 liquidatedAmount
-    ) public view virtual override returns (uint256 requestedAmount) {
+    function previewLiquidateExact(uint256 liquidatedAmount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 requestedAmount)
+    {
         // we cannot predict losses so return as if there were not
         // increase 1% to be pessimistic
         return (previewLiquidate(liquidatedAmount) * 108) / 100; // UNIT working
-        // return (previewLiquidate(liquidatedAmount) * 101) / 100;     // FUZZ working
+            // return (previewLiquidate(liquidatedAmount) * 101) / 100;     // FUZZ working
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxLiquidateExact() public view override returns (uint256) {
         // make sure it doesnt revert when increaseing it 1% in the withdraw
         return (previewLiquidate(estimatedTotalAssets()) * 93) / 100; // UNIT working
-        // return (previewLiquidate(estimatedTotalAssets()) * 99) / 100;        // FUZZ working
+            // return (previewLiquidate(estimatedTotalAssets()) * 99) / 100;        // FUZZ working
     }
 
     ////////////////////////////////////////////////////////////////
@@ -238,9 +220,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
 
     /// @notice Determines the current value of `shares`.
     /// @return _assets the estimated amount of underlying computed from shares `shares`
-    function _shareValue(
-        uint256 shares
-    ) internal view virtual override returns (uint256 _assets) {
+    function _shareValue(uint256 shares) internal view virtual override returns (uint256 _assets) {
         uint256 frxETHAmount = super._shareValue(shares);
         // get swap estimation underlying frxETH for ETH
         if (frxETHAmount != 0) {
@@ -250,9 +230,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return shares the estimated amount of shares computed in exchange for underlying `amount`
-    function _sharesForAmount(
-        uint256 amount
-    ) internal view virtual override returns (uint256 shares) {
+    function _sharesForAmount(uint256 amount) internal view virtual override returns (uint256 shares) {
         // get swap estimation underlying ETH for frxETH
         if (amount != 0) {
             uint256 frxETHAmount = curveEthFrxEthPool.get_dy(0, 1, amount);
@@ -267,5 +245,5 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     }
 
     //solhint-disable no-empty-blocks
-    receive() external payable {}
+    receive() external payable { }
 }

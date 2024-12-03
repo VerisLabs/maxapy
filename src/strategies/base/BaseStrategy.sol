@@ -176,14 +176,12 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
 
         // Send it directly back to vault
         if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(address(vault), amountNeeded);
-
         // something didn't work as expected
         // this should NEVER happen in normal conditions
         else revert("NOT ENOUGH");
         // Note: update esteimated totalAssets
         _snapshotEstimatedTotalAssets();
     }
-
 
     /// @notice Harvests the Strategy and reports any gain in its positions to the vault
     /// In the rare case the Strategy is in emergency shutdown, this will exit
