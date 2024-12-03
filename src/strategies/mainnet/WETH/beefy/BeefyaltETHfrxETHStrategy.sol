@@ -192,26 +192,55 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
 
         if (underlyingBalance < requestedAmount) {
             uint256 amountToWithdraw = requestedAmount - underlyingBalance;
+            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:195 ~ )viewoverridereturns ~ amountToWithdraw:", amountToWithdraw);
 
-            uint256 lpNeeded = _lpForAmount(amountToWithdraw);
-            uint256 availableLp = beefyVault.balanceOf(address(this));
-            lpNeeded = Math.min(lpNeeded, availableLp);
+            uint256 beefyShares = _sharesForAmount(amountToWithdraw); 
+            // uint256 frxETH = curveEthFrxEthPool.get_dy(
+            //     0,
+            //     1,
+            //     amountToWithdraw
+            // );
+            // console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:201 ~ )viewoverridereturns ~ frxETH:", frxETH);
 
-            uint256 expectedFrxEth = curveLpPool.calc_withdraw_one_coin(
+
+            // uint256[2] memory amounts;
+            // amounts[1] = frxETH;
+
+            // uint256 tokenAmt = curveLpPool.calc_token_amount(amounts, true);
+            // console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:208 ~ )viewoverridereturns ~ tokenAmt:", tokenAmt);
+
+            // uint256 beefyShares = BaseBeefyStrategy._sharesForAmount(tokenAmt);
+            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:211 ~ )viewoverridereturns ~ beefyShares:", beefyShares);
+
+
+            uint256 lpNeeded = _lpForAmount(amountToWithdraw);              // in terms of curve, i/p is in terms of weth, must be frxETH 
+            uint256 availableLp = beefyVault.balanceOf(address(this));      // in termas of beefy
+            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:216 ~ )viewoverridereturns ~ availableLp:", availableLp);
+
+            lpNeeded = Math.min(beefyShares, availableLp);
+
+            uint256 expectedFrxEth = curveLpPool.calc_withdraw_one_coin(   
                 lpNeeded,
                 1 // frxETH index
             );
+            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:224 ~ )viewoverridereturns ~ expectedFrxEth:", expectedFrxEth);
+
 
             uint256 expectedEth = curveEthFrxEthPool.get_dy(
                 1,
                 0,
                 expectedFrxEth
             );
+            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:232 ~ )viewoverridereturns ~ expectedEth:", expectedEth);
+
 
             if (expectedEth < amountToWithdraw) {
                 loss = amountToWithdraw - expectedEth;
+                
             }
         }
+
+        console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:239 ~ )viewoverridereturns ~ loss:", loss);
 
         liquidatedAmount = requestedAmount - loss;
     }
@@ -268,7 +297,16 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
                 frxETHAmount
             );
 
-            shares = (super._sharesForAmount(frxETHAmount)); //* 150 /100);
+            uint256[2] memory amounts;
+            amounts[1] = frxETHAmount;
+
+            uint256 tokenAmt = curveLpPool.calc_token_amount(amounts, true);
+            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:208 ~ )viewoverridereturns ~ tokenAmt:", tokenAmt);
+
+            shares = BaseBeefyStrategy._sharesForAmount(tokenAmt) ;
+            console2.log("###   ~ file: BeefyaltETHfrxETHStrategy.sol:211 ~ )viewoverridereturns ~ beefyShares:", shares);
+
+            // shares = (super._sharesForAmount(frxETHAmount)); //* 150 /100);
         }
     }
 
