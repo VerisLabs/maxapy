@@ -178,24 +178,26 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
 
     function previewLiquidate(
         uint256 requestedAmount
-    ) public view override returns (uint256 liquidatedAmount) {
+    ) public view override returns (uint256) {
         uint256 loss;
         uint256 underlyingBalance = _underlyingBalance();
 
         if (underlyingBalance < requestedAmount) {
             uint256 amountToWithdraw = requestedAmount - underlyingBalance;
-            
-            uint256 beefyShares = _sharesForAmount(amountToWithdraw);
-            uint256 lpNeeded = _lpForAmount(amountToWithdraw);        
-            uint256 availableLp = beefyVault.balanceOf(address(this)); 
-            
-            lpNeeded = Math.min(beefyShares, availableLp);
 
-            uint256 expectedFrxEth = curveLpPool.calc_withdraw_one_coin(   
-                lpNeeded,
-                1 // frxETH index
+            uint256 beefySharesNeeded = _sharesForAmount(amountToWithdraw);
+            uint256 availableBeefyShares = beefyVault.balanceOf(address(this));
+
+            uint256 beefyShares = Math.min(
+                beefySharesNeeded,
+                availableBeefyShares
             );
-            
+
+            uint256 expectedCurveLp = beefyShares * beefyVault.balance() / beefyVault.totalSupply();
+            uint256 expectedFrxEth = curveLpPool.calc_withdraw_one_coin(
+                expectedCurveLp,
+                1
+            );
             uint256 expectedEth = curveEthFrxEthPool.get_dy(
                 1,
                 0,
@@ -203,11 +205,11 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
             );
 
             if (expectedEth < amountToWithdraw) {
-                loss = amountToWithdraw - expectedEth;  
+                loss = amountToWithdraw - expectedEth;
             }
         }
-        liquidatedAmount = (requestedAmount - loss) * 101 /100;     // UNIT working
-        // liquidatedAmount = (requestedAmount - loss);             // FUZZ working
+
+        return requestedAmount - loss;
     }
 
     /// @notice This function is meant to be called from the vault
@@ -219,14 +221,14 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     ) public view virtual override returns (uint256 requestedAmount) {
         // we cannot predict losses so return as if there were not
         // increase 1% to be pessimistic
-        return (previewLiquidate(liquidatedAmount) * 108) / 100;        // UNIT working
+        return (previewLiquidate(liquidatedAmount) * 108) / 100; // UNIT working
         // return (previewLiquidate(liquidatedAmount) * 101) / 100;     // FUZZ working
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxLiquidateExact() public view override returns (uint256) {
         // make sure it doesnt revert when increaseing it 1% in the withdraw
-        return (previewLiquidate(estimatedTotalAssets()) * 93) / 100;           // UNIT working
+        return (previewLiquidate(estimatedTotalAssets()) * 93) / 100; // UNIT working
         // return (previewLiquidate(estimatedTotalAssets()) * 99) / 100;        // FUZZ working
     }
 
@@ -258,10 +260,9 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
             uint256[2] memory amounts;
             amounts[1] = frxETHAmount;
 
-            uint256 tokenAmt = curveLpPool.calc_token_amount(amounts, true);
-        
-            shares = BaseBeefyStrategy._sharesForAmount(tokenAmt) ;
-            
+            uint256 lpAmount = curveLpPool.calc_token_amount(amounts, true);
+
+            shares = BaseBeefyStrategy._sharesForAmount(lpAmount);
         }
     }
 

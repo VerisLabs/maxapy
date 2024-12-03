@@ -4,8 +4,8 @@ pragma solidity ^0.8.19;
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {IBeefyVault} from "src/interfaces/IBeefyVault.sol";
 import {ICurveLpPool} from "src/interfaces/ICurve.sol";
-
 import {BaseBeefyStrategy, IMaxApyVault, SafeTransferLib} from "src/strategies/base/BaseBeefyStrategy.sol";
+
 /// @title BaseBeefyCurveStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
 /// @notice `BaseBeefyCurveStrategy` supplies an underlying token into a generic Beefy Vault,

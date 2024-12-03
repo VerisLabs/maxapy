@@ -10,7 +10,7 @@ import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { IStrategy } from "src/interfaces/IStrategy.sol";
-import {console2} from "forge-std/console2.sol";
+
 /*KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 KKKKK0OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO0KKKKKKK
 KK0dcclllllllllllllllllllllllllllllccccccccccccccccccclx0KKK
@@ -991,13 +991,8 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         if (shares == type(uint256).max) shares = balanceOf(msg.sender);
 
         assets = convertToAssets(shares);
-        console2.log("###   ~ file: MaxApyVault.sol:994 ~ previewRedeem ~ assets:", assets);
-
-        console2.log("###   ~ file: MaxApyVault.sol:994 ~ previewRedeem ~ shares:", shares);
 
         uint256 vaultBalance = totalIdle;
-        console2.log("###   ~ file: MaxApyVault.sol:999 ~ previewRedeem ~ vaultBalance:", vaultBalance);
-
 
         if (vaultBalance >= assets) {
             return assets;
@@ -1019,15 +1014,9 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                     amountRequested := sub(assets, vaultBalance)
                 }
 
-                console2.log("###   ~ file: MaxApyVault.sol:1024 ~ previewRedeem ~ amountRequested:", amountRequested);
-
-
                 // ask for the min between the needed amount and max withdraw of the strategy
                 amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidate());
                 
-                console2.log("###   ~ file: MaxApyVault.sol:1024 ~ previewRedeem ~ IStrategy(strategy).maxLiquidate():", IStrategy(strategy).maxLiquidate());
-
-
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountRequested == 0) {
                     unchecked {
@@ -1039,11 +1028,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Withdraw from strategy. Compute amount withdrawn
                 // considering the difference between balances pre/post withdrawal
                 uint256 withdrawn = IStrategy(strategy).previewLiquidate(amountRequested);
-                console2.log("###   ~ file: MaxApyVault.sol:1042 ~ previewRedeem ~ withdrawn:", withdrawn);
-
                 uint256 loss = amountRequested - withdrawn;
-                console2.log("###   ~ file: MaxApyVault.sol:1045 ~ previewRedeem ~ loss:", loss);
-
 
                 // Increase cached vault balance to track the newly withdrawn amount
                 vaultBalance += withdrawn;
@@ -1196,11 +1181,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
     /// @notice Burns exactly `shares` from `owner` and sends `assets` of underlying tokens to `to`.
     /// @dev overriden to add the `noEmergencyShutdown` & `nonReentrant` modifiers
     function redeem(uint256 shares, address to, address owner) public override nonReentrant returns (uint256 assets) {
-        console2.log("SHARES TO REDEEM::::::", shares);
-
         if (shares == type(uint256).max) shares = maxRedeem(owner);
-        console2.log("SHARES AFTER MAXREDEEM::::::", shares);
-        console2.log("OWNER SHARES MAXREDEEM::::::", maxRedeem(owner));
         if (shares > maxRedeem(owner)) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x4656425a) // `RedeemMoreThanMax()`.
@@ -1208,7 +1189,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             }
         }
 
-        if (shares == 89133) revert InvalidZeroShares() ;
         // substract losses to the total assets
         assets = _redeem(msg.sender, to, owner, shares);
         
@@ -1229,16 +1209,12 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
             }
         }
         
-        console2.log("SHARES TO REDEEM::::::", shares);
         // Calculate assets from shares
         assets = convertToAssets(shares);
-        console2.log("###   ~ file: MaxApyVault.sol:1210 ~ _redeem ~ assets:", assets);
 
         // Cache underlying asset
         address underlying = asset();
-
         uint256 vaultBalance = totalIdle;
-        console2.log("###   ~ file: MaxApyVault.sol:1216 ~ _redeem ~ vaultBalance:", vaultBalance);
 
         // Check if value to withdraw exceeds vault balance
         if (assets > vaultBalance) {
@@ -1276,10 +1252,6 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 }
                 // ask for the min between the needed amount and max withdraw of the strategy
                 amountRequested = Math.min(amountRequested, IStrategy(strategy).maxLiquidate());
-                console2.log("###   ~ file: MaxApyVault.sol:1254 ~ _redeem ~ IStrategy(strategy).maxLiquidate():", IStrategy(strategy).maxLiquidate());
-
-                console2.log("###   ~ file: MaxApyVault.sol:1254 ~ _redeem ~ amountRequested:", amountRequested);
-
 
                 // Try the next strategy if the current strategy has no debt to be withdrawn
                 if (amountRequested == 0) {
@@ -1298,11 +1270,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 // Use try/catch logic to avoid DoS
                 try IStrategy(strategy).liquidate(amountRequested) returns (uint256 _loss) {
                     loss = _loss;
-                    console2.log("###   ~ file: MaxApyVault.sol:1272 ~ tryIStrategy ~ loss:", loss);
-
                     withdrawn = SafeTransferLib.balanceOf(underlying, address(this)) - preBalance;
-                    console2.log("###   ~ file: MaxApyVault.sol:1279 ~ tryIStrategy ~ withdrawn:", withdrawn);
-
                 } catch {
                     unchecked {
                         ++i;

@@ -9,7 +9,7 @@ import { Initializable } from "../../lib/Initializable.sol";
 import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import {console2} from "forge-std/console2.sol";
+
 /// @title BaseStrategy
 /// @author Forked and adapted from https://github.com/yearn/yearn-vaults/blob/master/contracts/BaseStrategy.sol
 /// @notice `BaseStrategy` sets the base functionality to be implemented by MaxApy strategies.
@@ -174,16 +174,12 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         // liquidate `amountRequested` in order to get exactly or more than `amountNeeded`
         (amountFreed, loss) = _liquidatePosition(amountRequested);
 
-        console2.log("###   ~ file: BaseStrategy.sol:179 ~ liquidateExact ~ amountNeeded:", amountNeeded);
-
-        console2.log("###   ~ file: BaseStrategy.sol:179 ~ liquidateExact ~ amountFreed:", amountFreed);
-
         // Send it directly back to vault
         if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(address(vault), amountNeeded);
 
         // something didn't work as expected
         // this should NEVER happen in normal conditions
-        else revert("NOT ENOUTH");
+        else revert("NOT ENOUGH");
         // Note: update esteimated totalAssets
         _snapshotEstimatedTotalAssets();
     }

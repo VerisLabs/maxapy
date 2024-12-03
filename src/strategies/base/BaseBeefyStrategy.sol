@@ -5,8 +5,6 @@ import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
 import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 
-import {console2} from "forge-std/console2.sol";
-
 /// @title BaseBeefyStrategy
 /// @author MaxApy
 /// @notice `BaseBeefyStrategy` sets the base functionality to be implemented by MaxApy Beefy strategies.
@@ -156,22 +154,15 @@ contract BaseBeefyStrategy is BaseStrategy {
             uint256 amountToWithdraw;
             unchecked {
                 amountToWithdraw = requestedAmount - underlyingBalance;
-                console2.log("###   ~ file: BaseBeefyStrategy.sol:159 ~ amountToWithdraw:", amountToWithdraw);
-
             }
-            uint256 shares = _sharesForAmount(amountToWithdraw);
-            console2.log("###   ~ file: BaseBeefyStrategy.sol:161 ~ shares:", shares);
 
+            uint256 shares = _sharesForAmount(amountToWithdraw);
             uint256 withdrawn = _shareValue(shares);
-            console2.log("###   ~ file: BaseBeefyStrategy.sol:164 ~ withdrawn:", withdrawn);
 
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
-            console2.log("###   ~ file: BaseBeefyStrategy.sol:167 ~ loss:", loss);
-
         }
-        liquidatedAmount = (requestedAmount - loss) * 997 / 1000;
-        console2.log("###   ~ file: BaseBeefyStrategy.sol:171 ~ liquidatedAmount:", liquidatedAmount);
 
+        liquidatedAmount = (requestedAmount - loss) * 997 / 1000;
     }
 
     /// @notice This function is meant to be called from the vault
