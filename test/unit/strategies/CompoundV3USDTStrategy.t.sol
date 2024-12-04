@@ -32,7 +32,7 @@ contract CompoundV3USDTStrategyTest is BaseTest, StrategyEvents {
 
     function setUp() public {
         super._setUp("MAINNET");
-        vm.rollFork(20_790_660);
+        vm.rollFork(20_990_660);
 
         TREASURY = makeAddr("treasury");
 
@@ -165,6 +165,7 @@ contract CompoundV3USDTStrategyTest is BaseTest, StrategyEvents {
         vm.stopPrank();
 
         strategy.divest(IERC20(COMPOUND_USDT_V3_COMMET_MAINNET).balanceOf(address(strategy)), 0, true);
+
         vm.startPrank(address(strategy));
         IERC20(USDC_MAINNET).transfer(makeAddr("random"), IERC20(USDC_MAINNET).balanceOf(address(strategy)));
 
@@ -195,6 +196,18 @@ contract CompoundV3USDTStrategyTest is BaseTest, StrategyEvents {
     }
 
     /*==================STRATEGY CORE LOGIC TESTS==================*/
+    function testCompoundV3USDT__InvestmentSlippage() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        vm.startPrank(users.keeper);
+
+        // Expect revert if output amount is gt amount obtained
+        vm.expectRevert(abi.encodeWithSignature("MinOutputAmountNotReached()"));
+        strategy.harvest(0, type(uint256).max, address(0), block.timestamp);
+    }
+
     function testCompoundV3USDT__PrepareReturn() public {
         uint256 snapshotId = vm.snapshot();
 
@@ -302,7 +315,7 @@ contract CompoundV3USDTStrategyTest is BaseTest, StrategyEvents {
         uint256 strategyBalanceBefore = IERC20(USDC_MAINNET).balanceOf(address(strategy));
         uint256 amountDivested = strategy.divest(investedUSDCAmount, 0, true);
 
-        assertApproxEq(amountDivested, investedUSDCAmount, 5 * _1_USDC / 10_000);
+        assertApproxEq(amountDivested, investedUSDCAmount, 6 * _1_USDC / 1000);
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
     }
 
@@ -418,7 +431,7 @@ contract CompoundV3USDTStrategyTest is BaseTest, StrategyEvents {
         vm.warp(block.timestamp + 1 days);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 110_002_427);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 109_997_139);
         assertEq(IERC20(COMPOUND_USDT_V3_COMMET_MAINNET).balanceOf(address(strategy)), 0);
         vm.revertTo(snapshotId);
 

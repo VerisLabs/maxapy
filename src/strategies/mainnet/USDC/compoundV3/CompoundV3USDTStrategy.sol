@@ -2,8 +2,8 @@
 pragma solidity ^0.8.19;
 
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { IComet } from "src/interfaces/CompoundV2/IComet.sol";
-import { ICometRewards, RewardOwed } from "src/interfaces/CompoundV2/ICometRewards.sol";
+import { IComet } from "src/interfaces/CompoundV3/IComet.sol";
+import { ICometRewards, RewardOwed } from "src/interfaces/CompoundV3/ICometRewards.sol";
 import { ICurveTriPool } from "src/interfaces/ICurve.sol";
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 import {
@@ -12,14 +12,12 @@ import {
     IMaxApyVault,
     SafeTransferLib
 } from "src/strategies/base/BaseCompoundV3Strategy.sol";
-
 import {
     COMP_MAINNET,
-    CURVE_3POOL_POOL_MAINNET,
     UNISWAP_V3_COMP_WETH_POOL_MAINNET,
     UNISWAP_V3_WETH_USDC_POOL_MAINNET,
+    CURVE_3POOL_POOL_MAINNET,
     USDC_MAINNET,
-    USDT_MAINNET,
     USDT_MAINNET,
     WETH_MAINNET
 } from "src/helpers/AddressBook.sol";
@@ -35,12 +33,14 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     ICurveTriPool public constant triPool = ICurveTriPool(CURVE_3POOL_POOL_MAINNET);
     address constant usdt = USDT_MAINNET;
 
-    /// @notice Router to perform COMP-WETH-USDT swaps
-    IRouter public router;
+    
     /// @notice Address of Uniswap V3 COMP-WETH pool
     address public constant poolA = UNISWAP_V3_COMP_WETH_POOL_MAINNET;
     /// @notice Address of Uniswap V3 WETH-USDC pool
     address public constant poolB = UNISWAP_V3_WETH_USDC_POOL_MAINNET;
+
+    /// @notice Router to perform COMP-WETH-USDT swaps
+    IRouter public router;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -51,6 +51,9 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
+    /// @param _comet The Compound Finance vault this strategy will interact with
+    /// @param _cometRewards The Compound Rewards contract this strategy will interact with to withdraw rewards
+    /// @param _tokenSupplyAddress The address of the base coin to be supplied to the comet contract
     /// @param _router The router address to perform swaps
     function initialize(
         IMaxApyVault _vault,
@@ -64,7 +67,6 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     )
         public
         virtual
-        override
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
@@ -150,6 +152,15 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
 
         depositedAmount = comet.balanceOf(address(this));
 
+        assembly ("memory-safe") {
+            // if (shares < minOutputAfterInvestment)
+            if lt(depositedAmount, minOutputAfterInvestment) {
+                // throw the `MinOutputAmountNotReached` error
+                mstore(0x00, 0xf7c67a48)
+                revert(0x1c, 0x04)
+            }
+        }
+
         emit Invested(address(this), amount);
     }
 
@@ -217,7 +228,7 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
                 comet.supply(tokenSupplyAddress, usdtAmount);
             } else {
                 uint256 usdcAmount = swapTokens(COMP_MAINNET, WETH_MAINNET, USDC_MAINNET, _rewardAfter - _rewardBefore);
-                withdrawn = usdcAmount;
+                withdrawn += usdcAmount;
             }
         }
     }
@@ -309,10 +320,16 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
         return rewardsUSDC;
     }
 
+    function _convertUsdcToCompRewards(uint256 amount) public view override returns (uint256) {
+        uint256 rewardWETH = _estimateAmountOut(USDC_MAINNET, WETH_MAINNET, amount.toUint128(), poolB, 1800);
+
+        return _estimateAmountOut(WETH_MAINNET, COMP_MAINNET, rewardWETH.toUint128(), poolA, 1800);
+    }
+
     function _totalInvestedValue() public view override returns (uint256 totalInvestedValue) {
         uint256 totalInvestedAsset = _totalInvestedBaseAsset();
         if (totalInvestedAsset > 0) {
-            totalInvestedValue = triPool.get_dy(2, 1, _totalInvestedBaseAsset());
+            totalInvestedValue = triPool.get_dy(2, 1, totalInvestedAsset);
         }
     }
 
