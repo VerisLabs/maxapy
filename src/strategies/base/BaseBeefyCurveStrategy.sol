@@ -4,7 +4,6 @@ pragma solidity ^0.8.19;
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
 import { ICurveLpPool } from "src/interfaces/ICurve.sol";
-
 import { BaseBeefyStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
 
 /// @title BaseBeefyCurveStrategy
@@ -86,12 +85,10 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
         uint256[] memory amounts = new uint256[](2);
         amounts[1] = amount;
 
-        // Add liquidity to the curve pool in underlying token [coin1 -> usdce]
         lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
 
         uint256 _before = beefyVault.balanceOf(address(this));
 
-        // Deposit Curve LP tokens to Beefy vault
         beefyVault.deposit(lpReceived);
 
         uint256 _after = beefyVault.balanceOf(address(this));
@@ -121,14 +118,12 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
 
         uint256 _before = beefyVault.want().balanceOf(address(this));
 
-        // Withdraw from Beefy and unwrap directly to Curve LP tokens
         beefyVault.withdraw(amount);
 
         uint256 _after = beefyVault.want().balanceOf(address(this));
 
         uint256 lptokens = _after - _before;
 
-        // Remove liquidity and obtain usdce
         return curveLpPool.remove_liquidity_one_coin(
             lptokens,
             1,
@@ -170,6 +165,19 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
     /// @notice Returns the estimated price for the strategy's curve's LP token
     /// @return returns the estimated lp token price
     function _lpPrice() internal view returns (uint256) {
-        return ((curveLpPool.get_virtual_price() * curveLpPool.get_dy(0, 1, 1 ether)) / 1 ether);
+        uint256 virtualPrice = curveLpPool.get_virtual_price();
+        uint256 exchangePrice = Math.min(
+            curveLpPool.get_dy(1, 0, 1 ether), // WETH -> other token
+            curveLpPool.get_dy(0, 1, 1 ether) // other token -> WETH
+        );
+        return (virtualPrice * exchangePrice) / 1 ether;
+    }
+
+    function _lpForAmount(uint256 amount) internal view virtual returns (uint256) {
+        return (amount * 1e18) / _lpPrice();
+    }
+
+    function _lpValue(uint256 lp) internal view virtual returns (uint256) {
+        return (lp * _lpPrice()) / 1e18;
     }
 }

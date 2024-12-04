@@ -178,7 +178,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // something didn't work as expected
         // this should NEVER happen in normal conditions
-        else revert("NOT ENOUTH");
+        else revert("NOT ENOUGH");
         // Note: update esteimated totalAssets
         _snapshotEstimatedTotalAssets();
     }
