@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { OracleLibrary } from "src/lib/OracleLibrary.sol";
-import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
-import { IComet } from "src/interfaces/CompoundV2/IComet.sol";
-import { COMPOUND_USDT_V3_COMMET_MAINNET } from "src/helpers/AddressBook.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import { ICometRewards, RewardOwed } from "src/interfaces/CompoundV2/ICometRewards.sol";
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+import { IComet } from "src/interfaces/CompoundV3/IComet.sol";
+import { ICometRewards, RewardOwed } from "src/interfaces/CompoundV3/ICometRewards.sol";
 import { IUniswapV3Pool, IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
+import { OracleLibrary } from "src/lib/OracleLibrary.sol";
 import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 
-
-/// @title BaseCompoundV2Strategy
+/// @title BaseCompoundV3Strategy
 /// @author MaxApy
-/// @notice `BaseCompoundV2Strategy` sets the base functionality to be implemented by MaxApy CompoundV2 strategies.
+/// @notice `BaseCompoundV3Strategy` sets the base functionality to be implemented by MaxApy CompoundV3 strategies.
 /// @dev Some functions can be overriden if needed
 abstract contract BaseCompoundV3Strategy is BaseStrategy {
     using SafeTransferLib for address;
@@ -25,8 +23,6 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     ///                        CONSTANTS                         ///
     ////////////////////////////////////////////////////////////////
     uint256 internal constant DEGRADATION_COEFFICIENT = 10 ** 18;
-    /// @notice the reward accrued for an account on a Comet deployment
-    uint256 public totalAccruedReward;
 
     ////////////////////////////////////////////////////////////////
     ///                         ERRORS                           ///
@@ -94,6 +90,8 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
     /// @param _comet The Compound Finance vault this strategy will interact with
+    /// @param _cometRewards The Compound Rewards contract this strategy will interact with to withdraw rewards
+    /// @param _tokenSupplyAddress The address of the base coin to be supplied to the comet contract
     function initialize(
         IMaxApyVault _vault,
         address[] calldata _keepers,
@@ -101,8 +99,7 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
         address _strategist,
         IComet _comet,
         ICometRewards _cometRewards,
-        address _tokenSupplyAddress,
-        IRouter _router
+        address _tokenSupplyAddress
     )
         public
         virtual
@@ -312,13 +309,14 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
                     }
                     uint256 rewardsUsdc = _accruedRewardValue();
                     if (expectedAmountLeftToWithdraw > rewardsUsdc) {
+                        uint256 totalAccruedReward = uint256(comet.userBasic(address(this)).baseTrackingAccrued);
                         withdrawn = _divest(_totalInvestedBaseAsset(), totalAccruedReward, false);
                     } else {
                         unchecked {
                             expectedAmountLeftToWithdraw = rewardsUsdc - expectedAmountLeftToWithdraw;
                         }
                         withdrawn = _divest(
-                            _totalInvestedBaseAsset(), _convertUsdcToBaseAsset(expectedAmountLeftToWithdraw), true
+                            _totalInvestedBaseAsset(), _convertUsdcToCompRewards(expectedAmountLeftToWithdraw), true
                         );
                     }
                 } else {
@@ -397,6 +395,23 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
         comet.supply(tokenSupplyAddress, amount);
+
+        depositedAmount = comet.balanceOf(address(this));
+
+        assembly ("memory-safe") {
+            // if (shares < minOutputAfterInvestment)
+            if lt(depositedAmount, minOutputAfterInvestment) {
+                // throw the `MinOutputAmountNotReached` error
+                mstore(0x00, 0xf7c67a48)
+                revert(0x1c, 0x04)
+            }
+        }
+
+        assembly {
+            // Emit the `Invested` event
+            mstore(0x00, amount)
+            log2(0x00, 0x20, _INVESTED_EVENT_SIGNATURE, address())
+        }
     }
 
     /// @notice Divests amount `amount` from Compound Vault
@@ -441,6 +456,7 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
         returns (uint256 liquidatedAmount, uint256 loss)
     {
         uint256 underlyingBalance = _underlyingBalance();
+
         // If underlying balance currently held by strategy is not enough to cover
         // the requested amount, we divest from the Compound Vault
         if (amountNeeded > underlyingBalance) {
@@ -448,6 +464,7 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
             uint256 expectedAmountToWithdraw = amountNeeded - underlyingBalance;
 
             uint256 totalInvestedValue = _totalInvestedValue();
+
             // If underlying assest invested currently by strategy is not enough to cover
             // the requested amount, we divest from the Compound rewards
             if (expectedAmountToWithdraw > totalInvestedValue) {
@@ -456,14 +473,17 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
                     expectedAmountLeftToWithdraw = expectedAmountToWithdraw - totalInvestedValue;
                 }
                 uint256 rewardsUsdc = _accruedRewardValue();
+
                 if (expectedAmountLeftToWithdraw > rewardsUsdc) {
+                    uint256 totalAccruedReward = uint256(comet.userBasic(address(this)).baseTrackingAccrued);
                     withdrawn = _divest(_totalInvestedBaseAsset(), totalAccruedReward, false);
                 } else {
                     unchecked {
                         expectedAmountLeftToWithdraw = rewardsUsdc - expectedAmountLeftToWithdraw;
                     }
-                    withdrawn =
-                        _divest(_totalInvestedBaseAsset(), _convertUsdcToBaseAsset(expectedAmountLeftToWithdraw), true);
+                    withdrawn = _divest(
+                        _totalInvestedBaseAsset(), _convertUsdcToCompRewards(expectedAmountLeftToWithdraw), true
+                    );
                 }
             } else {
                 withdrawn = _divest(_convertUsdcToBaseAsset(expectedAmountToWithdraw), 0, true);
@@ -507,8 +527,10 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     function _totalInvestedValue() public view virtual returns (uint256);
 
     function _totalInvestedBaseAsset() public view virtual returns (uint256 investedAmount) {
-        investedAmount = COMPOUND_USDT_V3_COMMET_MAINNET.balanceOf(address(this));
+        investedAmount = comet.balanceOf(address(this));
     }
+
+    function _convertUsdcToCompRewards(uint256 amount) public view virtual returns (uint256);
 
     /// @notice Returns the real time estimation of the value in assets held by the strategy
     /// @return the strategy's total assets(idle + investment positions)
@@ -670,7 +692,6 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
             mstore(0x40, m) // Restore the free memory pointer
         }
         intendedInvest = _underlyingBalance();
-        // uint256 sharesBalanceBefore = _shareBalance();
         uint256 _investmentBefore = _totalInvestedValue();
         // Check if vault transferred underlying and re-invest it
         _adjustPosition(debtOutstanding, 0);

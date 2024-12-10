@@ -155,10 +155,13 @@ contract BaseBeefyStrategy is BaseStrategy {
             unchecked {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
+
             uint256 shares = _sharesForAmount(amountToWithdraw);
             uint256 withdrawn = _shareValue(shares);
+
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
+
         liquidatedAmount = (requestedAmount - loss) * 997 / 1000;
     }
 
@@ -179,12 +182,12 @@ contract BaseBeefyStrategy is BaseStrategy {
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxLiquidate() public view override returns (uint256) {
+    function maxLiquidate() public view virtual override returns (uint256) {
         return _estimatedTotalAssets();
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxLiquidateExact() public view override returns (uint256) {
+    function maxLiquidateExact() public view virtual override returns (uint256) {
         // make sure it doesnt revert when increaseing it 1% in the withdraw
         return previewLiquidate(estimatedTotalAssets()) * 99 / 100;
     }
@@ -401,6 +404,7 @@ contract BaseBeefyStrategy is BaseStrategy {
     /// amount
     function _liquidatePosition(uint256 amountNeeded)
         internal
+        virtual
         override
         returns (uint256 liquidatedAmount, uint256 loss)
     {

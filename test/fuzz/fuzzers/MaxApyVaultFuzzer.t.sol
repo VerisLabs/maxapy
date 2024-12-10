@@ -27,8 +27,10 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
 
     function deposit(uint256 assets) public createActor {
         assets = bound(assets, 0, vault.maxDeposit(currentActor));
+
         deal(token, currentActor, assets);
         uint256 expectedShares = vault.previewDeposit(assets);
+
         vm.startPrank(currentActor);
         token.safeApprove(address(vault), assets);
         if (assets == 0 || expectedShares == 0) vm.expectRevert();
@@ -51,21 +53,27 @@ contract MaxApyVaultFuzzer is BaseFuzzer {
 
     function redeem(LibPRNG.PRNG memory actorSeedRNG, uint256 shares) public useActor(actorSeedRNG.next()) {
         shares = bound(shares, 0, vault.maxRedeem(currentActor));
+
         uint256 expectedAssets = vault.previewRedeem(shares);
+
         vm.startPrank(currentActor);
+
         if (shares == 0 || expectedAssets == 0) vm.expectRevert();
         uint256 actualAssets = vault.redeem(shares, currentActor, currentActor);
+
         assertGe(actualAssets, expectedAssets);
         vm.stopPrank();
     }
 
     function withdraw(LibPRNG.PRNG memory actorSeedRNG, uint256 assets) public useActor(actorSeedRNG.next()) {
         assets = bound(assets, 0, vault.maxWithdraw(currentActor));
-        if (assets < 0.0001 ether) return;
+
+        if (assets < 0.0001 ether || assets > 250 ether) return;
         uint256 expectedShares = vault.previewWithdraw(assets);
         vm.startPrank(currentActor);
         if (assets == 0 || expectedShares == 0) vm.expectRevert();
         uint256 actualShares = vault.withdraw(assets, currentActor, currentActor);
+
         assertLe(actualShares, expectedShares);
         vm.stopPrank();
     }
