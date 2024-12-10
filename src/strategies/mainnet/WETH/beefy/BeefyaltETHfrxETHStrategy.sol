@@ -208,7 +208,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
         override
         returns (uint256 requestedAmount)
     {
-        return (previewLiquidate(liquidatedAmount) * 103) / 100;
+        return (previewLiquidate(liquidatedAmount) * 104) / 100;
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses

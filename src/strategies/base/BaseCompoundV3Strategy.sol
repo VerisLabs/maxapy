@@ -24,7 +24,6 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
     uint256 internal constant DEGRADATION_COEFFICIENT = 10 ** 18;
 
-
     ////////////////////////////////////////////////////////////////
     ///                         ERRORS                           ///
     ////////////////////////////////////////////////////////////////
@@ -317,7 +316,8 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
                             expectedAmountLeftToWithdraw = rewardsUsdc - expectedAmountLeftToWithdraw;
                         }
                         withdrawn = _divest(
-                        _totalInvestedBaseAsset(), _convertUsdcToCompRewards(expectedAmountLeftToWithdraw), true);
+                            _totalInvestedBaseAsset(), _convertUsdcToCompRewards(expectedAmountLeftToWithdraw), true
+                        );
                     }
                 } else {
                     withdrawn = _divest(_convertUsdcToBaseAsset(expectedAmountToWithdraw), 0, true);
@@ -481,7 +481,9 @@ abstract contract BaseCompoundV3Strategy is BaseStrategy {
                     unchecked {
                         expectedAmountLeftToWithdraw = rewardsUsdc - expectedAmountLeftToWithdraw;
                     }
-                    withdrawn = _divest(_totalInvestedBaseAsset(), _convertUsdcToCompRewards(expectedAmountLeftToWithdraw), true);
+                    withdrawn = _divest(
+                        _totalInvestedBaseAsset(), _convertUsdcToCompRewards(expectedAmountLeftToWithdraw), true
+                    );
                 }
             } else {
                 withdrawn = _divest(_convertUsdcToBaseAsset(expectedAmountToWithdraw), 0, true);
