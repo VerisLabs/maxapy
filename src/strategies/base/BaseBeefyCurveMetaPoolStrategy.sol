@@ -3,9 +3,12 @@ pragma solidity ^0.8.19;
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
-import { ICurveLpPool, ICurve3pool } from "src/interfaces/ICurve.sol";
+import { ICurveLpPool, ICurveTriPool } from "src/interfaces/ICurve.sol";
 import { BaseBeefyStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseBeefyStrategy.sol";
-import { _3CRV_MAINNET } from "src/helpers/AddressBook.sol";
+import { CRV3POOL_MAINNET } from "src/helpers/AddressBook.sol";
+import {ERC20} from  "solady/tokens/ERC20.sol";
+
+import {console2} from "forge-std/console2.sol";
 
 /// @title BaseBeefyCurveMetaPoolStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -22,9 +25,9 @@ contract BaseBeefyCurveMetaPoolStrategy is BaseBeefyStrategy {
     /// @notice Curve Meta pool for this Strategy
     ICurveLpPool public curveLpPool;
     /// @notice Curve 3pool for this Strategy - DAI/USDC/USDT Pool
-    ICurve3pool public curve3pool;
+    ICurveTriPool public curveTriPool;
 
-    address _3crvToken = _3CRV_MAINNET;
+    address public crvTriPoolToken;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -37,7 +40,8 @@ contract BaseBeefyCurveMetaPoolStrategy is BaseBeefyStrategy {
     /// @param _strategyName the name of the strategy
     /// @param _curveLpPool The address of the strategy's main Curve pool
     /// @param _beefyVault The address of the strategy's Beefy vault
-    /// @param _curve3pool The address of the strategy's Curve 3pool
+    /// @param _curveTriPool The address of the strategy's Curve Tripool
+    /// @param _crvTriPoolToken The address of the Curve Tripool's token
     function initialize(
         IMaxApyVault _vault,
         address[] calldata _keepers,
@@ -45,7 +49,8 @@ contract BaseBeefyCurveMetaPoolStrategy is BaseBeefyStrategy {
         address _strategist,
         ICurveLpPool _curveLpPool,
         IBeefyVault _beefyVault,
-        ICurve3pool _curve3pool
+        ICurveTriPool _curveTriPool,
+        address _crvTriPoolToken
     )
         public
         virtual
@@ -55,17 +60,32 @@ contract BaseBeefyCurveMetaPoolStrategy is BaseBeefyStrategy {
 
         // Curve init
         curveLpPool = _curveLpPool;
-        curve3pool = _curve3pool;
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:60 ~ _curveLpPool:");
 
-        underlyingAsset.safeApprove(address(curve3pool), type(uint256).max);
-        address(curve3pool).safeApprove(address(curveLpPool), type(uint256).max);
+        curveTriPool = _curveTriPool;
+        crvTriPoolToken = _crvTriPoolToken;
+
+        console2.log("### 2");
+
+        underlyingAsset.safeApprove(address(curveTriPool), type(uint256).max);
+        console2.log("### 3");
+        crvTriPoolToken.safeApprove(address(curveLpPool), type(uint256).max);
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:85 ~ address(crvTriPoolToken):", crvTriPoolToken);
+        console2.log("### 4");
         address(curveLpPool).safeApprove(address(beefyVault), type(uint256).max);
-
+        console2.log("### 5");
         /// min single trade by default
         minSingleTrade = 10e6;
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:74 ~ minSingleTrade:", minSingleTrade);
+
         /// Unlimited max single trade by default
         maxSingleTrade = 100_000e6;
-    }
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:78 ~ maxSingleTrade:", maxSingleTrade);
+
+    }   
+        
+
+
 
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL CORE FUNCTIONS                  ///
@@ -94,10 +114,16 @@ contract BaseBeefyCurveMetaPoolStrategy is BaseBeefyStrategy {
         uint256[3] memory amountsUsdc;
         amountsUsdc[1] = amount;
 
-        uint256 _before = _3crvToken.balanceOf(address(this));
-        // Add liquidity to the curve3pool in underlying token [coin1 -> usdc]
-        curve3pool.add_liquidity(amountsUsdc, 0);
-        uint256 _after = _3crvToken.balanceOf(address(this));
+        uint256 _before = ERC20(crvTriPoolToken).balanceOf(address(this));
+        // uint256 _before = ERC20(_3crvToken).balanceOf(address(this));
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:111 ~ _invest ~ _before:", _before);
+
+        // Add liquidity to the curveTriPool in underlying token [coin1 -> usdc]
+        curveTriPool.add_liquidity(amountsUsdc, 0);
+        uint256 _after = ERC20(crvTriPoolToken).balanceOf(address(this));
+        // uint256 _after = ERC20(_3crvToken).balanceOf(address(this));
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:116 ~ _invest ~ _after:", _after);
+
 
         uint256 _3crvTokenReceived;
         assembly ("memory-safe") {
@@ -108,6 +134,8 @@ contract BaseBeefyCurveMetaPoolStrategy is BaseBeefyStrategy {
         amounts[1] = _3crvTokenReceived;
         // Add liquidity to the curve Metapool in 3crv token [coin1 -> 3crv]
         uint256 lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:137 ~ _invest ~ lpReceived:", lpReceived);
+
 
         _before = beefyVault.balanceOf(address(this));
 
@@ -126,10 +154,14 @@ contract BaseBeefyCurveMetaPoolStrategy is BaseBeefyStrategy {
             }
         }
 
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:161 ~ _invest ~ shares:", shares);
+
         emit Invested(address(this), amount);
 
         return shares;
     }
+        
+
 
     /// @dev care should be taken, as the `amount` parameter is not in terms of underlying,
     /// but in terms of Beefy's moo tokens
@@ -156,17 +188,21 @@ contract BaseBeefyCurveMetaPoolStrategy is BaseBeefyStrategy {
             0,
             address(this)
         );
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:185 ~ _divest ~ _3crvTokenReceived:", _3crvTokenReceived);
+
 
         _before = underlyingAsset.balanceOf(address(this));
 
-        curve3pool.remove_liquidity_one_coin(
-            lptokens,
+        curveTriPool.remove_liquidity_one_coin(
+            _3crvTokenReceived,
             1,
             //usdce
             0
         );
 
         amountDivested = underlyingAsset.balanceOf(address(this)) - _before;
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:198 ~ _divest ~ amountDivested:", amountDivested);
+
     }
 
     ////////////////////////////////////////////////////////////////
@@ -176,31 +212,74 @@ contract BaseBeefyCurveMetaPoolStrategy is BaseBeefyStrategy {
     /// @notice Determines the current value of `shares`.
     /// @return _assets the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view virtual override returns (uint256 _assets) {
-        uint256 lpTokenAmount = super._shareValue(shares);
-        uint256 lpPrice = _lpPrice();
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:218 ~ _shareValue ~ shares:", shares);
 
-        // lp price add get function _lpPrice()
-        assembly {
-            let scale := 0xde0b6b3a7640000 // This is 1e18 in hexadecimal
-            _assets := div(mul(lpTokenAmount, lpPrice), scale)
+        uint256 expectedCurveLp = shares * beefyVault.balance() / beefyVault.totalSupply();
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:219 ~ _shareValue ~ expectedCurveLp:", expectedCurveLp);
+
+        if (expectedCurveLp > 0) {
+            uint256 expected3Crv = curveLpPool.calc_withdraw_one_coin(expectedCurveLp, 1);
+            console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:222 ~ _shareValue ~ expected3Crv:", expected3Crv);
+            if (expected3Crv > 0) {
+                _assets = curveTriPool.calc_withdraw_one_coin(expected3Crv, 1);
+            }
         }
+        
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:227 ~ _shareValue ~ _assets:", _assets);
+
+        // uint256 lpTokenAmount = super._shareValue(shares);
+        // console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:216 ~ _shareValue ~ lpTokenAmount:", lpTokenAmount);
+
+        // uint256 lpPrice = _lpPrice();
+        // console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:219 ~ _shareValue ~ lpPrice:", lpPrice);
+
+
+        // uint256 lpTriPoolPrice =_lpTriPoolPrice();
+        // console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:223 ~ _shareValue ~ lpTriPoolPrice:", lpTriPoolPrice);
+
+
+        // // lp price add get function _lpPrice()
+        // assembly {
+        //     let scale := 0xde0b6b3a7640000 // This is 1e18 in hexadecimal
+        //     _assets := div(mul(lpTokenAmount, lpPrice), scale)
+        //     _assets := div(mul(_assets, lpTriPoolPrice), scale)
+            
+        // }
     }
 
     /// @notice Determines how many shares depositor of `amount` of underlying would receive.
     /// @return shares the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view virtual override returns (uint256 shares) {
-        uint256 lpTokenAmount;
-        uint256 lpPrice = _lpPrice();
-        assembly {
-            let scale := 0xde0b6b3a7640000 // This is 1e18 in hexadecimal
-            lpTokenAmount := div(mul(amount, scale), lpPrice)
-        }
+
+        uint256[3] memory amounts;
+        amounts[1] = amount;
+
+        
+        uint256 lpTokenAmount = curveTriPool.calc_token_amount(amounts, true);  
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:228 ~ _sharesForAmount ~ lpTokenAmount:", lpTokenAmount);
+
+
+        uint256[2] memory _amounts;
+        _amounts[1] = lpTokenAmount;  
+
+        lpTokenAmount = curveLpPool.calc_token_amount(_amounts, true);
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:235 ~ _sharesForAmount ~ lpTokenAmount:", lpTokenAmount);
+
         shares = super._sharesForAmount(lpTokenAmount);
+        console2.log("###   ~ file: BaseBeefyCurveMetaPoolStrategy.sol:245 ~ _sharesForAmount ~ shares:", shares);
+
     }
 
     /// @notice Returns the estimated price for the strategy's curve's LP token
     /// @return returns the estimated lp token price
     function _lpPrice() internal view returns (uint256) {
         return ((curveLpPool.get_virtual_price() * curveLpPool.get_dy(0, 1, 1 ether)) / 1 ether);
+    }
+
+    /// @notice Returns the estimated price for the strategy's curve's Tri pool LP token
+    /// @return returns the estimated lp token price
+    function _lpTriPoolPrice() internal view returns (uint256) {
+        return ((curveTriPool.get_virtual_price() 
+                   * Math.min(curveTriPool.get_dy(0, 1, 1 ether), curveTriPool.get_dy(1,0,1e6))) / 1 ether);
     }
 }

@@ -99,6 +99,17 @@ interface ICurveTriPool {
     function get_dy(int128 i, int128 j, uint256 dx) external view returns (uint256);
 
     function exchange(int128 i, int128 j, uint256 _dx, uint256 _min_dy) external;
+
+    function get_virtual_price() external view returns (uint256);
+
+    function add_liquidity(uint256[3] calldata amounts, uint256 min_mint_amount) external;
+
+    function remove_liquidity_one_coin(uint256 token_amount, int128 i, uint256 min_amount) external;
+
+    function calc_token_amount(uint256[3] memory amounts, bool deposit) external view returns (uint256);
+
+    function calc_withdraw_one_coin(uint256 token_amount, int128 i) external view returns (uint256);
+
 }
 
 interface ICurveAtriCryptoZapper {
@@ -115,9 +126,4 @@ interface ICurveAtriCryptoZapper {
     function get_dy(int128 i, int128 j, uint256 dx) external view returns (uint256);
     function exchange_underlying(uint256 i, uint256 j, uint256 _dx, uint256 _min_dy, address _receiver) external;
     function get_dy_underlying(uint256 i, uint256 j, uint256 _dx) external view returns (uint256);
-}
-
-interface ICurve3pool {
-    function add_liquidity(uint256[3] calldata amounts, uint256 min_mint_amount) external;
-    function remove_liquidity_one_coin(uint256 token_amount, int128 i, uint256 min_amount) external;
 }

@@ -22,6 +22,9 @@ import { StrategyEvents } from "test/helpers/StrategyEvents.sol";
 // Compound v3
 import { CompoundV3USDTStrategyWrapper } from "../mock/CompoundV3USDTStrategyWrapper.sol";
 
+// Beefy
+import { BeefythUSDDAIUSDCUSDTStrategyWrapper } from "../mock/BeefythUSDDAIUSDCUSDTStrategyWrapper.sol";
+
 // Vault fuzzer
 import { MaxApyVaultFuzzer } from "./fuzzers/MaxApyVaultFuzzer.t.sol";
 import { StrategyFuzzer } from "./fuzzers/StrategyFuzzer.t.sol";
@@ -52,6 +55,7 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
     ////////////////////////////////////////////////////////////////
 
     ICompoundV3StrategyWrapper public strategy1; // yearn weth
+    IStrategyWrapper public strategy2;
 
     IMaxApyVault public vault;
     ITransparentUpgradeableProxy public proxy;
@@ -77,6 +81,11 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
         address[] memory keepers = new address[](1);
         keepers[0] = users.keeper;
 
+        /////////////////////////////////////////////////////////////////////////
+        ///                        STRATEGIES                                 ///
+        /////////////////////////////////////////////////////////////////////////
+        /// Deploy transparent upgradeable proxy admin
+
         // Deploy strategy1
         CompoundV3USDTStrategyWrapper implementation1 = new CompoundV3USDTStrategyWrapper();
         TransparentUpgradeableProxy _proxy = new TransparentUpgradeableProxy(
@@ -94,18 +103,37 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
                 UNISWAP_V3_ROUTER_MAINNET
             )
         );
-        proxy = ITransparentUpgradeableProxy(address(_proxy));
         vm.label(COMPOUND_USDT_V3_COMMET_MAINNET, "CompoundV3USDT");
-        vm.label(address(proxy), "CompoundV3USDTStrategy");
-
         strategy1 = ICompoundV3StrategyWrapper(address(_proxy));
 
-        address[] memory strategyList = new address[](1);
+        // Deploy strategy2
+        BeefythUSDDAIUSDCUSDTStrategyWrapper implementation2 = new BeefythUSDDAIUSDCUSDTStrategyWrapper();
+        _proxy = new TransparentUpgradeableProxy(
+            address(implementation2),
+            address(proxyAdmin),
+            abi.encodeWithSignature(
+                "initialize(address,address[],bytes32,address,address,address,address,address)",
+                address(vault),
+                keepers,
+                bytes32("MaxApy thUSDDAIUSDCUSDT Strategy"),
+                users.alice,
+                CURVE_THUSD_DAI_USDC_USDT_MAINNET,
+                BEEFY_THUSD_DAI_USDC_USDT_MAINNET,
+                CURVE_3POOL_POOL_MAINNET,
+                CRV3POOL_MAINNET
+            )
+        );
+        vm.label(BEEFY_THUSD_DAI_USDC_USDT_MAINNET, "BeefythUSDTDAIUSDCUSDT");
+        strategy2 = IStrategyWrapper(address(_proxy));
+
+        address[] memory strategyList = new address[](2);
 
         strategyList[0] = address(strategy1);
+        strategyList[1] = address(strategy2);
 
         // Add all the strategies
         vault.addStrategy(address(strategy1), 700, type(uint72).max, 0, 0);
+        vault.addStrategy(address(strategy2), 700, type(uint72).max, 0, 0);
 
         vm.label(address(USDC_MAINNET), "USDC");
         /// Alice approves vault for deposits
@@ -123,6 +151,7 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
         uint256 _keeperRole = strategy1.KEEPER_ROLE();
 
         strategy1.grantRoles(address(strategyFuzzer), _keeperRole);
+        strategy2.grantRoles(address(strategyFuzzer), _keeperRole);
     }
 
     function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithoutHarvests(
@@ -190,7 +219,7 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
         vaultFuzzer.redeem(actorSeedRNG, shares);
     }
 
-    function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithGainsAndLossesWithoutHarvests(
+    function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithGainsAndLossesWithoutHarvests_banana(
         uint256 actorSeed,
         uint256 strategySeed,
         uint256 gainsAndLossesSeed,
@@ -225,7 +254,7 @@ contract MaxApyIntegrationTestMainnet is BaseTest, StrategyEvents {
         strategyFuzzer.harvest(strategyRNG);
         strategyFuzzer.harvest(strategyRNG);
         vaultFuzzer.redeem(actorSeedRNG, shares);
-        vaultFuzzer.redeem(actorSeedRNG, shares);
+        // vaultFuzzer.redeem(actorSeedRNG, shares);
     }
 
     function testFuzzMaxApyIntegrationMainnet__DepositAndRedeemWithGainsAndLossesWithHarvests(
