@@ -110,24 +110,31 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
 
         uint256[2] memory amounts;
         amounts[1] = frxEthReceivedAmount;
-        // Add liquidity to the mai<>usdce pool in usdce [coin1 -> usdce]
+        // Add liquidity to the altETH<>frxETH pool in frxETH [coin1 -> frxETH]
         lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
 
+        
+        uint256 _before = beefyVault.balanceOf(address(this));
+
+        // Deposit Curve LP tokens to Beefy vault
+        beefyVault.deposit(lpReceived);
+
+        uint256 _after = beefyVault.balanceOf(address(this));
+        uint256 shares;
+        shares = _after - _before;
+
         assembly ("memory-safe") {
-            // if (lpReceived < minOutputAfterInvestment)
-            if lt(lpReceived, minOutputAfterInvestment) {
+            // if (shares < minOutputAfterInvestment)
+            if lt(shares, minOutputAfterInvestment) {
                 // throw the `MinOutputAmountNotReached` error
                 mstore(0x00, 0xf7c67a48)
                 revert(0x1c, 0x04)
             }
         }
 
-        // Deposit Curve LP tokens to Beefy vault
-        beefyVault.deposit(lpReceived);
-
         emit Invested(address(this), amount);
 
-        return _lpValue(lpReceived);
+        return _shareValue(shares);
     }
 
     /// @dev care should be taken, as the `amount` parameter is not in terms of underlying,
@@ -201,7 +208,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
         override
         returns (uint256 requestedAmount)
     {
-        return (previewLiquidate(liquidatedAmount) * 103) / 100;
+        return (previewLiquidate(liquidatedAmount) * 104) / 100;
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses

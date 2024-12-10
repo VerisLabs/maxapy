@@ -2,6 +2,16 @@
 pragma solidity ^0.8.19;
 
 import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
+
+import {
+    COMP_MAINNET,
+    CURVE_3POOL_POOL_MAINNET,
+    UNISWAP_V3_COMP_WETH_POOL_MAINNET,
+    UNISWAP_V3_WETH_USDC_POOL_MAINNET,
+    USDC_MAINNET,
+    USDT_MAINNET,
+    WETH_MAINNET
+} from "src/helpers/AddressBook.sol";
 import { IComet } from "src/interfaces/CompoundV3/IComet.sol";
 import { ICometRewards, RewardOwed } from "src/interfaces/CompoundV3/ICometRewards.sol";
 import { ICurveTriPool } from "src/interfaces/ICurve.sol";
@@ -12,15 +22,6 @@ import {
     IMaxApyVault,
     SafeTransferLib
 } from "src/strategies/base/BaseCompoundV3Strategy.sol";
-import {
-    COMP_MAINNET,
-    UNISWAP_V3_COMP_WETH_POOL_MAINNET,
-    UNISWAP_V3_WETH_USDC_POOL_MAINNET,
-    CURVE_3POOL_POOL_MAINNET,
-    USDC_MAINNET,
-    USDT_MAINNET,
-    WETH_MAINNET
-} from "src/helpers/AddressBook.sol";
 
 contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     using SafeTransferLib for address;
@@ -33,7 +34,6 @@ contract CompoundV3USDTStrategy is BaseCompoundV3Strategy {
     ICurveTriPool public constant triPool = ICurveTriPool(CURVE_3POOL_POOL_MAINNET);
     address constant usdt = USDT_MAINNET;
 
-    
     /// @notice Address of Uniswap V3 COMP-WETH pool
     address public constant poolA = UNISWAP_V3_COMP_WETH_POOL_MAINNET;
     /// @notice Address of Uniswap V3 WETH-USDC pool
