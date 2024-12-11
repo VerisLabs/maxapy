@@ -109,7 +109,6 @@ interface ICurveTriPool {
     function calc_token_amount(uint256[3] memory amounts, bool deposit) external view returns (uint256);
 
     function calc_withdraw_one_coin(uint256 token_amount, int128 i) external view returns (uint256);
-
 }
 
 interface ICurveAtriCryptoZapper {

@@ -54,7 +54,7 @@ interface IStrategyWrapper is IStrategy {
     function curveLpPool() external view returns (address);
 
     function curveTriPool() external view returns (address);
-    
+
     function curveEthFrxEthPool() external view returns (address);
 
     function curveUsdcCrvUsdPool() external view returns (address);

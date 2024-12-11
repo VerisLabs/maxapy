@@ -36,7 +36,7 @@ contract BeefythUSDDAIUSDCUSDTStrategyTest is BaseTest, ConvexdETHFrxETHStrategy
 
     function setUp() public {
         super._setUp("MAINNET");
-        vm.rollFork(21367091);
+        vm.rollFork(21_367_091);
 
         TREASURY = makeAddr("treasury");
 
@@ -293,7 +293,6 @@ contract BeefythUSDDAIUSDCUSDTStrategyTest is BaseTest, ConvexdETHFrxETHStrategy
 
         deal({ token: USDC_MAINNET, to: address(strategy), give: 10 * _1_USDC });
         uint256 expectedShares = strategy.sharesForAmount(10 * _1_USDC);
-        
 
         vm.expectEmit();
         emit Invested(address(strategy), 10 * _1_USDC);
@@ -318,8 +317,6 @@ contract BeefythUSDDAIUSDCUSDTStrategyTest is BaseTest, ConvexdETHFrxETHStrategy
 
         uint256 strategyBalanceBefore = IERC20(USDC_MAINNET).balanceOf(address(strategy));
         uint256 amountDivested = strategy.divest(IERC20(BEEFY_THUSD_DAI_USDC_USDT_MAINNET).balanceOf(address(strategy)));
-        console2.log("###   ~ file: BeefythUSDDAIUSDCUSDTStrategy.t.sol:318 ~ testBeefythUSDDAIUSDCUSDT__Divest ~ amountDivested:", amountDivested);
-
 
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + amountDivested);
     }
@@ -390,7 +387,6 @@ contract BeefythUSDDAIUSDCUSDTStrategyTest is BaseTest, ConvexdETHFrxETHStrategy
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), strategyBalanceBefore + amountFreed);
         assertEq(IERC20(BEEFY_THUSD_DAI_USDC_USDT_MAINNET).balanceOf(address(strategy)), 0);
     }
-        
 
     function testBeefythUSDDAIUSDCUSDT__Harvest() public {
         vm.expectRevert(abi.encodeWithSignature("Unauthorized()"));
@@ -453,7 +449,7 @@ contract BeefythUSDDAIUSDCUSDTStrategyTest is BaseTest, ConvexdETHFrxETHStrategy
         vm.warp(block.timestamp + 1 days);
 
         strategy.harvest(0, 0, address(0), block.timestamp);
-        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 109971091);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 109_971_091);
         assertEq(IERC20(BEEFY_THUSD_DAI_USDC_USDT_MAINNET).balanceOf(address(strategy)), 0);
         vm.revertTo(snapshotId);
 
@@ -490,7 +486,6 @@ contract BeefythUSDDAIUSDCUSDTStrategyTest is BaseTest, ConvexdETHFrxETHStrategy
         assertEq(vault.debtRatio(), 3001);
         assertEq(data.strategyDebtRatio, 3001);
     }
-        
 
     function testBeefythUSDDAIUSDCUSDT__PreviewLiquidate() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
@@ -501,13 +496,10 @@ contract BeefythUSDDAIUSDCUSDTStrategyTest is BaseTest, ConvexdETHFrxETHStrategy
 
         vm.stopPrank();
         uint256 expected = strategy.previewLiquidate(30 * _1_USDC);
-        console2.log("###   ~ file: BeefythUSDDAIUSDCUSDTStrategy.t.sol:500 ~ testBeefythUSDDAIUSDCUSDT__PreviewLiquidate ~ expected:", expected);
 
         vm.startPrank(address(vault));
 
         uint256 loss = strategy.liquidate(30 * _1_USDC);
-        console2.log("###   ~ file: BeefythUSDDAIUSDCUSDTStrategy.t.sol:505 ~ testBeefythUSDDAIUSDCUSDT__PreviewLiquidate ~ loss:", loss);
-
 
         assertLe(expected, 30 * _1_USDC - loss);
     }

@@ -113,7 +113,6 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
         // Add liquidity to the altETH<>frxETH pool in frxETH [coin1 -> frxETH]
         lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
 
-        
         uint256 _before = beefyVault.balanceOf(address(this));
 
         // Deposit Curve LP tokens to Beefy vault
