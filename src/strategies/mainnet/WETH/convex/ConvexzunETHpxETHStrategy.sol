@@ -4,11 +4,12 @@ pragma solidity ^0.8.19;
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import {
     CONVEX_BOOSTER_MAINNET,
-    CONVEX_DETH_FRXETH_CONVEX_POOL_ID_MAINNET,
+    CONVEX_ZUNETH_PXETH_CONVEX_POOL_ID_MAINNET,
     CRV_MAINNET,
     CURVE_CVX_WETH_POOL_MAINNET,
     CVX_MAINNET,
-    FRXETH_MAINNET
+    PXETH_MAINNET,
+    WETH_MAINNET
 } from "src/helpers/AddressBook.sol";
 import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
 import { IConvexRewards } from "src/interfaces/IConvexRewards.sol";
@@ -20,12 +21,11 @@ import {
 } from "src/strategies/base/BaseConvexStrategy.sol";
 
 import {console2} from "forge-std/console2.sol";
-
-/// @title ConvexdETHFrxETHStrategy
+/// @title ConvexzunETHpxETHStrategy
 /// @author MaxApy
-/// @notice `ConvexdETHFrxETHStrategy` supplies ETH into the dETH-frxETH pool in Curve, then stakes the curve LP
+/// @notice `ConvexzunETHpxETHStrategy` supplies ETH into the zunETH-pxETH pool in Curve, then stakes the curve LP
 /// in Convex in order to maximize yield.
-contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
+contract ConvexzunETHpxETHStrategy is BaseConvexStrategy {
     using SafeTransferLib for address;
 
     ////////////////////////////////////////////////////////////////
@@ -37,15 +37,15 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
     /// @notice Ethereum mainnet's CVX Token
     address public constant cvx = CVX_MAINNET;
     /// @notice Ethereum mainnet's frxETH Token
-    address public constant frxETH = FRXETH_MAINNET;
+    address public constant pxETH = PXETH_MAINNET;
     /// @notice Main Convex's deposit contract for LP tokens
     IConvexBooster public constant convexBooster = IConvexBooster(CONVEX_BOOSTER_MAINNET);
     /// @notice Router to perform CRV-WETH swaps
     IRouter public router;
     /// @notice CVX-WETH pool in Curve
     ICurveLpPool public constant cvxWethPool = ICurveLpPool(CURVE_CVX_WETH_POOL_MAINNET);
-    /// @notice Identifier for the dETH<>frxETH Convex pool
-    uint256 public constant DETH_FRXETH_CONVEX_POOL_ID = CONVEX_DETH_FRXETH_CONVEX_POOL_ID_MAINNET;
+    /// @notice Identifier for the zunETH<>pxETH Convex pool
+    uint256 public constant ZUNETH_PXETH_CONVEX_POOL_ID = CONVEX_ZUNETH_PXETH_CONVEX_POOL_ID_MAINNET;
 
     ////////////////////////////////////////////////////////////////
     ///            STRATEGY GLOBAL STATE VARIABLES               ///
@@ -56,8 +56,8 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
     ICurveLpPool public curveLpPool;
 
     /*==================CURVE-RELATED STORAGE VARIABLES==================*/
-    /// @notice Curve's ETH-frxETH pool
-    ICurveLpPool public curveEthFrxEthPool;
+    /// @notice Curve's ETH-pxETH pool
+    ICurveLpPool public curveWETHpxETHPool;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -68,8 +68,8 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
-    /// @param _curveLpPool The address of the strategy's main Curve pool, dETH-frxETH pool
-    /// @param _curveEthFrxEthPool The address of Curve's ETH-frxETH pool
+    /// @param _curveLpPool The address of the strategy's main Curve pool, zunETH-pxETH pool
+    /// @param _curveWETHpxETHPool The address of Curve's ETH-pxETH pool
     /// @param _router The router address to perform swaps
     function initialize(
         IMaxApyVault _vault,
@@ -77,21 +77,16 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
         bytes32 _strategyName,
         address _strategist,
         ICurveLpPool _curveLpPool,
-        ICurveLpPool _curveEthFrxEthPool,
+        ICurveLpPool _curveWETHpxETHPool,
         IRouter _router
     )
         public
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        console2.log("###   ~ file: ConvexdETHFrxETHStrategy.sol:88 ~ DETH_FRXETH_CONVEX_POOL_ID:", DETH_FRXETH_CONVEX_POOL_ID);
         // Fetch convex pool data
-        (, address _token,, address _crvRewards,, bool _shutdown) = convexBooster.poolInfo(DETH_FRXETH_CONVEX_POOL_ID);
-        console2.log("###   ~ file: ConvexdETHFrxETHStrategy.sol:88 ~ _token:", _token);
-
+        (, address _token,, address _crvRewards,, bool _shutdown) = convexBooster.poolInfo(ZUNETH_PXETH_CONVEX_POOL_ID);
         
-
-
         assembly {
             // Check if Convex pool is in shutdown mode
             if eq(_shutdown, 0x01) {
@@ -102,25 +97,33 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
         }
 
         convexRewardPool = IConvexRewards(_crvRewards);
+        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:102 ~ convexRewardPool:");
+
         convexLpToken = _token;
         rewardToken = IConvexRewards(_crvRewards).rewardToken();
 
         // Curve init
         curveLpPool = _curveLpPool;
-        curveEthFrxEthPool = _curveEthFrxEthPool;
+        curveWETHpxETHPool = _curveWETHpxETHPool;
+        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:110 ~ curveWETHpxETHPool:");
+
 
         // Approve pools
         address(_curveLpPool).safeApprove(address(convexBooster), type(uint256).max);
 
         // Set router
         router = _router;
+        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:118 ~ router:");
+
 
         crv.safeApprove(address(_router), type(uint256).max);
         cvx.safeApprove(address(cvxWethPool), type(uint256).max);
-        frxETH.safeApprove(address(curveLpPool), type(uint256).max);
-        frxETH.safeApprove(address(curveEthFrxEthPool), type(uint256).max);
+        pxETH.safeApprove(address(curveLpPool), type(uint256).max);
+        pxETH.safeApprove(address(curveWETHpxETHPool), type(uint256).max);
 
         maxSingleTrade = 1000 * 1e18;
+        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:127 ~ maxSingleTrade:", maxSingleTrade);
+
 
         minSwapCrv = 1e17;
         minSwapCvx = 1e18;
@@ -172,15 +175,25 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
 
         // Invested amount will be a maximum of `maxSingleTrade`
         amount = Math.min(maxSingleTrade, amount);
+        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:177 ~ _invest ~ amount:", amount);
+
 
         // Unwrap WETH to interact with Curve
-        IWETH(address(underlyingAsset)).withdraw(amount);
+        // IWETH(address(underlyingAsset)).withdraw(amount);
 
-        // Swap ETH for frxETH
-        uint256 frxEthReceivedAmount = curveEthFrxEthPool.exchange{ value: amount }(0, 1, amount, 0);
+        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:213 ~ _invest ~ IWETH(WETH_MAINNET).balanceOf(address(this)):", IWETH(WETH_MAINNET).balanceOf(address(this)));
 
-        // Add liquidity to the dETH-frxETH pool in frxETH [coin1 -> frxETH]
-        uint256 lpReceived = curveLpPool.add_liquidity([0, frxEthReceivedAmount], 0);
+
+
+        // Swap WETH for pxETH
+        uint256 pxEthReceivedAmount = curveWETHpxETHPool.exchange{ value: amount }(0, 1, amount, 0);
+        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:183 ~ _invest ~ pxEthReceivedAmount:", pxEthReceivedAmount);
+
+
+        // Add liquidity to the zunETH-pxETH pool in pxETH [coin1 -> pxETH]
+        uint256 lpReceived = curveLpPool.add_liquidity([0, pxEthReceivedAmount], 0);
+        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:186 ~ _invest ~ lpReceived:", lpReceived);
+
 
         assembly ("memory-safe") {
             // if (lpReceived < minOutputAfterInvestment)
@@ -191,15 +204,15 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
             }
         }
 
-        // Deposit Curve LP into Convex pool with id `DETH_FRXETH_CONVEX_POOL_ID` and immediately stake convex LP tokens
+        // Deposit Curve LP into Convex pool with id `ZUNETH_PXETH_CONVEX_POOL_ID` and immediately stake convex LP tokens
         // into the rewards contract
-        convexBooster.deposit(DETH_FRXETH_CONVEX_POOL_ID, lpReceived, true);
+        convexBooster.deposit(ZUNETH_PXETH_CONVEX_POOL_ID, lpReceived, true);
 
         emit Invested(address(this), amount);
 
         return _lpValue(lpReceived);
     }
-
+        
     /// @notice Divests amount `amount` from the Convex pool
     /// Note that divesting from the pool could potentially cause loss, so the divested amount might actually be
     /// different from
@@ -213,20 +226,20 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
         // Withdraw from Convex and unwrap directly to Curve LP tokens
         convexRewardPool.withdrawAndUnwrap(amount, false);
 
-        // Remove liquidity and obtain frxETH
+        // Remove liquidity and obtain pxETH
         uint256 amountWithdrawn = curveLpPool.remove_liquidity_one_coin(
             amount,
             1,
-            //frxETH
+            //pxETH
             0
         );
 
         if (amountWithdrawn != 0) {
-            // Swap frxETH for ETH
-            uint256 ethReceived = curveEthFrxEthPool.exchange(1, 0, amountWithdrawn, 0);
+            // Swap pxETH for WETH
+            uint256 wethReceived = curveWETHpxETHPool.exchange(1, 0, amountWithdrawn, 0);
             // Wrap ETH into WETH
-            IWETH(address(underlyingAsset)).deposit{ value: ethReceived }();
-            return ethReceived;
+            // IWETH(address(underlyingAsset)).deposit{ value: wethReceived }();
+            return wethReceived;
         }
     }
 
@@ -286,7 +299,7 @@ contract ConvexdETHFrxETHStrategy is BaseConvexStrategy {
             uint256 withdrawn = curveLpPool.calc_withdraw_one_coin(lp, 1);
 
             if (withdrawn != 0) {
-                withdrawn = curveEthFrxEthPool.get_dy(1, 0, withdrawn);
+                withdrawn = curveWETHpxETHPool.get_dy(1, 0, withdrawn);
             }
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
