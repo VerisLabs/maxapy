@@ -2,7 +2,8 @@
 pragma solidity ^0.8.19;
 
 import {
-    ConvexzunETHpxETHStrategy, SafeTransferLib
+    ConvexzunETHpxETHStrategy,
+    SafeTransferLib
 } from "src/strategies/mainnet/WETH/convex/ConvexzunETHpxETHStrategy.sol";
 
 contract ConvexzunETHpxETHStrategyWrapper is ConvexzunETHpxETHStrategy {

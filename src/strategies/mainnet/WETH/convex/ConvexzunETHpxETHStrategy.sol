@@ -9,16 +9,21 @@ import {
     CURVE_CVX_WETH_POOL_MAINNET,
     CVX_MAINNET,
     PXETH_MAINNET,
-    WETH_MAINNET
+    WETH_MAINNET,
+    PANCAKESWAP_V3_ROUTER_MAINNET,
+    PANCAKESWAP_V3_WETH_PXETH_POOL_MAINNET
 } from "src/helpers/AddressBook.sol";
 import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
 import { IConvexRewards } from "src/interfaces/IConvexRewards.sol";
 import { ICurveLpPool } from "src/interfaces/ICurve.sol";
-import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
+import { IUniswapV3Pool, IUniswapV3Router as IRouterV3, IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 import { IWETH } from "src/interfaces/IWETH.sol";
 import {
     BaseConvexStrategy, BaseStrategy, IMaxApyVault, SafeTransferLib
 } from "src/strategies/base/BaseConvexStrategy.sol";
+import { OracleLibrary } from "src/lib/OracleLibrary.sol";
+import { ERC20 } from "solady/tokens/ERC20.sol";
+import { SafeCastLib } from "solady/utils/SafeCastLib.sol";
 
 import {console2} from "forge-std/console2.sol";
 /// @title ConvexzunETHpxETHStrategy
@@ -27,6 +32,7 @@ import {console2} from "forge-std/console2.sol";
 /// in Convex in order to maximize yield.
 contract ConvexzunETHpxETHStrategy is BaseConvexStrategy {
     using SafeTransferLib for address;
+    using SafeCastLib for uint256;
 
     ////////////////////////////////////////////////////////////////
     ///                        CONSTANTS                         ///
@@ -56,8 +62,9 @@ contract ConvexzunETHpxETHStrategy is BaseConvexStrategy {
     ICurveLpPool public curveLpPool;
 
     /*==================CURVE-RELATED STORAGE VARIABLES==================*/
-    /// @notice Curve's ETH-pxETH pool
-    ICurveLpPool public curveWETHpxETHPool;
+    /// @notice pancakeswap WETH-pxETH router
+    IRouterV3 public constant pancakeswapRouter = IRouterV3(PANCAKESWAP_V3_ROUTER_MAINNET);
+    address public constant wETHpxETHPool = PANCAKESWAP_V3_WETH_PXETH_POOL_MAINNET;
 
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
@@ -69,7 +76,6 @@ contract ConvexzunETHpxETHStrategy is BaseConvexStrategy {
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
     /// @param _curveLpPool The address of the strategy's main Curve pool, zunETH-pxETH pool
-    /// @param _curveWETHpxETHPool The address of Curve's ETH-pxETH pool
     /// @param _router The router address to perform swaps
     function initialize(
         IMaxApyVault _vault,
@@ -77,7 +83,6 @@ contract ConvexzunETHpxETHStrategy is BaseConvexStrategy {
         bytes32 _strategyName,
         address _strategist,
         ICurveLpPool _curveLpPool,
-        ICurveLpPool _curveWETHpxETHPool,
         IRouter _router
     )
         public
@@ -97,15 +102,14 @@ contract ConvexzunETHpxETHStrategy is BaseConvexStrategy {
         }
 
         convexRewardPool = IConvexRewards(_crvRewards);
-        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:102 ~ convexRewardPool:");
+        
 
         convexLpToken = _token;
         rewardToken = IConvexRewards(_crvRewards).rewardToken();
 
         // Curve init
         curveLpPool = _curveLpPool;
-        curveWETHpxETHPool = _curveWETHpxETHPool;
-        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:110 ~ curveWETHpxETHPool:");
+        
 
 
         // Approve pools
@@ -113,22 +117,27 @@ contract ConvexzunETHpxETHStrategy is BaseConvexStrategy {
 
         // Set router
         router = _router;
-        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:118 ~ router:");
+        
+
+        WETH_MAINNET.safeApprove(address(pancakeswapRouter), type(uint256).max);
+        PXETH_MAINNET.safeApprove(address(pancakeswapRouter), type(uint256).max);
 
 
         crv.safeApprove(address(_router), type(uint256).max);
         cvx.safeApprove(address(cvxWethPool), type(uint256).max);
         pxETH.safeApprove(address(curveLpPool), type(uint256).max);
-        pxETH.safeApprove(address(curveWETHpxETHPool), type(uint256).max);
+        // pxETH.safeApprove(address(curveWETHpxETHPool), type(uint256).max);
 
-        maxSingleTrade = 1000 * 1e18;
-        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:127 ~ maxSingleTrade:", maxSingleTrade);
+        maxSingleTrade = 250 * 1e18;
+        
+
+        
 
 
         minSwapCrv = 1e17;
         minSwapCvx = 1e18;
     }
-
+        
     /// @notice Sets the new router
     /// @dev Approval for CRV will be granted to the new router if it was not already granted
     /// @param _newRouter The new router address
@@ -175,24 +184,32 @@ contract ConvexzunETHpxETHStrategy is BaseConvexStrategy {
 
         // Invested amount will be a maximum of `maxSingleTrade`
         amount = Math.min(maxSingleTrade, amount);
-        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:177 ~ _invest ~ amount:", amount);
-
-
-        // Unwrap WETH to interact with Curve
-        // IWETH(address(underlyingAsset)).withdraw(amount);
-
-        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:213 ~ _invest ~ IWETH(WETH_MAINNET).balanceOf(address(this)):", IWETH(WETH_MAINNET).balanceOf(address(this)));
-
-
-
+        
         // Swap WETH for pxETH
-        uint256 pxEthReceivedAmount = curveWETHpxETHPool.exchange{ value: amount }(0, 1, amount, 0);
-        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:183 ~ _invest ~ pxEthReceivedAmount:", pxEthReceivedAmount);
+        pancakeswapRouter.exactInputSingle(
+            IRouterV3.ExactInputSingleParams({
+                    tokenIn: WETH_MAINNET,
+                    tokenOut: PXETH_MAINNET,
+                    fee: 100, // 0.01%
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: amount,
+                    amountOutMinimum: 0,
+                    sqrtPriceLimitX96: 0
+                })
+        );
+        uint256 pxEthReceivedAmount = ERC20(PXETH_MAINNET).balanceOf(address(this));
+        
+        // curveWETHpxETHPool.exchange{ value: amount }(0, 1, amount, 0);
+        
 
+
+        uint256[] memory amounts = new uint256[](2);
+        amounts[1] = pxEthReceivedAmount;
 
         // Add liquidity to the zunETH-pxETH pool in pxETH [coin1 -> pxETH]
-        uint256 lpReceived = curveLpPool.add_liquidity([0, pxEthReceivedAmount], 0);
-        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:186 ~ _invest ~ lpReceived:", lpReceived);
+        uint256 lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
+        
 
 
         assembly ("memory-safe") {
@@ -236,7 +253,24 @@ contract ConvexzunETHpxETHStrategy is BaseConvexStrategy {
 
         if (amountWithdrawn != 0) {
             // Swap pxETH for WETH
-            uint256 wethReceived = curveWETHpxETHPool.exchange(1, 0, amountWithdrawn, 0);
+            // Swap WETH for pxETH
+        pancakeswapRouter.exactInputSingle(
+            IRouterV3.ExactInputSingleParams({
+                    tokenIn: PXETH_MAINNET,
+                    tokenOut: WETH_MAINNET,
+                    fee: 100, // 0.01%
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: amountWithdrawn,
+                    amountOutMinimum: 0,
+                    sqrtPriceLimitX96: 0
+                })
+        );
+
+            uint256 wethReceived = ERC20(WETH_MAINNET).balanceOf(address(this));
+            
+
+            // curveWETHpxETHPool.exchange(1, 0, amountWithdrawn, 0);
             // Wrap ETH into WETH
             // IWETH(address(underlyingAsset)).deposit{ value: wethReceived }();
             return wethReceived;
@@ -285,11 +319,20 @@ contract ConvexzunETHpxETHStrategy is BaseConvexStrategy {
         // the requested amount, we divest from the Curve liquidity pool
         if (underlyingBalance < requestedAmount) {
             uint256 amountToWithdraw;
+            
             unchecked {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
+
+            amountToWithdraw = _estimateAmountOut(WETH_MAINNET, PXETH_MAINNET, amountToWithdraw.toUint128(), wETHpxETHPool, 1800);
+            console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:323 ~ amountToWithdraw:", amountToWithdraw);
+
             uint256 lp = _lpForAmount(amountToWithdraw);
+            console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:331 ~ lp:", lp);
+
             uint256 staked = _stakedBalance(convexRewardPool);
+            console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:334 ~ staked:", staked);
+
 
             assembly {
                 // Adjust computed lp amount by current lp balance
@@ -297,9 +340,12 @@ contract ConvexzunETHpxETHStrategy is BaseConvexStrategy {
             }
 
             uint256 withdrawn = curveLpPool.calc_withdraw_one_coin(lp, 1);
+            console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:342 ~ withdrawn:", withdrawn);
 
             if (withdrawn != 0) {
-                withdrawn = curveWETHpxETHPool.get_dy(1, 0, withdrawn);
+                withdrawn = _estimateAmountOut(PXETH_MAINNET, WETH_MAINNET, withdrawn.toUint128(), wETHpxETHPool, 1800);
+                console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:349 ~ withdrawn:", withdrawn);
+
             }
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
@@ -309,6 +355,56 @@ contract ConvexzunETHpxETHStrategy is BaseConvexStrategy {
     ////////////////////////////////////////////////////////////////
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
+
+    /// @notice returns the estimated result of a Uniswap V3 swap
+    /// @dev use TWAP oracle for more safety
+    function _estimateAmountOut(
+        address tokenIn,
+        address tokenOut,
+        uint128 amountIn,
+        address pool,
+        uint32 secondsAgo
+    )
+        internal
+        view
+        returns (uint256 amountOut)
+    {
+        // Code copied from OracleLibrary.sol, consult()
+        uint32[] memory secondsAgos = new uint32[](2);
+        secondsAgos[0] = secondsAgo;
+        secondsAgos[1] = 0;
+        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:375 ~ secondsAgos[1]:", secondsAgos[1]);
+
+
+        // int56 since tick * time = int24 * uint32
+        // 56 = 24 + 32
+        (int56[] memory tickCumulatives,) = IUniswapV3Pool(pool).observe(secondsAgos);
+
+        int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
+        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:381 ~ tickCumulativesDelta:", tickCumulativesDelta);
+
+
+        // int56 / uint32 = int24
+        int24 tick = int24(int256(tickCumulativesDelta) / int256(int32(secondsAgo)));
+        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:388 ~ tick:", tick);
+
+        // Always round to negative infinity
+
+        if (tickCumulativesDelta < 0 && (int256(tickCumulativesDelta) % int256(int32(secondsAgo)) != 0)) {
+            tick--;
+        }
+
+        
+
+        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:397 ~ amountOut:", amountIn);
+
+        amountOut = OracleLibrary.getQuoteAtTick(tick, amountIn, tokenIn, tokenOut);
+        console2.log("###   ~ file: ConvexzunETHpxETHStrategy.sol:401 ~ amountIn:", amountIn);
+
+
+    }
+
+
     /// @notice Returns the estimated price for the strategy's Convex's LP token
     /// @return returns the estimated lp token price
     function _lpPrice() internal view override returns (uint256) {
