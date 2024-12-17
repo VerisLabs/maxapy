@@ -43,7 +43,7 @@ contract YearnDAIStrategy is BaseYearnV2Strategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        yVault = _yVault;
+        underlyingVault = _yVault;
 
         /// Approve Yearn Vault to transfer underlying
         dai.safeApprove(address(_yVault), type(uint256).max);
@@ -93,7 +93,7 @@ contract YearnDAIStrategy is BaseYearnV2Strategy {
 
         amount = dai.balanceOf(address(this)) - balanceBefore;
 
-        uint256 shares = yVault.deposit(amount);
+        uint256 shares = underlyingVault.deposit(amount);
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -112,16 +112,16 @@ contract YearnDAIStrategy is BaseYearnV2Strategy {
     /// the Vault implementation), so the divested amount might actually be different from
     /// the requested `shares` to divest
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
-    /// but in terms of yvault shares
+    /// but in terms of underlyingVault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
-        // return uint256 withdrawn = yVault.withdraw(shares);
+        // return uint256 withdrawn = underlyingVault.withdraw(shares);
         assembly {
             // store selector and parameters in memory
             mstore(0x00, 0x2e1a7d4d)
             mstore(0x20, shares)
-            // call yVault.withdraw(shares)
-            if iszero(call(gas(), sload(yVault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            // call underlyingVault.withdraw(shares)
+            if iszero(call(gas(), sload(underlyingVault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             withdrawn := mload(0x00)
         }
         uint256 balanceBefore = underlyingAsset.balanceOf(address(this));
@@ -144,7 +144,7 @@ contract YearnDAIStrategy is BaseYearnV2Strategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice Determines the current value of `shares`.
-    /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
+    /// @dev if sqrt(underlyingVault.totalAssets()) >>> 1e39, this could potentially revert
     /// @return returns the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view override returns (uint256) {
         uint256 sharesValue = super._shareValue(shares);

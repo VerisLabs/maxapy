@@ -61,8 +61,6 @@ interface IStrategyWrapper is IStrategy {
 
     function cvxWethPool() external view returns (address);
 
-    function cellar() external view returns (address);
-
     function minSwapCrv() external view returns (uint256);
 
     function minSwapCvx() external view returns (uint256);
@@ -91,5 +89,5 @@ interface IStrategyWrapper is IStrategy {
 
     function uniProxy() external view returns (address);
 
-    function hopPool() external view returns (address);
+    function underlyingVault() external view returns (address);
 }

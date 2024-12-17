@@ -10,7 +10,7 @@ contract SommelierTurboRsEthStrategyWrapper is SommelierTurboRsEthStrategy {
     using SafeTransferLib for address;
 
     function investSommelier(uint256 amount) external returns (uint256) {
-        return cellar.deposit(amount, address(this));
+        return underlyingVault.deposit(amount, address(this));
     }
 
     function triggerLoss(uint256 amount) external {

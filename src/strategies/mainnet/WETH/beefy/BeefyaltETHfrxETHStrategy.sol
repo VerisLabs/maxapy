@@ -58,7 +58,7 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
         //CURVE_ETH_FRXETH_POOL_MAINNET
 
         underlyingAsset.safeApprove(address(curveLpPool), type(uint256).max);
-        address(curveLpPool).safeApprove(address(beefyVault), type(uint256).max);
+        address(curveLpPool).safeApprove(address(underlyingVault), type(uint256).max);
         frxETH.safeApprove(address(curveLpPool), type(uint256).max);
         frxETH.safeApprove(address(curveEthFrxEthPool), type(uint256).max);
 
@@ -114,12 +114,12 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
         lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
 
         
-        uint256 _before = beefyVault.balanceOf(address(this));
+        uint256 _before = underlyingVault.balanceOf(address(this));
 
         // Deposit Curve LP tokens to Beefy vault
-        beefyVault.deposit(lpReceived);
+        underlyingVault.deposit(lpReceived);
 
-        uint256 _after = beefyVault.balanceOf(address(this));
+        uint256 _after = underlyingVault.balanceOf(address(this));
         uint256 shares;
         shares = _after - _before;
 
@@ -145,12 +145,12 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
     function _divest(uint256 amount) internal virtual override returns (uint256 amountDivested) {
         if (amount == 0) return 0;
 
-        uint256 _before = beefyVault.want().balanceOf(address(this));
+        uint256 _before = underlyingVault.want().balanceOf(address(this));
 
         // Withdraw from Beefy and unwrap directly to Curve LP tokens
-        beefyVault.withdraw(amount);
+        underlyingVault.withdraw(amount);
 
-        uint256 _after = beefyVault.want().balanceOf(address(this));
+        uint256 _after = underlyingVault.want().balanceOf(address(this));
 
         uint256 lptokens = _after - _before;
         // Remove liquidity and obtain frxETH
@@ -181,11 +181,11 @@ contract BeefyaltETHfrxETHStrategy is BaseBeefyCurveStrategy {
             uint256 amountToWithdraw = requestedAmount - underlyingBalance;
 
             uint256 beefySharesNeeded = _sharesForAmount(amountToWithdraw);
-            uint256 availableBeefyShares = beefyVault.balanceOf(address(this));
+            uint256 availableBeefyShares = underlyingVault.balanceOf(address(this));
 
             uint256 beefyShares = Math.min(beefySharesNeeded, availableBeefyShares);
 
-            uint256 expectedCurveLp = beefyShares * beefyVault.balance() / beefyVault.totalSupply();
+            uint256 expectedCurveLp = beefyShares * underlyingVault.balance() / underlyingVault.totalSupply();
             uint256 expectedFrxEth = curveLpPool.calc_withdraw_one_coin(expectedCurveLp, 1);
             uint256 expectedEth = curveEthFrxEthPool.get_dy(1, 0, expectedFrxEth);
 

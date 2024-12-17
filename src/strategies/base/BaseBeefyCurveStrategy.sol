@@ -49,7 +49,7 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
         curveLpPool = _curveLpPool;
 
         underlyingAsset.safeApprove(address(curveLpPool), type(uint256).max);
-        address(curveLpPool).safeApprove(address(beefyVault), type(uint256).max);
+        address(curveLpPool).safeApprove(address(underlyingVault), type(uint256).max);
 
         /// min single trade by default
         minSingleTrade = 10e6;
@@ -87,11 +87,11 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
 
         lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
 
-        uint256 _before = beefyVault.balanceOf(address(this));
+        uint256 _before = underlyingVault.balanceOf(address(this));
 
-        beefyVault.deposit(lpReceived);
+        underlyingVault.deposit(lpReceived);
 
-        uint256 _after = beefyVault.balanceOf(address(this));
+        uint256 _after = underlyingVault.balanceOf(address(this));
         uint256 shares;
 
         assembly ("memory-safe") {
@@ -116,11 +116,11 @@ contract BaseBeefyCurveStrategy is BaseBeefyStrategy {
     function _divest(uint256 amount) internal virtual override returns (uint256 amountDivested) {
         if (amount == 0) return 0;
 
-        uint256 _before = beefyVault.want().balanceOf(address(this));
+        uint256 _before = underlyingVault.want().balanceOf(address(this));
 
-        beefyVault.withdraw(amount);
+        underlyingVault.withdraw(amount);
 
-        uint256 _after = beefyVault.want().balanceOf(address(this));
+        uint256 _after = underlyingVault.want().balanceOf(address(this));
 
         uint256 lptokens = _after - _before;
 

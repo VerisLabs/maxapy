@@ -102,7 +102,7 @@ contract HopETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
         assertEq(_strategy.owner(), users.alice);
         assertEq(_strategy.strategyName(), bytes32("MaxApy WETH Strategy"));
-        assertEq(_strategy.hopPool(), HOP_ETH_SWAP_POLYGON, "hereee");
+        assertEq(_strategy.underlyingVault(), HOP_ETH_SWAP_POLYGON, "hereee");
 
         assertEq(_proxyAdmin.owner(), users.alice);
         vm.startPrank(address(_proxyAdmin));

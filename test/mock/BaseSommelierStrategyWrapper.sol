@@ -7,14 +7,14 @@ contract BaseSommelierStrategyWrapper is BaseSommelierStrategy {
     using SafeTransferLib for address;
 
     function investSommelier(uint256 amount) external returns (uint256) {
-        return cellar.deposit(amount, address(this));
+        return underlyingVault.deposit(amount, address(this));
     }
 
     function triggerLoss(uint256 amount) external {
         uint256 amountToWithdraw = _sub0(amount, underlyingAsset.balanceOf(address(this)));
         if (amountToWithdraw > 0) {
-            uint256 shares = cellar.previewRedeem(amountToWithdraw);
-            cellar.redeem(shares, address(this), address(this));
+            uint256 shares = underlyingVault.previewRedeem(amountToWithdraw);
+            underlyingVault.redeem(shares, address(this), address(this));
         }
         underlyingAsset.safeTransfer(address(underlyingAsset), amount);
     }

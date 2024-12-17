@@ -28,7 +28,7 @@ contract SommelierTurboEthXStrategy is BaseSommelierStrategy {
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
-    /// @param _cellar The address of the Sommelier Turbo-stETH cellar
+    /// @param _cellar The address of the Sommelier Turbo-stETH underlyingVault
     function initialize(
         IMaxApyVault _vault,
         address[] calldata _keepers,
@@ -41,7 +41,7 @@ contract SommelierTurboEthXStrategy is BaseSommelierStrategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        cellar = _cellar;
+        underlyingVault = _cellar;
         /// Approve Cellar Vault to transfer underlying
         underlyingAsset.safeApprove(address(_cellar), type(uint256).max);
         // Set max and min single trade
@@ -72,7 +72,7 @@ contract SommelierTurboEthXStrategy is BaseSommelierStrategy {
             unchecked {
                 amountToWithdraw = amountNeeded - underlyingBalance;
             }
-            uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
+            uint256 burntShares = underlyingVault.withdraw(amountToWithdraw, address(this), address(this));
             // use sub zero because shares could be fewer than expected and underflow
             loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
@@ -94,13 +94,13 @@ contract SommelierTurboEthXStrategy is BaseSommelierStrategy {
     /// the Vault implementation), so the divested amount might actually be different from
     /// the requested `shares` to divest
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
-    /// but in terms of cellar shares
+    /// but in terms of underlyingVault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
-        // if cellar is paused dont liquidate, skips revert
-        if (cellar.isPaused()) return 0;
+        // if underlyingVault is paused dont liquidate, skips revert
+        if (underlyingVault.isPaused()) return 0;
         uint256 balanceBefore = _underlyingBalance();
-        cellar.redeem(shares, address(this), address(this));
+        underlyingVault.redeem(shares, address(this), address(this));
         uint256 ethXBalance = _ethXBalance();
         // If the vault sent any ethX swap it to underlying WETH
         if (ethXBalance > 0) withdrawn += _swapEthX(ethXBalance);

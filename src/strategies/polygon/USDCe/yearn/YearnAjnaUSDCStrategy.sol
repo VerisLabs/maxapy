@@ -30,7 +30,7 @@ contract YearnAjnaUSDCStrategy is BaseYearnV3Strategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        yVault = _yVault;
+        underlyingVault = _yVault;
 
         /// Perform needed approvals
         underlyingAsset.safeApprove(address(_yVault), type(uint256).max);

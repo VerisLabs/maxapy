@@ -26,9 +26,9 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        yVault = _yVault;
+        underlyingVault = _yVault;
 
-        underlyingAsset.safeApprove(address(yVault), type(uint256).max);
+        underlyingAsset.safeApprove(address(underlyingVault), type(uint256).max);
 
         /// Mininmum single trade is 0.01 token units
         minSingleTrade = 10 ** IERC20Metadata(underlyingAsset).decimals() / 100;
@@ -38,14 +38,14 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
     }
 
     function investYearn(uint256 amount) external returns (uint256) {
-        return yVault.deposit(amount);
+        return underlyingVault.deposit(amount);
     }
 
     function triggerLoss(uint256 amount) external {
         uint256 amountToWithdraw = _sub0(amount, underlyingAsset.balanceOf(address(this)));
         if (amountToWithdraw > 0) {
-            uint256 shares = Math.min(yVault.balanceOf(address(this)), _sharesForAmount(amountToWithdraw));
-            yVault.withdraw(shares);
+            uint256 shares = Math.min(underlyingVault.balanceOf(address(this)), _sharesForAmount(amountToWithdraw));
+            underlyingVault.withdraw(shares);
         }
         underlyingAsset.safeTransfer(address(underlyingAsset), amount);
     }

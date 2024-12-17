@@ -7,7 +7,7 @@ contract YearnUSDCStrategyWrapper is YearnUSDCStrategy {
     using SafeTransferLib for address;
 
     function investYearn(uint256 amount) external returns (uint256) {
-        return yVault.deposit(amount);
+        return underlyingVault.deposit(amount);
     }
 
     function triggerLoss(uint256 amount) external {

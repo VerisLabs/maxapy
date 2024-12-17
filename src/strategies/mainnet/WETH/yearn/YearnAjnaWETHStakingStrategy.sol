@@ -58,7 +58,7 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        yVault = _yVault;
+        underlyingVault = _yVault;
 
         /// Perform needed approvals
         underlyingAsset.safeApprove(address(_yVault), type(uint256).max);
@@ -85,14 +85,14 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
             unchecked {
                 amountToWithdraw = amountNeeded - underlyingBalance;
             }
-            uint256 neededVaultShares = yVault.previewWithdraw(amountToWithdraw);
+            uint256 neededVaultShares = underlyingVault.previewWithdraw(amountToWithdraw);
             yearnStakingRewards.withdraw(neededVaultShares);
-            uint256 burntShares = yVault.withdraw(amountToWithdraw, address(this), address(this));
+            uint256 burntShares = underlyingVault.withdraw(amountToWithdraw, address(this), address(this));
             loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
         underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // In case all shares were not burnt reinvest them
-        uint256 sharesLeft = yVault.balanceOf(address(this));
+        uint256 sharesLeft = underlyingVault.balanceOf(address(this));
         if (sharesLeft != 0) {
             yearnStakingRewards.stake(sharesLeft);
         }
@@ -128,7 +128,7 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
-        uint256 shares = yVault.deposit(amount, address(this));
+        uint256 shares = underlyingVault.deposit(amount, address(this));
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -155,11 +155,11 @@ contract YearnAjnaWETHStakingStrategy is BaseYearnV3Strategy {
     /// the Vault implementation), so the divested amount might actually be different from
     /// the requested `shares` to divest
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
-    /// but in terms of yvault shares
+    /// but in terms of underlyingVault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
         yearnStakingRewards.withdraw(shares);
-        withdrawn = yVault.redeem(shares, address(this), address(this));
+        withdrawn = underlyingVault.redeem(shares, address(this), address(this));
         emit Divested(address(this), shares, withdrawn);
     }
 

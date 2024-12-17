@@ -45,12 +45,12 @@ contract BeefyMaiUSDCeStrategy is BaseBeefyCurveStrategy {
         // Add liquidity to the mai<>usdce pool in usdce [coin1 -> usdce]
         lpReceived = curveLpPool.add_liquidity(amounts, 0, address(this));
 
-        uint256 _before = beefyVault.balanceOf(address(this));
+        uint256 _before = underlyingVault.balanceOf(address(this));
 
         // Deposit Curve LP tokens to Beefy vault
-        beefyVault.deposit(lpReceived);
+        underlyingVault.deposit(lpReceived);
 
-        uint256 _after = beefyVault.balanceOf(address(this));
+        uint256 _after = underlyingVault.balanceOf(address(this));
         uint256 shares;
 
         assembly ("memory-safe") {

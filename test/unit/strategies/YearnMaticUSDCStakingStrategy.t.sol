@@ -101,7 +101,7 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
         assertEq(_strategy.strategyName(), bytes32("MaxApy Yearn Strategy"));
-        assertEq(_strategy.yVault(), YVAULT_USDCE_POLYGON);
+        assertEq(_strategy.underlyingVault(), YVAULT_USDCE_POLYGON);
         assertEq(IERC20(USDCE_POLYGON).allowance(address(_strategy), YVAULT_USDCE_POLYGON), type(uint256).max);
 
         assertEq(_proxyAdmin.owner(), users.alice);

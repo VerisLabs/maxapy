@@ -102,7 +102,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
         assertEq(_strategy.strategyName(), bytes32("MaxApy Sommelier Strategy"));
-        assertEq(_strategy.cellar(), CELLAR_USDC_MAINNET);
+        assertEq(_strategy.underlyingVault(), CELLAR_USDC_MAINNET);
         assertEq(IERC20(USDC_MAINNET).allowance(address(_strategy), CELLAR_USDC_MAINNET), type(uint256).max);
 
         assertEq(_proxyAdmin.owner(), users.alice);
@@ -400,7 +400,7 @@ contract SommelierTurboGHOStrategyTest is BaseTest, StrategyEvents {
         // there are 60 USDC left in the vault
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(vault)), 60 * _1_USDC);
         assertEq(IERC20(USDC_MAINNET).balanceOf(address(strategy)), 0);
-        // strategy has expectedStrategyShareBalance cellar shares
+        // strategy has expectedStrategyShareBalance underlyingVault shares
         assertEq(IERC20(CELLAR_USDC_MAINNET).balanceOf(address(strategy)), expectedStrategyShareBalance, "here 1");
 
         // strategy gets 10 USDC more as profit

@@ -55,7 +55,7 @@ contract BaseBeefyStrategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice The Beefy Vault the strategy interacts with
-    IBeefyVault public beefyVault;
+    IBeefyVault public underlyingVault;
 
     /// @notice The maximum single trade allowed in the strategy
     uint256 public maxSingleTrade;
@@ -86,7 +86,7 @@ contract BaseBeefyStrategy is BaseStrategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        beefyVault = _beefyVault;
+        underlyingVault = _beefyVault;
         /// Unlimited max single trade by default
         maxSingleTrade = type(uint256).max;
     }
@@ -339,12 +339,12 @@ contract BaseBeefyStrategy is BaseStrategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
-        uint256 _before = beefyVault.balanceOf(address(this));
+        uint256 _before = underlyingVault.balanceOf(address(this));
 
         // Deposit LP tokens to Beefy vault
-        beefyVault.deposit(amount);
+        underlyingVault.deposit(amount);
 
-        uint256 _after = beefyVault.balanceOf(address(this));
+        uint256 _after = underlyingVault.balanceOf(address(this));
         uint256 shares;
         shares = _after - _before;
 
@@ -374,13 +374,13 @@ contract BaseBeefyStrategy is BaseStrategy {
     /// but in terms of "yvault" shares ...........########## TODO
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal virtual returns (uint256 withdrawn) {
-        // return uint256 withdrawn = beefyVault.withdraw(shares);
+        // return uint256 withdrawn = underlyingVault.withdraw(shares);
         assembly {
             // store selector and parameters in memory
             mstore(0x00, 0x2e1a7d4d)
             mstore(0x20, shares)
-            // call beefyVault.withdraw(shares)
-            if iszero(call(gas(), sload(beefyVault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            // call underlyingVault.withdraw(shares)
+            if iszero(call(gas(), sload(underlyingVault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             withdrawn := mload(0x00)
 
             // Emit the `Divested` event
@@ -446,14 +446,14 @@ contract BaseBeefyStrategy is BaseStrategy {
     /// @return _assets the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view virtual returns (uint256 _assets) {
         assembly {
-            //get beefyVault.balance()
+            //get underlyingVault.balance()
             mstore(0x00, 0xb69ef8a8)
-            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
             let vaultBalance := mload(0x00)
 
-            //get beefyVault.totalSupply
+            //get underlyingVault.totalSupply
             mstore(0x00, 0x18160ddd)
-            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
             let vaultTotalSupply := mload(0x00)
 
             _assets := div(mul(shares, vaultBalance), vaultTotalSupply)
@@ -464,14 +464,14 @@ contract BaseBeefyStrategy is BaseStrategy {
     /// @return shares the estimated amount of shares computed in exchange for underlying `amount`
     function _sharesForAmount(uint256 amount) internal view virtual returns (uint256 shares) {
         assembly {
-            //get beefyVault.balance()
+            //get underlyingVault.balance()
             mstore(0x00, 0xb69ef8a8)
-            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
             let pool := mload(0x00)
 
-            //get beefyVault.totalSupply
+            //get underlyingVault.totalSupply
             mstore(0x00, 0x18160ddd)
-            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
             let vaultTotalSupply := mload(0x00)
 
             switch vaultTotalSupply
@@ -484,10 +484,10 @@ contract BaseBeefyStrategy is BaseStrategy {
     /// @return _balance balance the strategy's balance of Beefy vault shares
     function _shareBalance() internal view returns (uint256 _balance) {
         assembly {
-            // return beefyVault.balanceOf(address(this));
+            // return underlyingVault.balanceOf(address(this));
             mstore(0x00, 0x70a08231)
             mstore(0x20, address())
-            if iszero(staticcall(gas(), sload(beefyVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             _balance := mload(0x00)
         }
     }

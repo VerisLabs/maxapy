@@ -21,23 +21,23 @@ contract BaseYearnV3StrategyWrapper is BaseYearnV3Strategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        yVault = _yVault;
+        underlyingVault = _yVault;
 
-        underlyingAsset.safeApprove(address(yVault), type(uint256).max);
+        underlyingAsset.safeApprove(address(underlyingVault), type(uint256).max);
 
         /// Unlimited max single trade by default
         maxSingleTrade = type(uint256).max;
     }
 
     function investYearn(uint256 amount) external returns (uint256) {
-        return yVault.deposit(amount, address(this));
+        return underlyingVault.deposit(amount, address(this));
     }
 
     function triggerLoss(uint256 amount) external {
         uint256 amountToWithdraw = _sub0(amount, underlyingAsset.balanceOf(address(this)));
         if (amountToWithdraw > 0) {
-            uint256 shares = yVault.previewRedeem(amountToWithdraw);
-            yVault.redeem(shares, address(this), address(this));
+            uint256 shares = underlyingVault.previewRedeem(amountToWithdraw);
+            underlyingVault.redeem(shares, address(this), address(this));
         }
         underlyingAsset.safeTransfer(address(underlyingAsset), amount);
     }

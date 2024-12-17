@@ -41,7 +41,7 @@ contract SommelierTurboGHOStrategy is BaseSommelierStrategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        cellar = _cellar;
+        underlyingVault = _cellar;
         /// Approve Cellar Vault to transfer underlying
         underlyingAsset.safeApprove(address(_cellar), type(uint256).max);
         // Set max and min single trade
@@ -72,7 +72,7 @@ contract SommelierTurboGHOStrategy is BaseSommelierStrategy {
             unchecked {
                 amountToWithdraw = amountNeeded - underlyingBalance;
             }
-            uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
+            uint256 burntShares = underlyingVault.withdraw(amountToWithdraw, address(this), address(this));
             // use sub zero because shares could be fewer than expected and underflow
             loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
@@ -98,9 +98,9 @@ contract SommelierTurboGHOStrategy is BaseSommelierStrategy {
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
         // if cellar is paused dont liquidate, skips revert
-        if (cellar.isPaused()) return 0;
+        if (underlyingVault.isPaused()) return 0;
         uint256 balanceBefore = _underlyingBalance();
-        cellar.redeem(shares, address(this), address(this));
+        underlyingVault.redeem(shares, address(this), address(this));
         uint256 ghoBalance = _ghoBalance();
         if (ghoBalance > 0) _swapGho(ghoBalance);
         withdrawn = _underlyingBalance() - balanceBefore;

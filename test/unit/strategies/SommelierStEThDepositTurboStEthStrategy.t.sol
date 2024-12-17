@@ -112,7 +112,7 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
         assertEq(_strategy.strategyName(), bytes32("MaxApy Sommelier Strategy"));
-        assertEq(_strategy.cellar(), CELLAR_STETH_MAINNET);
+        assertEq(_strategy.underlyingVault(), CELLAR_STETH_MAINNET);
         assertEq(IERC20(STETH_MAINNET).allowance(address(_strategy), CELLAR_STETH_MAINNET), type(uint256).max);
         assertEq(_strategy.maxSingleTrade(), 1000 * 1e18);
 

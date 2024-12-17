@@ -34,7 +34,7 @@ contract YearnUSDCStrategy is BaseYearnV2Strategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        yVault = _yVault;
+        underlyingVault = _yVault;
 
         /// Approve Yearn Vault to transfer underlying
         underlyingAsset.safeApprove(address(_yVault), type(uint256).max);

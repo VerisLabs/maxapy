@@ -72,7 +72,7 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy, ReentrancyGuard {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        beefyVault = _beefyVault;
+        underlyingVault = _beefyVault;
 
         // Gamma init
         uniProxy = _uniProxy;
@@ -87,7 +87,7 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy, ReentrancyGuard {
         underlyingAsset.safeApprove(address(hypervisor), type(uint256).max);
         dai.safeApprove(address(hypervisor), type(uint256).max);
 
-        address(hypervisor).safeApprove(address(beefyVault), type(uint256).max);
+        address(hypervisor).safeApprove(address(underlyingVault), type(uint256).max);
 
         /// min single trade by default
         minSingleTrade = 10e6;
@@ -154,12 +154,12 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy, ReentrancyGuard {
         }
 
         //step4 deposit LP token into Beefy
-        uint256 _before = beefyVault.balanceOf(address(this));
+        uint256 _before = underlyingVault.balanceOf(address(this));
 
         // Deposit Curve LP tokens to Beefy vault
-        beefyVault.deposit(lpReceived);
+        underlyingVault.deposit(lpReceived);
 
-        uint256 _after = beefyVault.balanceOf(address(this));
+        uint256 _after = underlyingVault.balanceOf(address(this));
         uint256 shares;
 
         assembly ("memory-safe") {
@@ -184,12 +184,12 @@ contract BeefyUSDCeDAIStrategy is BaseBeefyStrategy, ReentrancyGuard {
     function _divest(uint256 amount) internal override returns (uint256 amountDivested) {
         if (amount == 0) return 0;
 
-        uint256 _before = beefyVault.want().balanceOf(address(this));
+        uint256 _before = underlyingVault.want().balanceOf(address(this));
 
         // Withdraw from Beefy and unwrap directly to Curve LP tokens
-        beefyVault.withdraw(amount);
+        underlyingVault.withdraw(amount);
 
-        uint256 _after = beefyVault.want().balanceOf(address(this));
+        uint256 _after = underlyingVault.want().balanceOf(address(this));
 
         uint256 lptokens = _after - _before;
 

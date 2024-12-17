@@ -62,7 +62,7 @@ contract SommelierTurboDivEthStrategy is BaseSommelierStrategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        cellar = _cellar;
+        underlyingVault = _cellar;
 
         /// Approve pool to perform swaps
         underlyingAsset.safeApprove(address(balancerVault), type(uint256).max);
@@ -90,10 +90,10 @@ contract SommelierTurboDivEthStrategy is BaseSommelierStrategy {
             // calculate the amount of LP tokens to withdraw
             uint256 lpToWithdraw = ((amountNeeded - underlyingBalance) * 1e18 / _lpPrice()) * 101 / 100; // account
                 // pessimistically
-            uint256 burntShares = cellar.withdraw(lpToWithdraw, address(this), address(this));
+            uint256 burntShares = underlyingVault.withdraw(lpToWithdraw, address(this), address(this));
             _exitPool(lpToWithdraw);
             // use sub zero because shares could be fewer than expected and underflow
-            uint256 lpTokens = cellar.convertToAssets(burntShares);
+            uint256 lpTokens = underlyingVault.convertToAssets(burntShares);
             loss = _sub0(amountNeeded - underlyingBalance, _lpValue(lpTokens));
         }
         underlyingAsset.safeTransfer(address(vault), amountNeeded);
@@ -115,9 +115,9 @@ contract SommelierTurboDivEthStrategy is BaseSommelierStrategy {
             // calculate the amount of LP tokens to withdraw
             uint256 lpToWithdraw = ((liquidatedAmount - underlyingBalance) * 1e18 / _lpPrice()) * 101 / 100; // account
                 // pessimistically
-            uint256 burntShares = cellar.previewWithdraw(lpToWithdraw);
+            uint256 burntShares = underlyingVault.previewWithdraw(lpToWithdraw);
             // use sub zero because shares could be fewer than expected and underflow
-            uint256 lpTokens = cellar.convertToAssets(burntShares);
+            uint256 lpTokens = underlyingVault.convertToAssets(burntShares);
             loss = _sub0(liquidatedAmount - underlyingBalance, _lpValue(lpTokens));
         }
         requestedAmount = liquidatedAmount + loss;
@@ -130,7 +130,7 @@ contract SommelierTurboDivEthStrategy is BaseSommelierStrategy {
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxLiquidateExact() public view override returns (uint256) {
-        return _underlyingBalance() + (_lpValue(cellar.maxWithdraw(address(this)))) * 99 / 100;
+        return _underlyingBalance() + (_lpValue(underlyingVault.maxWithdraw(address(this)))) * 99 / 100;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -150,8 +150,8 @@ contract SommelierTurboDivEthStrategy is BaseSommelierStrategy {
     {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
-        // Dont't do anything if cellar is paused or shutdown
-        if (cellar.isShutdown() || cellar.isPaused()) return 0;
+        // Dont't do anything if underlyingVault is paused or shutdown
+        if (underlyingVault.isShutdown() || underlyingVault.isPaused()) return 0;
 
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
@@ -159,8 +159,8 @@ contract SommelierTurboDivEthStrategy is BaseSommelierStrategy {
         // 1. Add liquidity to the Balancer pool
         uint256 mintedLpTokens = _joinPool(amount);
 
-        // 2. Deposit into the Sommelier cellar
-        uint256 shares = cellar.deposit(mintedLpTokens, address(this));
+        // 2. Deposit into the Sommelier underlyingVault
+        uint256 shares = underlyingVault.deposit(mintedLpTokens, address(this));
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -185,13 +185,13 @@ contract SommelierTurboDivEthStrategy is BaseSommelierStrategy {
     /// the Vault implementation), so the divested amount might actually be different from
     /// the requested `shares` to divest
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
-    /// but in terms of cellar shares
+    /// but in terms of underlyingVault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
-        // if cellar is paused dont liquidate, skips revert
-        if (cellar.isPaused()) return 0;
-        // 1. Exit cellar
-        uint256 lpWithdrawn = cellar.redeem(shares, address(this), address(this));
+        // if underlyingVault is paused dont liquidate, skips revert
+        if (underlyingVault.isPaused()) return 0;
+        // 1. Exit underlyingVault
+        uint256 lpWithdrawn = underlyingVault.redeem(shares, address(this), address(this));
         // 2. Withdraw from Balancer LP pool
         withdrawn = _exitPool(lpWithdrawn);
         emit Divested(address(this), shares, withdrawn);
@@ -215,8 +215,8 @@ contract SommelierTurboDivEthStrategy is BaseSommelierStrategy {
         returns (uint256 liquidatedAmount, uint256 loss)
     {
         uint256 underlyingBalance = _underlyingBalance();
-        // if cellar is paused dont liquidate, skips revert
-        if (cellar.isPaused()) {
+        // if underlyingVault is paused dont liquidate, skips revert
+        if (underlyingVault.isPaused()) {
             uint256 amountOut = Math.min(underlyingBalance, amountNeeded);
             return (amountOut, amountNeeded - amountOut);
         }
@@ -248,7 +248,7 @@ contract SommelierTurboDivEthStrategy is BaseSommelierStrategy {
     /// @notice Determines the current value of `shares`.
     /// @return _assets the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view override returns (uint256 _assets) {
-        uint256 lpTokens = cellar.convertToAssets(shares);
+        uint256 lpTokens = underlyingVault.convertToAssets(shares);
         // account pessimistically
         _assets = _lpValue(lpTokens) * 998 / 1000;
     }
@@ -258,10 +258,10 @@ contract SommelierTurboDivEthStrategy is BaseSommelierStrategy {
     function _sharesForAmount(uint256 amount) internal view override returns (uint256 _shares) {
         amount = amount * 1e18 / _lpPrice();
         assembly {
-            // return cellar.convertToShares(amount);
+            // return underlyingVault.convertToShares(amount);
             mstore(0x00, 0xc6e6f592)
             mstore(0x20, amount)
-            if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             _shares := mload(0x00)
         }
         // account pessimistically
@@ -272,10 +272,10 @@ contract SommelierTurboDivEthStrategy is BaseSommelierStrategy {
     /// @return _balance balance the strategy's balance of Cellar vault shares
     function _shareBalance() internal view override returns (uint256 _balance) {
         assembly {
-            // return cellar.balanceOf(address(this));
+            // return underlyingVault.balanceOf(address(this));
             mstore(0x00, 0x70a08231)
             mstore(0x20, address())
-            if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             _balance := mload(0x00)
         }
     }

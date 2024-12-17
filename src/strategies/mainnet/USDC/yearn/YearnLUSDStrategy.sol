@@ -46,7 +46,7 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        yVault = _yVault;
+        underlyingVault = _yVault;
 
         /// Approve Yearn Vault to transfer LUSD
         lusd.safeApprove(address(_yVault), type(uint256).max);
@@ -135,7 +135,7 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
 
         uint256 lusdBalance = _lusdBalance();
 
-        uint256 shares = yVault.deposit(lusdBalance);
+        uint256 shares = underlyingVault.deposit(lusdBalance);
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -160,19 +160,19 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     /// the Vault implementation), so the divested amount might actually be different from
     /// the requested `shares` to divest
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
-    /// but in terms of yvault shares
+    /// but in terms of underlyingVault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
         // check that shares is not greater than actual shares balance
-        uint256 sharesBalance = yVault.balanceOf(address(this));
+        uint256 sharesBalance = underlyingVault.balanceOf(address(this));
         if (shares > sharesBalance) shares = sharesBalance;
-        // return uint256 withdrawn = yVault.withdraw(shares);
+        // return uint256 withdrawn = underlyingVault.withdraw(shares);
         assembly {
             // store selector and parameters in memory
             mstore(0x00, 0x2e1a7d4d)
             mstore(0x20, shares)
-            // call yVault.withdraw(shares)
-            if iszero(call(gas(), sload(yVault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            // call underlyingVault.withdraw(shares)
+            if iszero(call(gas(), sload(underlyingVault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             withdrawn := mload(0x00)
         }
 
@@ -204,7 +204,7 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
     ///                 INTERNAL VIEW FUNCTIONS                  ///
     ////////////////////////////////////////////////////////////////
     /// @notice Determines the current value of `shares`.
-    /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
+    /// @dev if sqrt(underlyingVault.totalAssets()) >>> 1e39, this could potentially revert
     /// @return returns the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view override returns (uint256) {
         return _estimateAmountOut(lusd, underlyingAsset, uint128(super._shareValue(shares)), 1800); // use a 30 min TWAP
@@ -219,9 +219,9 @@ contract YearnLUSDStrategy is BaseYearnV2Strategy {
         assembly {
             // if freeFunds != 0 return amount
             if gt(freeFunds, 0) {
-                // get yVault.totalSupply()
+                // get underlyingVault.totalSupply()
                 mstore(0x00, 0x18160ddd)
-                if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+                if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
                 let totalSupply := mload(0x00)
 
                 // Overflow check equivalent to require(totalSupply == 0 || amount <= type(uint256).max / totalSupply)

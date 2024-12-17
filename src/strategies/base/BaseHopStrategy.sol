@@ -57,7 +57,7 @@ contract BaseHopStrategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice The Hop protocol the strategy interacts with
-    ISwap public hopPool;
+    ISwap public underlyingVault;
     ERC20Burnable public hopLPToken;
 
     /// @notice The maximum single trade allowed in the strategy
@@ -91,14 +91,14 @@ contract BaseHopStrategy is BaseStrategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        hopPool = _hopPool;
+        underlyingVault = _hopPool;
         hopLPToken = _hopLPToken;
 
         /// Approve Vault to transfer USDCe
         underlyingAsset.safeApprove(address(_vault), type(uint256).max);
 
-        underlyingAsset.safeApprove(address(hopPool), type(uint256).max);
-        address(hopLPToken).safeApprove(address(hopPool), type(uint256).max);
+        underlyingAsset.safeApprove(address(underlyingVault), type(uint256).max);
+        address(hopLPToken).safeApprove(address(underlyingVault), type(uint256).max);
 
         /// Unlimited max single trade by default
         maxSingleTrade = type(uint256).max;
@@ -179,7 +179,7 @@ contract BaseHopStrategy is BaseStrategy {
             }
             uint256 withdrawn;
             if (shares > 0) {
-                withdrawn = hopPool.calculateRemoveLiquidityOneToken(address(this), shares, 0);
+                withdrawn = underlyingVault.calculateRemoveLiquidityOneToken(address(this), shares, 0);
             }
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
@@ -362,7 +362,7 @@ contract BaseHopStrategy is BaseStrategy {
         amounts[0] = amount;
         amounts[1] = 0;
 
-        shares = hopPool.addLiquidity(amounts, 0, block.timestamp + 600);
+        shares = underlyingVault.addLiquidity(amounts, 0, block.timestamp + 600);
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -388,7 +388,7 @@ contract BaseHopStrategy is BaseStrategy {
     /// but in terms of "Hop" shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal virtual returns (uint256 withdrawn) {
-        withdrawn = hopPool.removeLiquidityOneToken(shares, 0, 0, block.timestamp + 600);
+        withdrawn = underlyingVault.removeLiquidityOneToken(shares, 0, 0, block.timestamp + 600);
 
         assembly {
             // Emit the `Divested` event
@@ -472,7 +472,7 @@ contract BaseHopStrategy is BaseStrategy {
     /// @notice Returns the estimated price for the strategy's Convex's LP token
     /// @return returns the estimated lp token price
     function _lpPrice() internal view virtual returns (uint256) {
-        return hopPool.getVirtualPrice();
+        return underlyingVault.getVirtualPrice();
     }
 
     /// @notice Returns the real time estimation of the value in assets held by the strategy

@@ -43,7 +43,7 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        yVault = _yVault;
+        underlyingVault = _yVault;
 
         /// Perform needed approvals
         dai.safeApprove(address(zapper), type(uint256).max);
@@ -98,7 +98,7 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
             }
             uint256 shares = _sharesForAmount(amountToWithdraw);
             if (shares == 0) return 0;
-            uint256 withdrawn = yVault.previewRedeem(shares);
+            uint256 withdrawn = underlyingVault.previewRedeem(shares);
             withdrawn = zapper.get_dy_underlying(0, 1, withdrawn) * 9995 / 10_000;
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
@@ -149,7 +149,7 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
-        uint256 maxDeposit = yVault.maxDeposit(address(this));
+        uint256 maxDeposit = underlyingVault.maxDeposit(address(this));
 
         // Scale up to 18 decimals
 
@@ -167,7 +167,7 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
         // Deposit into the underlying vault
         amount = dai.balanceOf(address(this)) - balanceBefore;
 
-        uint256 shares = yVault.deposit(amount, address(this));
+        uint256 shares = underlyingVault.deposit(amount, address(this));
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -192,10 +192,10 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
     /// the Vault implementation), so the divested amount might actually be different from
     /// the requested `shares` to divest
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
-    /// but in terms of yvault shares
+    /// but in terms of underlyingVault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
-        withdrawn = yVault.redeem(shares, address(this), address(this));
+        withdrawn = underlyingVault.redeem(shares, address(this), address(this));
         uint256 balanceBefore = underlyingAsset.balanceOf(address(this));
         // Swap base asset to USDCe
         zapper.exchange_underlying(0, 1, withdrawn, 0, address(this));

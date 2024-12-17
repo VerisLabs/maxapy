@@ -58,7 +58,7 @@ contract BaseSommelierStrategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice The Sommelier Vault the strategy interacts with
-    ICellar public cellar;
+    ICellar public underlyingVault;
 
     /// @notice The maximum single trade allowed in the strategy
     uint256 public maxSingleTrade;
@@ -89,8 +89,8 @@ contract BaseSommelierStrategy is BaseStrategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        cellar = _cellar;
-        /// Approve Cellar Vault to transfer underlying
+        underlyingVault = _cellar;
+        /// Approve underlyingVault Vault to transfer underlying
         underlyingAsset.safeApprove(address(_cellar), type(uint256).max);
 
         /// Unlimited max single trade by default
@@ -117,7 +117,7 @@ contract BaseSommelierStrategy is BaseStrategy {
             unchecked {
                 amountToWithdraw = amountNeeded - underlyingBalance;
             }
-            uint256 burntShares = cellar.withdraw(amountToWithdraw, address(this), address(this));
+            uint256 burntShares = underlyingVault.withdraw(amountToWithdraw, address(this), address(this));
             // use sub zero because shares could be fewer than expected and underflow
             loss = _sub0(_shareValue(burntShares), amountToWithdraw);
         }
@@ -151,7 +151,7 @@ contract BaseSommelierStrategy is BaseStrategy {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
             uint256 shares = _sharesForAmount(amountToWithdraw);
-            uint256 withdrawn = cellar.previewRedeem(shares);
+            uint256 withdrawn = underlyingVault.previewRedeem(shares);
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
         liquidatedAmount = requestedAmount - loss;
@@ -173,7 +173,7 @@ contract BaseSommelierStrategy is BaseStrategy {
             unchecked {
                 liquidatedAmount = liquidatedAmount - underlyingBalance;
             }
-            requestedAmount = _shareValue(cellar.previewWithdraw(liquidatedAmount));
+            requestedAmount = _shareValue(underlyingVault.previewWithdraw(liquidatedAmount));
         }
         return requestedAmount + underlyingBalance;
     }
@@ -186,7 +186,7 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
     function maxLiquidateExact() public view virtual override returns (uint256) {
         // only can request harvested assets
-        return _underlyingBalance() + cellar.maxWithdraw(address(this));
+        return _underlyingBalance() + underlyingVault.maxWithdraw(address(this));
     }
 
     ////////////////////////////////////////////////////////////////
@@ -260,7 +260,7 @@ contract BaseSommelierStrategy is BaseStrategy {
         override
         returns (uint256 unrealizedProfit, uint256 loss, uint256 debtPayment)
     {
-        if (cellar.isPaused()) return (0, 0, 0);
+        if (underlyingVault.isPaused()) return (0, 0, 0);
         // Fetch initial strategy state
         uint256 underlyingBalance = _underlyingBalance();
         uint256 _estimatedTotalAssets_ = _estimatedTotalAssets();
@@ -370,15 +370,15 @@ contract BaseSommelierStrategy is BaseStrategy {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
         // Dont't do anything if cellar is paused or shutdown
-        if (cellar.isShutdown() || cellar.isPaused()) return 0;
+        if (underlyingVault.isShutdown() || underlyingVault.isPaused()) return 0;
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
         // Check max deposit just in case
-        uint256 maxDeposit = cellar.maxDeposit(address(this));
+        uint256 maxDeposit = underlyingVault.maxDeposit(address(this));
         amount = Math.min(amount, maxDeposit);
 
-        uint256 shares = cellar.deposit(amount, address(this));
+        uint256 shares = underlyingVault.deposit(amount, address(this));
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -407,8 +407,8 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal virtual returns (uint256 withdrawn) {
         // if cellar is paused dont liquidate, skips revert
-        if (cellar.isPaused()) return 0;
-        withdrawn = cellar.redeem(shares, address(this), address(this));
+        if (underlyingVault.isPaused()) return 0;
+        withdrawn = underlyingVault.redeem(shares, address(this), address(this));
         emit Divested(address(this), shares, withdrawn);
     }
 
@@ -432,7 +432,7 @@ contract BaseSommelierStrategy is BaseStrategy {
     {
         uint256 underlyingBalance = _underlyingBalance();
         // if cellar is paused dont liquidate, skips revert
-        if (cellar.isPaused()) {
+        if (underlyingVault.isPaused()) {
             uint256 amountOut = Math.min(underlyingBalance, amountNeeded);
             return (amountOut, amountNeeded - amountOut);
         }
@@ -461,7 +461,7 @@ contract BaseSommelierStrategy is BaseStrategy {
     /// @dev This function is used during emergency exit instead of `_prepareReturn()` to
     /// liquidate all of the Strategy's positions back to the MaxApy Vault.
     function _liquidateAllPositions() internal virtual override returns (uint256 amountFreed) {
-        if (cellar.isPaused()) revert CellarIsPaused();
+        if (underlyingVault.isPaused()) revert CellarIsPaused();
         _divest(_shareBalance());
         amountFreed = _underlyingBalance();
     }
@@ -477,7 +477,7 @@ contract BaseSommelierStrategy is BaseStrategy {
             // return cellar.previewRedeem(shares);
             mstore(0x00, 0x4cdad506)
             mstore(0x20, shares)
-            if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             _assets := mload(0x00)
         }
     }
@@ -489,7 +489,7 @@ contract BaseSommelierStrategy is BaseStrategy {
             // return cellar.convertToShares(amount);
             mstore(0x00, 0xc6e6f592)
             mstore(0x20, amount)
-            if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             _shares := mload(0x00)
         }
     }
@@ -501,7 +501,7 @@ contract BaseSommelierStrategy is BaseStrategy {
             // return cellar.balanceOf(address(this));
             mstore(0x00, 0x70a08231)
             mstore(0x20, address())
-            if iszero(staticcall(gas(), sload(cellar.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             _balance := mload(0x00)
         }
     }

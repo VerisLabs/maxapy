@@ -98,7 +98,7 @@ contract YearnUSDCStrategyTest is BaseTest, StrategyEvents {
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
         assertEq(_strategy.strategyName(), bytes32("MaxApy Yearn Strategy"));
-        assertEq(_strategy.yVault(), YVAULT_USDC_MAINNET);
+        assertEq(_strategy.underlyingVault(), YVAULT_USDC_MAINNET);
         assertEq(IERC20(USDC_MAINNET).allowance(address(_strategy), YVAULT_USDC_MAINNET), type(uint256).max);
 
         assertEq(_proxyAdmin.owner(), users.alice);

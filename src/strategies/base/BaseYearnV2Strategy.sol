@@ -61,7 +61,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice The Yearn Vault the strategy interacts with
-    IYVault public yVault;
+    IYVault public underlyingVault;
     /// @notice Minimun trade size within the strategy
     uint256 public minSingleTrade;
     /// @notice Maximum trade size within the strategy
@@ -89,7 +89,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        yVault = _yVault;
+        underlyingVault = _yVault;
 
         /// Mininmum single trade is 0.01 token units
         minSingleTrade = 10 ** IERC20Metadata(underlyingAsset).decimals() / 100;
@@ -346,7 +346,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
-        uint256 shares = yVault.deposit(amount);
+        uint256 shares = underlyingVault.deposit(amount);
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -371,16 +371,16 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// the Vault implementation), so the divested amount might actually be different from
     /// the requested `shares` to divest
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
-    /// but in terms of yvault shares
+    /// but in terms of underlyingVault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal virtual returns (uint256 withdrawn) {
-        // return uint256 withdrawn = yVault.withdraw(shares);
+        // return uint256 withdrawn = underlyingVault.withdraw(shares);
         assembly {
             // store selector and parameters in memory
             mstore(0x00, 0x2e1a7d4d)
             mstore(0x20, shares)
-            // call yVault.withdraw(shares)
-            if iszero(call(gas(), sload(yVault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            // call underlyingVault.withdraw(shares)
+            if iszero(call(gas(), sload(underlyingVault.slot), 0, 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             withdrawn := mload(0x00)
 
             // Emit the `Divested` event
@@ -442,14 +442,14 @@ contract BaseYearnV2Strategy is BaseStrategy {
     ////////////////////////////////////////////////////////////////
 
     /// @notice Determines the current value of `shares`.
-    /// @dev if sqrt(yVault.totalAssets()) >>> 1e39, this could potentially revert
+    /// @dev if sqrt(underlyingVault.totalAssets()) >>> 1e39, this could potentially revert
     /// @return returns the estimated amount of underlying computed from shares `shares`
     function _shareValue(uint256 shares) internal view virtual returns (uint256) {
         uint256 vaultTotalSupply;
         assembly {
-            // get yVault.totalSupply()
+            // get underlyingVault.totalSupply()
             mstore(0x00, 0x18160ddd)
-            if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+            if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
             vaultTotalSupply := mload(0x00)
         }
         if (vaultTotalSupply == 0) return shares;
@@ -464,9 +464,9 @@ contract BaseYearnV2Strategy is BaseStrategy {
         assembly {
             // if freeFunds != 0 return amount
             if gt(freeFunds, 0) {
-                // get yVault.totalSupply()
+                // get underlyingVault.totalSupply()
                 mstore(0x00, 0x18160ddd)
-                if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
+                if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
                 let totalSupply := mload(0x00)
 
                 // Overflow check equivalent to require(totalSupply == 0 || amount <= type(uint256).max / totalSupply)
@@ -480,20 +480,20 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @notice Calculates the yearn vault free funds considering the locked profit
     /// @return returns the computed yearn vault free funds
     function _freeFunds() internal view returns (uint256) {
-        return yVault.totalAssets() - _calculateLockedProfit();
+        return underlyingVault.totalAssets() - _calculateLockedProfit();
     }
 
     /// @notice Calculates the yearn vault locked profit i.e. how much profit is locked and cant be withdrawn
     /// @return lockedProfit returns the computed locked profit value
     function _calculateLockedProfit() internal view returns (uint256 lockedProfit) {
         assembly {
-            let _yVault := sload(yVault.slot)
+            let _yVault := sload(underlyingVault.slot)
 
-            // get yVault.lastReport()
+            // get underlyingVault.lastReport()
             mstore(0x00, 0xc3535b52)
             if iszero(staticcall(gas(), _yVault, 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
             let lastReport := mload(0x00)
-            // get yVault.lockedProfitDegradation()
+            // get underlyingVault.lockedProfitDegradation()
             mstore(0x00, 0x42232716)
             if iszero(staticcall(gas(), _yVault, 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
             let lockedProfitDegradation := mload(0x00)
@@ -515,7 +515,7 @@ contract BaseYearnV2Strategy is BaseStrategy {
 
             //if (lockedFundsRatio < DEGRADATION_COEFFICIENT)
             if lt(lockedFundsRatio, DEGRADATION_COEFFICIENT) {
-                // get yVault.lockedProfit()
+                // get underlyingVault.lockedProfit()
                 mstore(0x00, 0x44b81396)
                 if iszero(staticcall(gas(), _yVault, 0x1c, 0x04, 0x00, 0x20)) { revert(0x00, 0x04) }
                 lockedProfit := mload(0x00)
@@ -534,10 +534,10 @@ contract BaseYearnV2Strategy is BaseStrategy {
     /// @return _balance balance the strategy's balance of yearn vault shares
     function _shareBalance() internal view returns (uint256 _balance) {
         assembly {
-            // return yVault.balanceOf(address(this));
+            // return underlyingVault.balanceOf(address(this));
             mstore(0x00, 0x70a08231)
             mstore(0x20, address())
-            if iszero(staticcall(gas(), sload(yVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
+            if iszero(staticcall(gas(), sload(underlyingVault.slot), 0x1c, 0x24, 0x00, 0x20)) { revert(0x00, 0x04) }
             _balance := mload(0x00)
         }
     }

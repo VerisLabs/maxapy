@@ -98,7 +98,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
         assertEq(_strategy.strategyName(), bytes32("MaxApy Sommelier Strategy"));
-        assertEq(_strategy.cellar(), CELLAR_WETH_MAINNET);
+        assertEq(_strategy.underlyingVault(), CELLAR_WETH_MAINNET);
         assertEq(IERC20(WETH_MAINNET).allowance(address(_strategy), CELLAR_WETH_MAINNET), type(uint256).max);
 
         assertEq(_proxyAdmin.owner(), users.alice);

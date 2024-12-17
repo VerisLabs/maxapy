@@ -100,7 +100,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
         assertEq(_strategy.strategyName(), bytes32("MaxApy Yearn Strategy"));
-        assertEq(_strategy.yVault(), YVAULT_LUSD_MAINNET);
+        assertEq(_strategy.underlyingVault(), YVAULT_LUSD_MAINNET);
         assertEq(IERC20(USDC_MAINNET).allowance(address(_strategy), YVAULT_LUSD_MAINNET), 0);
 
         assertEq(_proxyAdmin.owner(), users.alice);

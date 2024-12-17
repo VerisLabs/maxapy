@@ -42,7 +42,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     /// @param _vault The address of the MaxApy Vault associated to the strategy
     /// @param _keepers The addresses of the keepers to be added as valid keepers to the strategy
     /// @param _strategyName the name of the strategy
-    /// @param _cellar The address of the Sommelier Turbo-stETH cellar
+    /// @param _cellar The address of the Sommelier Turbo-stETH underlyingVault
     function initialize(
         IMaxApyVault _vault,
         address[] calldata _keepers,
@@ -55,7 +55,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
         initializer
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
-        cellar = _cellar;
+        underlyingVault = _cellar;
 
         /// Approve pool to perform swaps
         underlyingAsset.safeApprove(address(pool), type(uint256).max);
@@ -109,7 +109,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
             uint256 shares = _sharesForAmount(amountToWithdraw);
-            uint256 withdrawn = cellar.previewRedeem(shares);
+            uint256 withdrawn = underlyingVault.previewRedeem(shares);
             withdrawn = pool.get_dy(1, 0, withdrawn);
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
@@ -166,9 +166,9 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     {
         // Don't do anything if amount to invest is 0
         if (amount == 0) return 0;
-        // Dont't do anything if cellar is paused or shutdown
-        if (cellar.isShutdown() || cellar.isPaused()) return 0;
-        uint256 maxDeposit = cellar.maxDeposit(address(this));
+        // Dont't do anything if underlyingVault is paused or shutdown
+        if (underlyingVault.isShutdown() || underlyingVault.isPaused()) return 0;
+        uint256 maxDeposit = underlyingVault.maxDeposit(address(this));
         amount = Math.min(amount, maxDeposit);
 
         uint256 underlyingBalance = _underlyingBalance();
@@ -178,7 +178,7 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
 
         uint256 stEthReceived = pool.exchange{ value: amount }(0, 1, amount, 0);
 
-        uint256 shares = cellar.deposit(stEthReceived, address(this));
+        uint256 shares = underlyingVault.deposit(stEthReceived, address(this));
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -203,12 +203,12 @@ contract SommelierStEthDepositTurboStEthStrategy is BaseSommelierStrategy {
     /// the Vault implementation), so the divested amount might actually be different from
     /// the requested `shares` to divest
     /// @dev care should be taken, as the `shares` parameter is *not* in terms of underlying,
-    /// but in terms of cellar shares
+    /// but in terms of underlyingVault shares
     /// @return withdrawn the total amount divested, in terms of underlying asset
     function _divest(uint256 shares) internal override returns (uint256 withdrawn) {
-        // if cellar is paused dont liquidate, skips revert
-        if (cellar.isPaused()) return 0;
-        uint256 stEthWithdrawn = cellar.redeem(shares, address(this), address(this));
+        // if underlyingVault is paused dont liquidate, skips revert
+        if (underlyingVault.isPaused()) return 0;
+        uint256 stEthWithdrawn = underlyingVault.redeem(shares, address(this), address(this));
         withdrawn = pool.exchange(1, 0, stEthWithdrawn, 0);
         IWETH(underlyingAsset).deposit{ value: withdrawn }();
         emit Divested(address(this), shares, withdrawn);

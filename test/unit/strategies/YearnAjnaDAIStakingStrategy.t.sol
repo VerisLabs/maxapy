@@ -101,7 +101,7 @@ contract YearnAjnaDAIStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
         assertEq(_strategy.strategyName(), bytes32("MaxApy Yearn Strategy"));
-        assertEq(_strategy.yVault(), YVAULT_DAI_MAINNET);
+        assertEq(_strategy.underlyingVault(), YVAULT_DAI_MAINNET);
         assertEq(IERC20(DAI_MAINNET).allowance(address(_strategy), YVAULT_DAI_MAINNET), type(uint256).max);
 
         assertEq(_proxyAdmin.owner(), users.alice);
