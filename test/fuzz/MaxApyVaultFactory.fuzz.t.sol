@@ -3,8 +3,9 @@ pragma solidity ^0.8.19;
 
 import { Test } from "forge-std/Test.sol";
 import { MaxApyVaultFactory } from "src/MaxApyVaultFactory.sol";
-import { MockERC20 } from "test/mock/MockERC20.sol";
+
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { MockERC20 } from "test/mock/MockERC20.sol";
 
 contract MaxApyVaultFactoryFuzzTest is Test {
     event CreateVault(address indexed asset, address vaultAddress);

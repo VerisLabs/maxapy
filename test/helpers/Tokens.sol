@@ -2,15 +2,16 @@
 pragma solidity ^0.8.19;
 
 import {
-    WETH_MAINNET,
-    USDC_MAINNET,
     DAI_MAINNET,
+    DAI_POLYGON,
     LUSD_MAINNET,
+    USDCE_POLYGON,
+    USDC_MAINNET,
+    USDC_POLYGON,
     USDT_MAINNET,
     USDT_POLYGON,
-    DAI_POLYGON,
-    USDCE_POLYGON,
-    USDC_POLYGON
+    WETH_MAINNET,
+    WETH_POLYGON
 } from "src/helpers/AddressBook.sol";
 
 uint256 constant _1_USDC = 1e6;
@@ -28,10 +29,11 @@ function getTokensList(string memory chain) pure returns (address[] memory) {
         tokens[4] = USDT_MAINNET;
         return tokens;
     } else if (keccak256(abi.encodePacked(chain)) == keccak256(abi.encodePacked("POLYGON"))) {
-        address[] memory tokens = new address[](3);
+        address[] memory tokens = new address[](4);
         tokens[0] = USDT_POLYGON;
         tokens[1] = DAI_POLYGON;
         tokens[2] = USDCE_POLYGON;
+        tokens[3] = WETH_POLYGON;
         return tokens;
     } else {
         revert("InvalidChain");

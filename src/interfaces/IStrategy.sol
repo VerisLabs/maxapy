@@ -81,4 +81,17 @@ interface IStrategy {
     function setMaxSingleTrade(uint256) external;
 
     function setMinSingleTrade(uint256) external;
+
+    function unharvestedAmount() external view returns (int256);
+
+    function simulateHarvest()
+        external
+        returns (
+            uint256 expectedBalance,
+            uint256 outputAfterInvestment,
+            uint256 intendedInvest,
+            uint256 actualInvest,
+            uint256 intendedDivest,
+            uint256 actualDivest
+        );
 }

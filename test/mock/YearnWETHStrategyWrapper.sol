@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { YearnWETHStrategy, SafeTransferLib } from "src/strategies/mainnet/WETH/yearn/YearnWETHStrategy.sol";
+import { SafeTransferLib, YearnWETHStrategy } from "src/strategies/mainnet/WETH/yearn/YearnWETHStrategy.sol";
 
 contract YearnWETHStrategyWrapper is YearnWETHStrategy {
     using SafeTransferLib for address;

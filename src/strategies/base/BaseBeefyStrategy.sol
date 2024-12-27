@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
-import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
-
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { IBeefyVault } from "src/interfaces/IBeefyVault.sol";
+import { BaseStrategy, IERC20Metadata, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 
 /// @title BaseBeefyStrategy
 /// @author MaxApy
@@ -88,7 +87,6 @@ contract BaseBeefyStrategy is BaseStrategy {
     {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         beefyVault = _beefyVault;
-        /// Approve beefy Vault to transfer underlying
         /// Unlimited max single trade by default
         maxSingleTrade = type(uint256).max;
     }
@@ -157,11 +155,14 @@ contract BaseBeefyStrategy is BaseStrategy {
             unchecked {
                 amountToWithdraw = requestedAmount - underlyingBalance;
             }
+
             uint256 shares = _sharesForAmount(amountToWithdraw);
             uint256 withdrawn = _shareValue(shares);
+
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
-        liquidatedAmount = requestedAmount - loss;
+
+        liquidatedAmount = (requestedAmount - loss) * 997 / 1000;
     }
 
     /// @notice This function is meant to be called from the vault
@@ -181,12 +182,12 @@ contract BaseBeefyStrategy is BaseStrategy {
     }
 
     /// @notice Returns the max amount of assets that the strategy can withdraw after losses
-    function maxLiquidate() public view override returns (uint256) {
+    function maxLiquidate() public view virtual override returns (uint256) {
         return _estimatedTotalAssets();
     }
 
     /// @notice Returns the max amount of assets that the strategy can liquidate, before realizing losses
-    function maxLiquidateExact() public view override returns (uint256) {
+    function maxLiquidateExact() public view virtual override returns (uint256) {
         // make sure it doesnt revert when increaseing it 1% in the withdraw
         return previewLiquidate(estimatedTotalAssets()) * 99 / 100;
     }
@@ -338,8 +339,14 @@ contract BaseBeefyStrategy is BaseStrategy {
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
 
-        uint256 shares = _sharesForAmount(amount);
+        uint256 _before = beefyVault.balanceOf(address(this));
+
+        // Deposit LP tokens to Beefy vault
         beefyVault.deposit(amount);
+
+        uint256 _after = beefyVault.balanceOf(address(this));
+        uint256 shares;
+        shares = _after - _before;
 
         assembly ("memory-safe") {
             // if (shares < minOutputAfterInvestment)
@@ -397,6 +404,7 @@ contract BaseBeefyStrategy is BaseStrategy {
     /// amount
     function _liquidatePosition(uint256 amountNeeded)
         internal
+        virtual
         override
         returns (uint256 liquidatedAmount, uint256 loss)
     {
@@ -488,5 +496,139 @@ contract BaseBeefyStrategy is BaseStrategy {
     /// @return the strategy's total assets(idle + investment positions)
     function _estimatedTotalAssets() internal view override returns (uint256) {
         return _underlyingBalance() + _shareValue(_shareBalance());
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                      SIMULATION                          ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @dev internal helper function that reverts and returns needed values in the revert message
+    function _simulateHarvest() public override {
+        address harvester = address(0);
+
+        uint256 expectedBalance;
+        uint256 outputAfterInvestment;
+        uint256 intendedDivest;
+        uint256 actualDivest;
+        uint256 intendedInvest;
+        uint256 actualInvest;
+
+        // normally the treasury would get the management fee
+        address managementFeeReceiver = address(0);
+
+        uint256 unrealizedProfit;
+        uint256 loss;
+        uint256 debtPayment;
+        uint256 debtOutstanding;
+
+        address cachedVault = address(vault); // Cache `vault` address to avoid multiple SLOAD's
+
+        assembly ("memory-safe") {
+            // Store `vault`'s `debtOutstanding()` function selector:
+            // `bytes4(keccak256("debtOutstanding(address)"))`
+            mstore(0x00, 0xbdcf36bb)
+            mstore(0x20, address()) // append the current address as parameter
+
+            // query `vault`'s `debtOutstanding()`
+            if iszero(
+                staticcall(
+                    gas(), // Remaining amount of gas
+                    cachedVault, // Address of `vault`
+                    0x1c, // byte offset in memory where calldata starts
+                    0x24, // size of the calldata to copy
+                    0x00, // byte offset in memory to store the return data
+                    0x20 // size of the return data
+                )
+            ) {
+                // Revert if debt outstanding query fails
+                revert(0x00, 0x04)
+            }
+
+            // Store debt outstanding returned by staticcall into `debtOutstanding`
+            debtOutstanding := mload(0x00)
+        }
+
+        intendedDivest = debtOutstanding;
+
+        if (emergencyExit == 2) {
+            // Do what needed before
+            _beforePrepareReturn();
+
+            uint256 balanceBefore = _estimatedTotalAssets();
+            // Free up as much capital as possible
+            uint256 amountFreed = _liquidateAllPositions();
+
+            // silence compiler warnings
+            amountFreed;
+
+            uint256 balanceAfter = _estimatedTotalAssets();
+
+            assembly {
+                // send everything back to the vault
+                debtPayment := balanceAfter
+                if lt(balanceAfter, balanceBefore) { loss := sub(balanceBefore, balanceAfter) }
+            }
+        } else {
+            // Do what needed before
+            _beforePrepareReturn();
+            // Free up returns for vault to pull
+            (unrealizedProfit, loss, debtPayment) = _prepareReturn(debtOutstanding, 0);
+
+            expectedBalance = _underlyingBalance();
+        }
+
+        actualDivest = debtPayment;
+
+        assembly ("memory-safe") {
+            let m := mload(0x40) // Store free memory pointer
+            // Store `vault`'s `report()` function selector:
+            // `bytes4(keccak256("report(uint128,uint128,uint128,address)"))`
+            mstore(0x00, 0x80919dd5)
+            mstore(0x20, unrealizedProfit) // append the `profit` argument
+            mstore(0x40, loss) // append the `loss` argument
+            mstore(0x60, debtPayment) // append the `debtPayment` argument
+            mstore(0x80, managementFeeReceiver) // append the `debtPayment` argument
+
+            // Report to vault
+            if iszero(
+                call(
+                    gas(), // Remaining amount of gas
+                    cachedVault, // Address of `vault`
+                    0, // `msg.value`
+                    0x1c, // byte offset in memory where calldata starts
+                    0x84, // size of the calldata to copy
+                    0x00, // byte offset in memory to store the return data
+                    0x20 // size of the return data
+                )
+            ) {
+                // If call failed, throw the error thrown in the previous `call`
+                revert(0x00, 0x04)
+            }
+
+            // Store debt outstanding returned by call to `report()` into `debtOutstanding`
+            debtOutstanding := mload(0x00)
+
+            mstore(0x60, 0) // Restore the zero slot
+            mstore(0x40, m) // Restore the free memory pointer
+        }
+        intendedInvest = _underlyingBalance();
+        uint256 sharesBalanceBefore = _shareBalance();
+        // Check if vault transferred underlying and re-invest it
+        _adjustPosition(debtOutstanding, 0);
+        outputAfterInvestment = _shareBalance() - sharesBalanceBefore;
+        actualInvest = _shareValue(outputAfterInvestment);
+        _snapshotEstimatedTotalAssets();
+
+        // revert with data we need
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, expectedBalance)
+            mstore(add(ptr, 32), outputAfterInvestment)
+            mstore(add(ptr, 64), intendedDivest)
+            mstore(add(ptr, 96), actualDivest)
+            mstore(add(ptr, 128), intendedInvest)
+            mstore(add(ptr, 160), actualInvest)
+            revert(ptr, 192)
+        }
     }
 }

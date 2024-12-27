@@ -5,94 +5,112 @@ MaxAPY is a yield farming **gas-optimized** and **capital-efficient** vault impl
 ## Contracts
 
 ```ml
-├── src
-│   ├── helpers
-│   │   ├── AddressBook.sol
-│   │   └── VaultTypes.sol
-│   ├── interfaces
-│   │   ├── IBalancer.sol
-│   │   ├── ICellar.sol
-│   │   ├── IConvexBooster.sol
-│   │   ├── IConvexRewards.sol
-│   │   ├── ICurve.sol
-│   │   ├── IMaxApyRouter.sol
-│   │   ├── IMaxApyVault.sol
-│   │   ├── IStakingRewardsMulti.sol
-│   │   ├── IStrategy.sol
-│   │   ├── IUniswap.sol
-│   │   ├── IWETH.sol
-│   │   ├── IWrappedTokenGateway.sol
-│   │   ├── IWrappedToken.sol
-│   │   ├── IYVault.sol
-│   │   └── IYVaultV3.sol
-│   ├── lib
-│   │   ├── ERC20.sol
-│   │   ├── Initializable.sol
-│   │   ├── OracleLibrary.sol
-│   │   └── ReentrancyGuard.sol
-│   ├── MaxApyRouter.sol
-│   ├── MaxApyVaultFactory.sol
-│   ├── MaxApyVault.sol
-│   ├── periphery
-│   │   └── MaxApyHarvester.sol
-│   └── strategies
-│       ├── base
-│       │   ├── BaseConvexStrategyPolygon.sol
-│       │   ├── BaseConvexStrategy.sol
-│       │   ├── BaseSommelierStrategy.sol
-│       │   ├── BaseStrategy.sol
-│       │   ├── BaseYearnV2Strategy.sol
-│       │   └── BaseYearnV3Strategy.sol
-│       ├── mainnet
-│       │   ├── DAI
-│       │   │   └── yearn
-│       │   │       ├── YearnAjnaDAIStakingStrategy.sol
-│       │   │       └── YearnDAIStrategy.sol
-│       │   ├── USDC
-│       │   │   ├── convex
-│       │   │   │   └── ConvexCrvUSDWethCollateralStrategy.sol
-│       │   │   ├── sommelier
-│       │   │   │   └── SommelierTurboGHOStrategy.sol
-│       │   │   └── yearn
-│       │   │       ├── YearnLUSDStrategy.sol
-│       │   │       └── YearnUSDCStrategy.sol
-│       │   ├── USDT
-│       │   │   └── yearn
-│       │   │       └── YearnUSDTStrategy.sol
-│       │   └── WETH
-│       │       ├── convex
-│       │       │   └── ConvexdETHFrxETHStrategy.sol
-│       │       ├── sommelier
-│       │       │   ├── SommelierMorphoEthMaximizerStrategy.sol
-│       │       │   ├── SommelierStEthDepositTurboStEthStrategy.sol
-│       │       │   ├── SommelierTurboDivEthStrategy.sol
-│       │       │   ├── SommelierTurboEEthV2Strategy.sol
-│       │       │   ├── SommelierTurboEthXStrategy.sol
-│       │       │   ├── SommelierTurboEzEthStrategy.sol
-│       │       │   ├── SommelierTurboRsEthStrategy.sol
-│       │       │   ├── SommelierTurboStEthStrategy.sol
-│       │       │   └── SommelierTurboSwEthStrategy.sol
-│       │       └── yearn
-│       │           ├── YearnAaveV3WETHLenderStrategy.sol
-│       │           ├── YearnAjnaWETHStakingStrategy.sol
-│       │           ├── YearnCompoundV3WETHLenderStrategy.sol
-│       │           ├── YearnV3WETH2Strategy.sol
-│       │           ├── YearnV3WETHStrategy.sol
-│       │           └── YearnWETHStrategy.sol
-│       └── polygon
-│           └── USDCe
-│               ├── convex
-│               │   ├── ConvexUSDCCrvUSDStrategy.sol
-│               │   └── ConvexUSDTCrvUSDStrategy.sol
-│               └── yearn
-│                   ├── YearnAjnaUSDCStrategy.sol
-│                   ├── YearnCompoundUSDCeLenderStrategy.sol
-│                   ├── YearnDAILenderStrategy.sol
-│                   ├── YearnDAIStrategy.sol
-│                   ├── YearnMaticUSDCStakingStrategy.sol
-│                   ├── YearnUSDCeLenderStrategy.sol
-│                   ├── YearnUSDCeStrategy.sol
-│                   └── YearnUSDTStrategy.sol
+src/
+├── MaxApyRouter.sol
+├── MaxApyVault.sol
+├── MaxApyVaultFactory.sol
+├── helpers
+│   ├── AddressBook.sol
+│   └── VaultTypes.sol
+├── interfaces
+│   ├── Hop
+│   │   └── ISwap.sol
+│   ├── IAlgebraPool.sol
+│   ├── IBalancer.sol
+│   ├── IBeefyVault.sol
+│   ├── ICellar.sol
+│   ├── IConvexBooster.sol
+│   ├── IConvexRewards.sol
+│   ├── ICurve.sol
+│   ├── IHypervisor.sol
+│   ├── IMaxApyRouter.sol
+│   ├── IMaxApyVault.sol
+│   ├── IStakingRewardsMulti.sol
+│   ├── IStrategy.sol
+│   ├── IUniProxy.sol
+│   ├── IUniswap.sol
+│   ├── IWETH.sol
+│   ├── IWrappedToken.sol
+│   ├── IWrappedTokenGateway.sol
+│   ├── IYVault.sol
+│   └── IYVaultV3.sol
+├── lib
+│   ├── Constants.sol
+│   ├── ERC20.sol
+│   ├── FixedPoint96.sol
+│   ├── Initializable.sol
+│   ├── LiquidityRangePool.sol
+│   ├── LiquidityTokenMath.sol
+│   ├── OracleLibrary.sol
+│   └── ReentrancyGuard.sol
+├── periphery
+│   └── MaxApyHarvester.sol
+└── strategies
+    ├── base
+    │   ├── BaseBeefyCurveStrategy.sol
+    │   ├── BaseBeefyStrategy.sol
+    │   ├── BaseConvexStrategy.sol
+    │   ├── BaseConvexStrategyPolygon.sol
+    │   ├── BaseHopStrategy.sol
+    │   ├── BaseSommelierStrategy.sol
+    │   ├── BaseStrategy.sol
+    │   ├── BaseYearnV2Strategy.sol
+    │   └── BaseYearnV3Strategy.sol
+    ├── mainnet
+    │   ├── USDC
+    │   │   ├── convex
+    │   │   │   └── ConvexCrvUSDWethCollateralStrategy.sol
+    │   │   ├── sommelier
+    │   │   │   └── SommelierTurboGHOStrategy.sol
+    │   │   └── yearn
+    │   │       ├── YearnAjnaDAIStakingStrategy.sol
+    │   │       ├── YearnDAIStrategy.sol
+    │   │       ├── YearnLUSDStrategy.sol
+    │   │       ├── YearnUSDCStrategy.sol
+    │   │       └── YearnUSDTStrategy.sol
+    │   └── WETH
+    │       ├── convex
+    │       │   └── ConvexdETHFrxETHStrategy.sol
+    │       ├── sommelier
+    │       │   ├── SommelierMorphoEthMaximizerStrategy.sol
+    │       │   ├── SommelierStEthDepositTurboStEthStrategy.sol
+    │       │   ├── SommelierTurboDivEthStrategy.sol
+    │       │   ├── SommelierTurboEEthV2Strategy.sol
+    │       │   ├── SommelierTurboEthXStrategy.sol
+    │       │   ├── SommelierTurboEzEthStrategy.sol
+    │       │   ├── SommelierTurboRsEthStrategy.sol
+    │       │   ├── SommelierTurboStEthStrategy.sol
+    │       │   └── SommelierTurboSwEthStrategy.sol
+    │       └── yearn
+    │           ├── YearnAaveV3WETHLenderStrategy.sol
+    │           ├── YearnAjnaWETHStakingStrategy.sol
+    │           ├── YearnCompoundV3WETHLenderStrategy.sol
+    │           ├── YearnV3WETH2Strategy.sol
+    │           ├── YearnV3WETHStrategy.sol
+    │           └── YearnWETHStrategy.sol
+    └── polygon
+        ├── USDCe
+        │   ├── beefy
+        │   │   ├── BeefyCrvUSDUSDCeStrategy.sol
+        │   │   ├── BeefyMaiUSDCeStrategy.sol
+        │   │   └── BeefyUSDCeDAIStrategy.sol
+        │   ├── convex
+        │   │   ├── ConvexUSDCCrvUSDStrategy.sol
+        │   │   └── ConvexUSDTCrvUSDStrategy.sol
+        │   └── yearn
+        │       ├── YearnAaveV3USDTLenderStrategy.sol
+        │       ├── YearnAjnaUSDCStrategy.sol
+        │       ├── YearnCompoundUSDCeLenderStrategy.sol
+        │       ├── YearnDAILenderStrategy.sol
+        │       ├── YearnDAIStrategy.sol
+        │       ├── YearnMaticUSDCStakingStrategy.sol
+        │       ├── YearnUSDCeLenderStrategy.sol
+        │       ├── YearnUSDCeStrategy.sol
+        │       └── YearnUSDTStrategy.sol
+        └── WETH
+            └── hop
+                └── HopETHStrategy.sol
+
 ```
 
 ## Installation

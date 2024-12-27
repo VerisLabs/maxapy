@@ -1,28 +1,32 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
-import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+
 import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+
 import { IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
 
-import { MaxApyVault } from "src/MaxApyVault.sol";
-import { StrategyData } from "src/helpers/VaultTypes.sol";
 import { ConvexdETHFrxETHStrategyEvents } from "../../helpers/ConvexdETHFrxETHStrategyEvents.sol";
-import "src/helpers/AddressBook.sol";
+
+import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
 import { ConvexCrvUSDWethCollateralStrategyWrapper } from "../../mock/ConvexCrvUSDWethCollateralStrategyWrapper.sol";
 import { MockConvexBooster } from "../../mock/MockConvexBooster.sol";
 import { MockCurvePool } from "../../mock/MockCurvePool.sol";
-import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { _1_USDC } from "test/helpers/Tokens.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
 import "src/helpers/AddressBook.sol";
+
+import "src/helpers/AddressBook.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { _1_USDC } from "test/helpers/Tokens.sol";
 
 contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     address public TREASURY;
@@ -55,7 +59,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
                 "initialize(address,address[],bytes32,address,address,address)",
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy dETH<>frxETH Strategy")),
+                bytes32("MaxApy dETH<>frxETH Strategy"),
                 users.alice,
                 CURVE_CRVUSD_WETH_COLLATERAL_LENDING_POOL_MAINNET,
                 CURVE_USDC_CRVUSD_POOL_MAINNET
@@ -88,7 +92,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
                 "initialize(address,address[],bytes32,address,address,address)",
                 address(_vault),
                 keepers,
-                bytes32(abi.encode("MaxApy dETH<>frxETH Strategy")),
+                bytes32("MaxApy Convex ETH Strategy"),
                 users.alice,
                 CURVE_CRVUSD_WETH_COLLATERAL_LENDING_POOL_MAINNET,
                 CURVE_USDC_CRVUSD_POOL_MAINNET
@@ -104,7 +108,7 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
         assertEq(_strategy.owner(), users.alice);
-        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy Convex ETH Strategy")));
+        assertEq(_strategy.strategyName(), bytes32("MaxApy Convex ETH Strategy"));
         assertEq(_strategy.convexBooster(), CONVEX_BOOSTER_MAINNET);
         assertEq(_strategy.router(), UNISWAP_V3_ROUTER_MAINNET);
 
@@ -660,5 +664,15 @@ contract ConvexCrvUSDWethCollateralStrategyTest is BaseTest, ConvexdETHFrxETHStr
         strategy.liquidate(maxWithdraw);
         uint256 withdrawn = IERC20(USDC_MAINNET).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
+    }
+
+    function testConvexCrvUSDWethCollateral__SimulateHarvest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        vm.startPrank(users.keeper);
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
+
+        strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
 }

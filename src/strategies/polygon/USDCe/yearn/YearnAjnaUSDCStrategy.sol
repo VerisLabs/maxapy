@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {IYVaultV3, BaseYearnV3Strategy, IMaxApyVault, SafeTransferLib} from "src/strategies/base/BaseYearnV3Strategy.sol";
+import {
+    BaseYearnV3Strategy, IMaxApyVault, IYVaultV3, SafeTransferLib
+} from "src/strategies/base/BaseYearnV3Strategy.sol";
 
 /// @title YearnAjnaUSDCStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -21,7 +23,12 @@ contract YearnAjnaUSDCStrategy is BaseYearnV3Strategy {
         bytes32 _strategyName,
         address _strategist,
         IYVaultV3 _yVault
-    ) public virtual override initializer {
+    )
+        public
+        virtual
+        override
+        initializer
+    {
         __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
         yVault = _yVault;
 

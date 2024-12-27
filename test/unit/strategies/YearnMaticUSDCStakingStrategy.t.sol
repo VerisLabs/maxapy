@@ -1,21 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
+
+import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { YearnMaticUSDCStakingStrategyWrapper } from "../../mock/YearnMaticUSDCStakingStrategyWrapper.sol";
 import { MaxApyVault } from "src/MaxApyVault.sol";
-import { StrategyData } from "src/helpers/VaultTypes.sol";
-import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
-import { USDCE_POLYGON, _1_USDC } from "test/helpers/Tokens.sol";
+
 import "src/helpers/AddressBook.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+
+import { USDCE_POLYGON, _1_USDC } from "test/helpers/Tokens.sol";
 
 contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
     address public constant YVAULT_USDCE_POLYGON = YEARN_MATIC_USDC_STAKING_YVAULT_POLYGON;
@@ -50,7 +53,7 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address)",
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                bytes32("MaxApy Yearn Strategy"),
                 users.alice,
                 YVAULT_USDCE_POLYGON
             )
@@ -83,7 +86,7 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address)",
                 address(_vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                bytes32("MaxApy Yearn Strategy"),
                 users.alice,
                 YVAULT_USDCE_POLYGON
             )
@@ -97,7 +100,7 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(USDCE_POLYGON).allowance(address(_strategy), address(_vault)), type(uint256).max);
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
-        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy Yearn Strategy")));
+        assertEq(_strategy.strategyName(), bytes32("MaxApy Yearn Strategy"));
         assertEq(_strategy.yVault(), YVAULT_USDCE_POLYGON);
         assertEq(IERC20(USDCE_POLYGON).allowance(address(_strategy), YVAULT_USDCE_POLYGON), type(uint256).max);
 
@@ -640,4 +643,87 @@ contract YearnMaticUSDCStakingStrategyTest is BaseTest, StrategyEvents {
         uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
     }
+
+    function testYearnMaticUSDC_Staking__SimulateHarvest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        vm.startPrank(users.keeper);
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
+
+        strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
+    }
+
+    // function testYearnMaticUSDC__PreviewLiquidate__FUZZY(uint256 amount) public {
+    //     vm.assume(amount > 1 * _1_USDC && amount < 1_000_000 * _1_USDC);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+
+    //     vm.stopPrank();
+    //     uint256 expected = strategy.previewLiquidate(amount / 3);
+    //     vm.startPrank(address(vault));
+
+    //     uint256 loss = strategy.liquidate(amount / 3);
+
+    //     assertLe(expected, amount / 3 - loss);
+    // }
+
+    // function testYearnMaticUSDC_Staking__PreviewLiquidateExact_FUZZY(uint256 amount) public {
+    //     vm.assume(amount > 1 * _1_USDC && amount < 100_000 * _1_USDC);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 10_000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+    //     vm.stopPrank();
+    //     uint256 withdrawExact = amount * 90 / 100;
+    //     uint256 requestedAmount = strategy.previewLiquidateExact(withdrawExact);
+    //     vm.startPrank(address(vault));
+
+    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+    //     uint256 loss = strategy.liquidateExact(withdrawExact);
+    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+    //     assertEq(withdrawn, withdrawExact);
+    //     assertLe(loss, requestedAmount - withdrawExact);
+    // }
+
+    // function testYearnMaticUSDC_Staking__maxLiquidateExact_FUZZY(uint256 amount) public {
+    //     vm.assume(amount > 1 * _1_USDC && amount < 100_000 * _1_USDC);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+    //     vm.stopPrank();
+    //     uint256 maxLiquidateExact = strategy.maxLiquidateExact();
+    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+    //     uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
+    //     vm.startPrank(address(vault));
+    //     uint256 losses = strategy.liquidateExact(maxLiquidateExact);
+    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+    //     // withdraw exactly what requested
+    //     assertEq(withdrawn, maxLiquidateExact);
+    //     // losses are equal or fewer than expected
+    //     assertLe(losses, requestedAmount - maxLiquidateExact);
+    // }
+
+    // function testYearnMaticUSDC_Staking__MaxLiquidate_FUZZY(uint256 amount) public {
+    //     vm.assume(amount > 1 * _1_USDC && amount < 1_000 * _1_USDC);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+    //     vm.stopPrank();
+    //     uint256 maxWithdraw = strategy.maxLiquidate();
+    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+    //     vm.startPrank(address(vault));
+    //     strategy.liquidate(maxWithdraw);
+    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+    //     assertLe(withdrawn, maxWithdraw);
+    // }
 }

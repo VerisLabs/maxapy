@@ -1,22 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
+
+import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
-import { ICellar } from "src/interfaces/ICellar.sol";
 import { SommelierTurboEEthV2StrategyWrapper } from "../../mock/SommelierTurboEEthV2StrategyWrapper.sol";
 import { MaxApyVault } from "src/MaxApyVault.sol";
-import { StrategyData } from "src/helpers/VaultTypes.sol";
-import { SommelierTurboEEthV2Strategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboEEthV2Strategy.sol";
-import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import "src/helpers/AddressBook.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { ICellar } from "src/interfaces/ICellar.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+
+import { SommelierTurboEEthV2Strategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboEEthV2Strategy.sol";
 
 contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
     address public constant CELLAR_WETH_MAINNET = SOMMELIER_TURBO_EETHV2_CELLAR_MAINNET;
@@ -49,7 +51,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address)",
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Sommelier Strategy")),
+                bytes32("MaxApy Sommelier Strategy"),
                 users.alice,
                 CELLAR_WETH_MAINNET
             )
@@ -81,7 +83,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address)",
                 address(_vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Sommelier Strategy")),
+                bytes32("MaxApy Sommelier Strategy"),
                 users.alice,
                 CELLAR_WETH_MAINNET
             )
@@ -95,7 +97,7 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(WETH_MAINNET).allowance(address(_strategy), address(_vault)), type(uint256).max);
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
-        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy Sommelier Strategy")));
+        assertEq(_strategy.strategyName(), bytes32("MaxApy Sommelier Strategy"));
         assertEq(_strategy.cellar(), CELLAR_WETH_MAINNET);
         assertEq(IERC20(WETH_MAINNET).allowance(address(_strategy), CELLAR_WETH_MAINNET), type(uint256).max);
 
@@ -720,5 +722,15 @@ contract SommelierTurboEEthV2StrategyTest is BaseTest, StrategyEvents {
                 )
             )
         );
+    }
+
+    function testSommelierTurboEEthV2__SimulateHarvest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 ether, users.alice);
+
+        vm.startPrank(users.keeper);
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
+
+        strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
 }

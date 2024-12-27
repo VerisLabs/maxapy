@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import "openzeppelin/interfaces/IERC20.sol";
 import "./IStrategy.sol";
+import "openzeppelin/interfaces/IERC20.sol";
 
 interface IBeefyVault is IERC20 {
     function deposit(uint256) external;

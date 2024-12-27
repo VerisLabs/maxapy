@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseFuzzer, console2, LibAddressSet, AddressSet } from "./base/BaseFuzzer.t.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
+import { AddressSet, BaseFuzzer, LibAddressSet, console2 } from "./base/BaseFuzzer.t.sol";
 import { LibPRNG } from "solady/utils/LibPRNG.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 
 contract StrategyFuzzer is BaseFuzzer {
     using SafeTransferLib for address;

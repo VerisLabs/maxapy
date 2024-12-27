@@ -1,25 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
-import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
-import { ICellar } from "src/interfaces/ICellar.sol";
-import { ICurveLpPool } from "src/interfaces/ICurve.sol";
-import { IWETH } from "src/interfaces/IWETH.sol";
 import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
+
+import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { SommelierStEthDepositTurboStEthStrategyWrapper } from
     "../../mock/SommelierStEthDepositTurboStEthStrategyWrapper.sol";
-import { MaxApyVault } from "src/MaxApyVault.sol";
-import { StrategyData } from "src/helpers/VaultTypes.sol";
-import { SommelierTurboStEthStrategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboStEthStrategy.sol";
-import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
+import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
+
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
 import "src/helpers/AddressBook.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { ICellar } from "src/interfaces/ICellar.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { IWETH } from "src/interfaces/IWETH.sol";
+
+import { SommelierTurboStEthStrategy } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboStEthStrategy.sol";
 
 contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents {
     address public constant CELLAR_STETH_MAINNET = SOMMELIER_ST_ETH_DEPOSIT_TURBO_STETH_CELLAR_MAINNET;
@@ -59,7 +62,7 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
                 "initialize(address,address[],bytes32,address,address)",
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Sommelier Strategy")),
+                bytes32("MaxApy Sommelier Strategy"),
                 users.alice,
                 CELLAR_STETH_MAINNET
             )
@@ -94,7 +97,7 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
                 "initialize(address,address[],bytes32,address,address)",
                 address(_vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Sommelier Strategy")),
+                bytes32("MaxApy Sommelier Strategy"),
                 users.alice,
                 CELLAR_STETH_MAINNET
             )
@@ -108,7 +111,7 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
         assertEq(IERC20(WETH_MAINNET).allowance(address(_strategy), address(_vault)), type(uint256).max);
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
-        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy Sommelier Strategy")));
+        assertEq(_strategy.strategyName(), bytes32("MaxApy Sommelier Strategy"));
         assertEq(_strategy.cellar(), CELLAR_STETH_MAINNET);
         assertEq(IERC20(STETH_MAINNET).allowance(address(_strategy), CELLAR_STETH_MAINNET), type(uint256).max);
         assertEq(_strategy.maxSingleTrade(), 1000 * 1e18);
@@ -825,5 +828,15 @@ contract SommelierStEthDepositTurboStEthStrategyTest is BaseTest, StrategyEvents
             bytes32(uint256(6)),
             bytes32(abi.encodePacked(0x69592e6f9d21989a043646fE8225da2600e5A0f7, false, true, false, false, uint32(10)))
         );
+    }
+
+    function testSommelierStEthDeposit_TurboStEth__SimulateHarvest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 ether, users.alice);
+
+        vm.startPrank(users.keeper);
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
+
+        strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
 }

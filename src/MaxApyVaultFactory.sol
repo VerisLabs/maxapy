@@ -2,8 +2,9 @@
 pragma solidity ^0.8.19;
 
 import { MaxApyVault } from "./MaxApyVault.sol";
-import { CREATE3 } from "solady/utils/CREATE3.sol";
+
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+import { CREATE3 } from "solady/utils/CREATE3.sol";
 import { MetadataReaderLib } from "solady/utils/MetadataReaderLib.sol";
 
 contract MaxApyVaultFactory is OwnableRoles {

@@ -1,29 +1,32 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
-import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
-import { YearnUSDTStrategyWrapper } from "../../mock/YearnUSDTStrategyWrapper-polygon.sol";
-import { MaxApyVault } from "src/MaxApyVault.sol";
-import { StrategyData } from "src/helpers/VaultTypes.sol";
+
 import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
+import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
+import { YearnUSDTStrategyWrapper } from "../../mock/YearnUSDTStrategyWrapper-polygon.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { USDT_POLYGON, _1_USDCE } from "test/helpers/Tokens.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
+
 import "src/helpers/AddressBook.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+
+import { USDT_POLYGON, _1_USDCE } from "test/helpers/Tokens.sol";
 
 import "forge-std/console.sol";
 
 contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
     using SafeTransferLib for address;
 
-    address public constant YVAULT_USDT_POLYGON = YEARN_USDT_MAINNET_YVAULT_POLYGON;
+    address public constant YVAULT_USDT_POLYGON = YEARN_USDT_YVAULT_POLYGON;
     address public TREASURY;
 
     IStrategyWrapper public strategy;
@@ -54,7 +57,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address)",
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                bytes32("MaxApy Yearn Strategy"),
                 users.alice,
                 YVAULT_USDT_POLYGON
             )
@@ -86,7 +89,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address)",
                 address(_vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                bytes32("MaxApy Yearn Strategy"),
                 users.alice,
                 YVAULT_USDT_POLYGON
             )
@@ -101,7 +104,7 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(USDCE_POLYGON).allowance(address(_strategy), address(_vault)), type(uint256).max);
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
-        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy Yearn Strategy")));
+        assertEq(_strategy.strategyName(), bytes32("MaxApy Yearn Strategy"));
         assertEq(_strategy.yVault(), YVAULT_USDT_POLYGON);
 
         assertEq(_proxyAdmin.owner(), users.alice);
@@ -550,6 +553,24 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         assertLe(expected, 30 * _1_USDCE - loss);
     }
 
+    function testYearnUSDT__PreviewLiquidate__FUZZY(uint256 amount) public {
+        vm.assume(amount > 1 * _1_USDCE && amount < 1_000_000 * _1_USDCE);
+        deal(USDCE_POLYGON, users.alice, amount);
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(amount, users.alice);
+        vm.startPrank(users.keeper);
+
+        strategy.harvest(0, 0, address(0), block.timestamp);
+
+        vm.stopPrank();
+        uint256 expected = strategy.previewLiquidate(amount / 3);
+        vm.startPrank(address(vault));
+
+        uint256 loss = strategy.liquidate(amount / 3);
+
+        assertLe(expected, amount / 3 - loss);
+    }
+
     function testYearnUSDT__PreviewLiquidateExact() public {
         vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
         vault.deposit(100 * _1_USDCE, users.alice);
@@ -597,5 +618,70 @@ contract YearnUSDTStrategyTest is BaseTest, StrategyEvents {
         strategy.liquidate(maxWithdraw);
         uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
+    }
+
+    // function testYearnUSDT__PreviewLiquidateExact_FUZZY(uint256 amount) public {
+    //     vm.assume(amount > 1 * _1_USDCE && amount < 1_000_000 * _1_USDCE);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+    //     vm.stopPrank();
+    //     uint256 requestedAmount = strategy.previewLiquidateExact(amount / 3);
+    //     vm.startPrank(address(vault));
+    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+    //     strategy.liquidateExact(amount / 3);
+    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+    //     // withdraw exactly what requested
+    //     assertGe(withdrawn, amount / 3);
+    //     // losses are equal or fewer than expected
+    //     assertLe(withdrawn - amount / 3, requestedAmount - amount / 3);
+    // }
+
+    // function testYearnUSDT__maxLiquidateExact_FUZZY(uint256 amount) public {
+    //     vm.assume(amount > 1 * _1_USDCE && amount < 1_000_000 * _1_USDCE);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+    //     vm.stopPrank();
+    //     uint256 maxLiquidateExact = strategy.maxLiquidateExact();
+    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+    //     uint256 requestedAmount = strategy.previewLiquidateExact(maxLiquidateExact);
+    //     vm.startPrank(address(vault));
+    //     uint256 losses = strategy.liquidateExact(maxLiquidateExact);
+    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+    //     // withdraw exactly what requested
+    //     assertGe(withdrawn, maxLiquidateExact);
+    //     // losses are equal or fewer than expected
+    //     assertLe(losses, requestedAmount - maxLiquidateExact);
+    // }
+
+    // function testYearnUSDT__MaxLiquidate_FUZZY(uint256 amount) public {
+    //     vm.assume(amount > 1 * _1_USDCE && amount < 1_000_000 * _1_USDCE);
+    //     deal(USDCE_POLYGON, users.alice, amount);
+    //     vault.addStrategy(address(strategy), 9000, type(uint72).max, 0, 0);
+    //     vault.deposit(amount, users.alice);
+    //     vm.startPrank(users.keeper);
+    //     strategy.harvest(0, 0, address(0), block.timestamp);
+    //     vm.stopPrank();
+    //     uint256 maxWithdraw = strategy.maxLiquidate();
+    //     uint256 balanceBefore = IERC20(USDCE_POLYGON).balanceOf(address(vault));
+    //     vm.startPrank(address(vault));
+    //     strategy.liquidate(maxWithdraw);
+    //     uint256 withdrawn = IERC20(USDCE_POLYGON).balanceOf(address(vault)) - balanceBefore;
+    //     assertLe(withdrawn, maxWithdraw);
+    // }
+
+    function testYearnUSDT__SimulateHarvest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDCE, users.alice);
+
+        vm.startPrank(users.keeper);
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
+
+        strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
 }

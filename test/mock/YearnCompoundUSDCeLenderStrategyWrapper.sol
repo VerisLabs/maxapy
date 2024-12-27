@@ -2,8 +2,8 @@
 pragma solidity ^0.8.19;
 
 import {
-    YearnCompoundUSDCeLenderStrategy,
-    SafeTransferLib
+    SafeTransferLib,
+    YearnCompoundUSDCeLenderStrategy
 } from "src/strategies/polygon/USDCe/yearn/YearnCompoundUSDCeLenderStrategy.sol";
 
 contract YearnCompoundUSDCeLenderStrategyWrapper is YearnCompoundUSDCeLenderStrategy {

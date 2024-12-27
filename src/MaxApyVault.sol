@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { StrategyData } from "src/helpers/VaultTypes.sol";
-import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { IStrategy } from "src/interfaces/IStrategy.sol";
+import { ReentrancyGuard } from "./lib/ReentrancyGuard.sol";
 import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
+import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
+
+import { ERC20, ERC4626 } from "solady/tokens/ERC4626.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { ReentrancyGuard } from "./lib/ReentrancyGuard.sol";
-import { ERC4626, ERC20 } from "solady/tokens/ERC4626.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { IStrategy } from "src/interfaces/IStrategy.sol";
 
 /*KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
 KKKKK0OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO0KKKKKKK
@@ -990,6 +991,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
         if (shares == type(uint256).max) shares = balanceOf(msg.sender);
 
         assets = convertToAssets(shares);
+
         uint256 vaultBalance = totalIdle;
 
         if (vaultBalance >= assets) {
@@ -1186,6 +1188,7 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 revert(0x1c, 0x04)
             }
         }
+
         // substract losses to the total assets
         assets = _redeem(msg.sender, to, owner, shares);
     }
@@ -1204,12 +1207,14 @@ contract MaxApyVault is ERC4626, OwnableRoles, ReentrancyGuard {
                 revert(0x1c, 0x04)
             }
         }
+
         // Calculate assets from shares
         assets = convertToAssets(shares);
+
         // Cache underlying asset
         address underlying = asset();
-
         uint256 vaultBalance = totalIdle;
+
         // Check if value to withdraw exceeds vault balance
         if (assets > vaultBalance) {
             // Vault balance is not enough to cover withdrawal. We need to perform forced withdrawals

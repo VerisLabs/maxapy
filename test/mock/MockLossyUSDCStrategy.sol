@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 
 contract MockLossyUSDCStrategy {
     address public immutable vault;

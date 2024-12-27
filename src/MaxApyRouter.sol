@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
 
 /// @title MaxApy Vault Universal Router
 /// @notice A helper contract to safely and easily interact with MaxApy universal vaults

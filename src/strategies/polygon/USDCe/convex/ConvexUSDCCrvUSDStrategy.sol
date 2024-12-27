@@ -1,33 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import {
+    CONVEX_BOOSTER_POLYGON,
+    CRVUSD_USDC_CONVEX_POOL_ID_POLYGON,
+    CRV_POLYGON,
+    CRV_USD_POLYGON,
+    CURVE_CRVUSD_USDC_POOL_POLYGON,
+    CURVE_CRV_ATRICRYPTO_ZAPPER_POLYGON,
+    TRI_CRYPTO_POOL_POLYGON,
+    UNISWAP_V3_USDC_USDCE_POOL_POLYGON,
+    USDC_POLYGON,
+    WPOL_POLYGON
+} from "src/helpers/AddressBook.sol";
+import { IConvexBoosterPolygon } from "src/interfaces/IConvexBooster.sol";
+import { IConvexRewardsPolygon } from "src/interfaces/IConvexRewards.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
+import { IUniswapV3Pool, IUniswapV3Router as IRouter } from "src/interfaces/IUniswap.sol";
+import { OracleLibrary } from "src/lib/OracleLibrary.sol";
 import {
     BaseConvexStrategyPolygon,
     BaseStrategy,
     IMaxApyVault,
     SafeTransferLib
 } from "src/strategies/base/BaseConvexStrategyPolygon.sol";
-import { IConvexBoosterPolygon } from "src/interfaces/IConvexBooster.sol";
-import { IConvexRewardsPolygon } from "src/interfaces/IConvexRewards.sol";
-import { ICurveLpPool } from "src/interfaces/ICurve.sol";
-import { IUniswapV3Router as IRouter, IUniswapV3Pool } from "src/interfaces/IUniswap.sol";
-import { OracleLibrary } from "src/lib/OracleLibrary.sol";
-import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
-import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import {
-    CRV_USD_POLYGON,
-    USDC_POLYGON,
-    WPOL_POLYGON,
-    CRV_POLYGON,
-    CONVEX_BOOSTER_POLYGON,
-    CRVUSD_USDC_CONVEX_POOL_ID_POLYGON,
-    CURVE_CRVUSD_USDC_POOL_POLYGON,
-    CURVE_CRV_ATRICRYPTO_ZAPPER_POLYGON,
-    UNISWAP_V3_USDC_USDCE_POOL_POLYGON,
-    TRI_CRYPTO_POOL_POLYGON
-} from "src/helpers/AddressBook.sol";
 
-/// @title 
+/// @title
 /// @author MaxApy
 /// @notice `ConvexUSDCCrvUSDStrategy` supplies USDC into the crvUsd<>usdc pool in Curve, then stakes the curve LP
 /// in Convex in order to maximize yield.
@@ -170,7 +170,7 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
                 revert(0x1c, 0x04)
             }
         }
-        
+
         // Invested amount will be a maximum of `maxSingleTrade`
         amount = Math.min(maxSingleTrade, amount);
 
@@ -328,7 +328,7 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
 
             if (withdrawn < amountToWithdraw) loss = amountToWithdraw - withdrawn;
         }
-        liquidatedAmount = requestedAmount - loss;
+        liquidatedAmount = (requestedAmount - loss) * 9995 / 10_000;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -401,5 +401,128 @@ contract ConvexUSDCCrvUSDStrategy is BaseConvexStrategyPolygon {
         }
 
         amountOut = OracleLibrary.getQuoteAtTick(tick, amountIn, tokenIn, tokenOut);
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                      SIMULATION                          ///
+    ////////////////////////////////////////////////////////////////
+    /// @dev internal helper function that reverts and returns needed values in the revert message
+    function _simulateHarvest() public override {
+        address harvester = address(0);
+        uint256 expectedBalance;
+        uint256 outputAfterInvestment;
+        uint256 intendedDivest;
+        uint256 actualDivest;
+        uint256 intendedInvest;
+        uint256 actualInvest;
+        // normally the treasury would get the management fee
+        address managementFeeReceiver;
+        // if the harvest was done from the vault means it the
+        // harvest was triggered on a deposit
+        if (msg.sender == address(vault)) {
+            // the depositing user will get the management fees as a reward
+            // for paying gas costs of harvest
+            managementFeeReceiver = harvester;
+        }
+        uint256 unrealizedProfit;
+        uint256 loss;
+        uint256 debtPayment;
+        uint256 debtOutstanding;
+        address cachedVault = address(vault); // Cache `vault` address to avoid multiple SLOAD's
+        assembly ("memory-safe") {
+            // Store `vault`'s `debtOutstanding()` function selector:
+            // `bytes4(keccak256("debtOutstanding(address)"))`
+            mstore(0x00, 0xbdcf36bb)
+            mstore(0x20, address()) // append the current address as parameter
+            // query `vault`'s `debtOutstanding()`
+            if iszero(
+                staticcall(
+                    gas(), // Remaining amount of gas
+                    cachedVault, // Address of `vault`
+                    0x1c, // byte offset in memory where calldata starts
+                    0x24, // size of the calldata to copy
+                    0x00, // byte offset in memory to store the return data
+                    0x20 // size of the return data
+                )
+            ) {
+                // Revert if debt outstanding query fails
+                revert(0x00, 0x04)
+            }
+            // Store debt outstanding returned by staticcall into `debtOutstanding`
+            debtOutstanding := mload(0x00)
+        }
+
+        intendedDivest = debtOutstanding;
+
+        if (emergencyExit == 2) {
+            // Do what needed before
+            _beforePrepareReturn();
+            uint256 balanceBefore = _estimatedTotalAssets();
+            // Free up as much capital as possible
+            uint256 amountFreed = _liquidateAllPositions();
+            // silence compiler warnings
+            amountFreed;
+            uint256 balanceAfter = _estimatedTotalAssets();
+            assembly {
+                // send everything back to the vault
+                debtPayment := balanceAfter
+                if lt(balanceAfter, balanceBefore) { loss := sub(balanceBefore, balanceAfter) }
+            }
+        } else {
+            // Do what needed before
+            _beforePrepareReturn();
+            // Free up returns for vault to pull
+            (unrealizedProfit, loss, debtPayment) = _prepareReturn(debtOutstanding, 0);
+            expectedBalance = _underlyingBalance();
+        }
+        actualDivest = debtPayment;
+
+        assembly ("memory-safe") {
+            let m := mload(0x40) // Store free memory pointer
+            // Store `vault`'s `report()` function selector:
+            // `bytes4(keccak256("report(uint128,uint128,uint128,address)"))`
+            mstore(0x00, 0x80919dd5)
+            mstore(0x20, unrealizedProfit) // append the `profit` argument
+            mstore(0x40, loss) // append the `loss` argument
+            mstore(0x60, debtPayment) // append the `debtPayment` argument
+            mstore(0x80, managementFeeReceiver) // append the `debtPayment` argument
+            // Report to vault
+            if iszero(
+                call(
+                    gas(), // Remaining amount of gas
+                    cachedVault, // Address of `vault`
+                    0, // `msg.value`
+                    0x1c, // byte offset in memory where calldata starts
+                    0x84, // size of the calldata to copy
+                    0x00, // byte offset in memory to store the return data
+                    0x20 // size of the return data
+                )
+            ) {
+                // If call failed, throw the error thrown in the previous `call`
+                revert(0x00, 0x04)
+            }
+            // Store debt outstanding returned by call to `report()` into `debtOutstanding`
+            debtOutstanding := mload(0x00)
+            mstore(0x60, 0) // Restore the zero slot
+            mstore(0x40, m) // Restore the free memory pointer
+        }
+        intendedInvest = _underlyingBalance();
+        uint256 sharesBalanceBefore = curveLpPool.balanceOf(address(this));
+        // Check if vault transferred underlying and re-invest it
+        _adjustPosition(debtOutstanding, 0);
+        outputAfterInvestment = curveLpPool.balanceOf(address(this)) - sharesBalanceBefore;
+        actualInvest = _lpValue(outputAfterInvestment);
+        _snapshotEstimatedTotalAssets();
+        // revert with data we need
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, expectedBalance)
+            mstore(add(ptr, 32), outputAfterInvestment)
+            mstore(add(ptr, 64), intendedDivest)
+            mstore(add(ptr, 96), actualDivest)
+            mstore(add(ptr, 128), intendedInvest)
+            mstore(add(ptr, 160), actualInvest)
+            revert(ptr, 192)
+        }
     }
 }

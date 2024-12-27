@@ -3,11 +3,11 @@ pragma solidity ^0.8.19;
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { IMaxApyVault } from "../../interfaces/IMaxApyVault.sol";
+import { IStrategy } from "../../interfaces/IStrategy.sol";
+import { Initializable } from "../../lib/Initializable.sol";
 import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 import { OwnableRoles } from "solady/auth/OwnableRoles.sol";
-import { IStrategy } from "../../interfaces/IStrategy.sol";
-import { IMaxApyVault } from "../../interfaces/IMaxApyVault.sol";
-import { Initializable } from "../../lib/Initializable.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
 
 /// @title BaseStrategy
@@ -178,7 +178,7 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
         if (amountFreed >= amountNeeded) underlyingAsset.safeTransfer(address(vault), amountNeeded);
         // something didn't work as expected
         // this should NEVER happen in normal conditions
-        else revert();
+        else revert("NOT ENOUGH");
         // Note: update esteimated totalAssets
         _snapshotEstimatedTotalAssets();
     }
@@ -525,5 +525,31 @@ abstract contract BaseStrategy is Initializable, OwnableRoles {
     function _snapshotEstimatedTotalAssets() internal {
         // snapshot of the estimated total assets
         lastEstimatedTotalAssets = _estimatedTotalAssets();
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ///                      SIMULATION                          ///
+    ////////////////////////////////////////////////////////////////
+
+    /// @dev internal helper function that reverts and returns needed values in the revert message
+    function _simulateHarvest() public virtual;
+
+    /// @notice helper function to accurately simulate the effects of a harvest
+    function simulateHarvest()
+        public
+        returns (
+            uint256 expectedBalance,
+            uint256 outputAfterInvestment,
+            uint256 intendedInvest,
+            uint256 actualInvest,
+            uint256 intendedDivest,
+            uint256 actualDivest
+        )
+    {
+        try this._simulateHarvest() { }
+        catch (bytes memory e) {
+            (expectedBalance, outputAfterInvestment, intendedInvest, actualInvest, intendedDivest, actualDivest) =
+                abi.decode(e, (uint256, uint256, uint256, uint256, uint256, uint256));
+        }
     }
 }

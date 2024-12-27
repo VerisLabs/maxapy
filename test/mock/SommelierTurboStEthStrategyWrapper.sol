@@ -2,8 +2,8 @@
 pragma solidity ^0.8.19;
 
 import {
-    SommelierTurboStEthStrategy,
-    SafeTransferLib
+    SafeTransferLib,
+    SommelierTurboStEthStrategy
 } from "src/strategies/mainnet/WETH/sommelier/SommelierTurboStEthStrategy.sol";
 
 contract SommelierTurboStEthStrategyWrapper is SommelierTurboStEthStrategy {

@@ -2,8 +2,8 @@
 pragma solidity ^0.8.19;
 
 import {
-    YearnMaticUSDCStakingStrategy,
-    SafeTransferLib
+    SafeTransferLib,
+    YearnMaticUSDCStakingStrategy
 } from "src/strategies/polygon/USDCe/yearn/YearnMaticUSDCStakingStrategy.sol";
 
 contract YearnMaticUSDCStakingStrategyWrapper is YearnMaticUSDCStakingStrategy {

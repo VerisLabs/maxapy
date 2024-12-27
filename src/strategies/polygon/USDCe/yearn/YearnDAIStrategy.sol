@@ -2,9 +2,12 @@
 pragma solidity ^0.8.19;
 
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
-import { IYVaultV3, BaseYearnV3Strategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseYearnV3Strategy.sol";
+
+import { CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON, DAI_POLYGON } from "src/helpers/AddressBook.sol";
 import { ICurveAtriCryptoZapper } from "src/interfaces/ICurve.sol";
-import { DAI_POLYGON, CURVE_AAVE_ATRICRYPTO_ZAPPER_POLYGON } from "src/helpers/AddressBook.sol";
+import {
+    BaseYearnV3Strategy, IMaxApyVault, IYVaultV3, SafeTransferLib
+} from "src/strategies/base/BaseYearnV3Strategy.sol";
 
 /// @title YearnDAIStrategy
 /// @author Adapted from https://github.com/Grandthrax/yearn-steth-acc/blob/master/contracts/strategies.sol
@@ -48,7 +51,7 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
         underlyingAsset.safeApprove(address(zapper), type(uint256).max);
 
         minSingleTrade = 1 * 10 ** 6; // 1 USD
-        maxSingleTrade = 100_000 * 10 ** 6; // 100,000 USD
+        maxSingleTrade = 100_000 ether; // 100,000 DAI
     }
 
     ////////////////////////////////////////////////////////////////
@@ -145,20 +148,17 @@ contract YearnDAIStrategy is BaseYearnV3Strategy {
 
         uint256 underlyingBalance = _underlyingBalance();
         if (amount > underlyingBalance) revert NotEnoughFundsToInvest();
-        
+
         uint256 maxDeposit = yVault.maxDeposit(address(this));
 
         // Scale up to 18 decimals
 
-        uint256 scaledAmount = amount.mulWad(1e12); 
+        uint256 scaledAmount = amount * 1e12;
 
-        uint256 scaledMaxSingleTrade = maxSingleTrade.mulWad(1e12); 
-
-        uint256 minAmount = Math.min(Math.min(scaledAmount, maxDeposit), scaledMaxSingleTrade);
+        uint256 minAmount = Math.min(Math.min(scaledAmount, maxDeposit), maxSingleTrade);
 
         // Scale back down to 6 decimals
-
-        amount = minAmount.divWad(1e12);
+        amount = minAmount / 1e12;
 
         uint256 balanceBefore = dai.balanceOf(address(this));
         // Swap the USDCe to base asset

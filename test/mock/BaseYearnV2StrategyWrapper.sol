@@ -1,10 +1,41 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseYearnV2Strategy, SafeTransferLib } from "src/strategies/base/BaseYearnV2Strategy.sol";
+import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import {
+    BaseYearnV2Strategy,
+    IERC20Metadata,
+    IMaxApyVault,
+    IYVault,
+    SafeTransferLib
+} from "src/strategies/base/BaseYearnV2Strategy.sol";
 
 contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
     using SafeTransferLib for address;
+
+    function initialize(
+        IMaxApyVault _vault,
+        address[] calldata _keepers,
+        bytes32 _strategyName,
+        address _strategist,
+        IYVault _yVault
+    )
+        public
+        virtual
+        override
+        initializer
+    {
+        __BaseStrategy_init(_vault, _keepers, _strategyName, _strategist);
+        yVault = _yVault;
+
+        underlyingAsset.safeApprove(address(yVault), type(uint256).max);
+
+        /// Mininmum single trade is 0.01 token units
+        minSingleTrade = 10 ** IERC20Metadata(underlyingAsset).decimals() / 100;
+
+        /// Unlimited max single trade by default
+        maxSingleTrade = type(uint256).max;
+    }
 
     function investYearn(uint256 amount) external returns (uint256) {
         return yVault.deposit(amount);
@@ -13,7 +44,7 @@ contract BaseYearnV2StrategyWrapper is BaseYearnV2Strategy {
     function triggerLoss(uint256 amount) external {
         uint256 amountToWithdraw = _sub0(amount, underlyingAsset.balanceOf(address(this)));
         if (amountToWithdraw > 0) {
-            uint256 shares = _sharesForAmount(amount);
+            uint256 shares = Math.min(yVault.balanceOf(address(this)), _sharesForAmount(amountToWithdraw));
             yVault.withdraw(shares);
         }
         underlyingAsset.safeTransfer(address(underlyingAsset), amount);

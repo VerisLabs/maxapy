@@ -2,8 +2,8 @@
 pragma solidity ^0.8.19;
 
 import {
-    YearnCompoundV3WETHLenderStrategy,
-    SafeTransferLib
+    SafeTransferLib,
+    YearnCompoundV3WETHLenderStrategy
 } from "src/strategies/mainnet/WETH/yearn/YearnCompoundV3WETHLenderStrategy.sol";
 
 contract YearnCompoundV3WETHLenderStrategyWrapper is YearnCompoundV3WETHLenderStrategy {

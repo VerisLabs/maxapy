@@ -1,21 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
+
+import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
 import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { YearnLUSDStrategyWrapper } from "../../mock/YearnLUSDStrategyWrapper.sol";
 import { MaxApyVault } from "src/MaxApyVault.sol";
-import { StrategyData } from "src/helpers/VaultTypes.sol";
-import { StrategyEvents } from "../../helpers/StrategyEvents.sol";
-import { USDC_MAINNET, LUSD_MAINNET, _1_USDC } from "test/helpers/Tokens.sol";
+
 import "src/helpers/AddressBook.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+
+import { LUSD_MAINNET, USDC_MAINNET, _1_USDC } from "test/helpers/Tokens.sol";
 
 contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
     address public constant YVAULT_LUSD_MAINNET = YEARN_LUSD_YVAULT_MAINNET;
@@ -48,7 +51,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address)",
                 address(vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                bytes32("MaxApy Yearn Strategy"),
                 users.alice,
                 YVAULT_LUSD_MAINNET
             )
@@ -82,7 +85,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
                 "initialize(address,address[],bytes32,address,address)",
                 address(_vault),
                 keepers,
-                bytes32(abi.encode("MaxApy Yearn Strategy")),
+                bytes32("MaxApy Yearn Strategy"),
                 users.alice,
                 YVAULT_LUSD_MAINNET
             )
@@ -96,7 +99,7 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         assertEq(IERC20(USDC_MAINNET).allowance(address(_strategy), address(_vault)), type(uint256).max);
         assertEq(_strategy.hasAnyRole(users.keeper, _strategy.KEEPER_ROLE()), true);
         assertEq(_strategy.hasAnyRole(users.alice, _strategy.ADMIN_ROLE()), true);
-        assertEq(_strategy.strategyName(), bytes32(abi.encode("MaxApy Yearn Strategy")));
+        assertEq(_strategy.strategyName(), bytes32("MaxApy Yearn Strategy"));
         assertEq(_strategy.yVault(), YVAULT_LUSD_MAINNET);
         assertEq(IERC20(USDC_MAINNET).allowance(address(_strategy), YVAULT_LUSD_MAINNET), 0);
 
@@ -616,5 +619,15 @@ contract YearnLUSDStrategyTest is BaseTest, StrategyEvents {
         strategy.liquidate(maxWithdraw);
         uint256 withdrawn = IERC20(USDC_MAINNET).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
+    }
+
+    function testYearLUSD__SimulateHarvest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 * _1_USDC, users.alice);
+
+        vm.startPrank(users.keeper);
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
+
+        strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
 }

@@ -1,27 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import {
-    TransparentUpgradeableProxy,
-    ITransparentUpgradeableProxy
-} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "openzeppelin/proxy/transparent/ProxyAdmin.sol";
+import {
+    ITransparentUpgradeableProxy,
+    TransparentUpgradeableProxy
+} from "openzeppelin/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import { BaseTest, IERC20, Vm, console2 } from "../../base/BaseTest.t.sol";
-import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
-import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+
 import { IConvexBooster } from "src/interfaces/IConvexBooster.sol";
+import { ICurveLpPool } from "src/interfaces/ICurve.sol";
+import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
+
 import { IUniswapV2Router02 as IRouter } from "src/interfaces/IUniswap.sol";
 
-import { MaxApyVault } from "src/MaxApyVault.sol";
-import { StrategyData } from "src/helpers/VaultTypes.sol";
-import { ConvexdETHFrxETHStrategy } from "src/strategies/mainnet/WETH/convex/ConvexdETHFrxETHStrategy.sol";
 import { ConvexdETHFrxETHStrategyEvents } from "../../helpers/ConvexdETHFrxETHStrategyEvents.sol";
-import "src/helpers/AddressBook.sol";
+
+import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
 import { ConvexdETHFrxETHStrategyWrapper } from "../../mock/ConvexdETHFrxETHStrategyWrapper.sol";
 import { MockConvexBooster } from "../../mock/MockConvexBooster.sol";
 import { MockCurvePool } from "../../mock/MockCurvePool.sol";
-import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
+import { MaxApyVault } from "src/MaxApyVault.sol";
+import "src/helpers/AddressBook.sol";
+import { StrategyData } from "src/helpers/VaultTypes.sol";
+import { ConvexdETHFrxETHStrategy } from "src/strategies/mainnet/WETH/convex/ConvexdETHFrxETHStrategy.sol";
 
 contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvents {
     IERC20 public constant crv = IERC20(CRV_MAINNET);
@@ -739,5 +742,15 @@ contract ConvexdETHFrxETHStrategyTest is BaseTest, ConvexdETHFrxETHStrategyEvent
         strategy.liquidate(maxWithdraw);
         uint256 withdrawn = IERC20(WETH_MAINNET).balanceOf(address(vault)) - balanceBefore;
         assertLe(withdrawn, maxWithdraw);
+    }
+
+    function testConvexdETHFrxETH__SimulateHarvest() public {
+        vault.addStrategy(address(strategy), 4000, type(uint72).max, 0, 0);
+        vault.deposit(100 ether, users.alice);
+
+        vm.startPrank(users.keeper);
+        (uint256 expectedBalance, uint256 outputAfterInvestment,,,,) = strategy.simulateHarvest();
+
+        strategy.harvest(expectedBalance, outputAfterInvestment, address(0), block.timestamp);
     }
 }

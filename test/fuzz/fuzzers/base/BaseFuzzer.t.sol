@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
+import { AddressSet, LibAddressSet } from "../../../helpers/AddressSet.sol";
 import { CommonBase } from "forge-std/Base.sol";
 import { StdAssertions } from "forge-std/StdAssertions.sol";
 import { StdCheats } from "forge-std/StdCheats.sol";
 import { StdUtils } from "forge-std/StdUtils.sol";
 import { console2 } from "forge-std/console2.sol";
-import { AddressSet, LibAddressSet } from "../../../helpers/AddressSet.sol";
 
 abstract contract BaseFuzzer is CommonBase, StdUtils, StdCheats, StdAssertions {
     using LibAddressSet for AddressSet;

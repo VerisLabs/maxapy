@@ -2,9 +2,9 @@
 pragma solidity ^0.8.19;
 
 import {
-    YearnAjnaDAIStakingStrategy,
-    SafeTransferLib
-} from "src/strategies/mainnet/DAI/yearn/YearnAjnaDAIStakingStrategy.sol";
+    SafeTransferLib,
+    YearnAjnaDAIStakingStrategy
+} from "src/strategies/mainnet/USDC/yearn/YearnAjnaDAIStakingStrategy.sol";
 
 contract YearnAjnaDAIStakingStrategyWrapper is YearnAjnaDAIStakingStrategy {
     using SafeTransferLib for address;

@@ -3,22 +3,26 @@ pragma solidity ^0.8.19;
 
 import { BaseTest, IERC20, Vm, console2 } from "../base/BaseTest.t.sol";
 import { BaseVaultTest } from "../base/BaseVaultTest.t.sol";
-import { MaxApyVault, StrategyData } from "src/MaxApyVault.sol";
+
 import { MaxApyRouter } from "src/MaxApyRouter.sol";
+import { MaxApyVault, StrategyData } from "src/MaxApyVault.sol";
 import { IMaxApyRouter } from "src/interfaces/IMaxApyRouter.sol";
 import { IMaxApyVault } from "src/interfaces/IMaxApyVault.sol";
 import { IWrappedToken } from "src/interfaces/IWrappedToken.sol";
 
-import { MockStrategy } from "../mock/MockStrategy.sol";
+import { IERC1820Registry, MockERC777 } from "../mock/MockERC777.sol";
 import { MockLossyUSDCStrategy } from "../mock/MockLossyUSDCStrategy.sol";
-import { MockERC777, IERC1820Registry } from "../mock/MockERC777.sol";
+import { MockStrategy } from "../mock/MockStrategy.sol";
+
 import { ReentrantERC777AttackerDeposit } from "../mock/ReentrantERC777AttackerDeposit.sol";
 import { ReentrantERC777AttackerWithdraw } from "../mock/ReentrantERC777AttackerWithdraw.sol";
 import { SigUtils } from "../utils/SigUtils.sol";
-import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
+
 import { IERC20Metadata } from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
-import { WETH_MAINNET, USDC_MAINNET, _1_USDC } from "test/helpers/Tokens.sol";
+import { IERC20Permit } from "openzeppelin/token/ERC20/extensions/IERC20Permit.sol";
+
 import "src/helpers/AddressBook.sol";
+import { USDC_MAINNET, WETH_MAINNET, _1_USDC } from "test/helpers/Tokens.sol";
 
 contract MaxApyRouterTest is BaseVaultTest {
     IMaxApyRouter public router;

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { BaseStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
-import { IConvexRewardsPolygon } from "src/interfaces/IConvexRewards.sol";
 import { FixedPointMathLib as Math } from "solady/utils/FixedPointMathLib.sol";
+import { IConvexRewardsPolygon } from "src/interfaces/IConvexRewards.sol";
+import { BaseStrategy, IMaxApyVault, SafeTransferLib } from "src/strategies/base/BaseStrategy.sol";
 
 /// @title BaseConvexStrategyPolygon
 /// @author MaxApy

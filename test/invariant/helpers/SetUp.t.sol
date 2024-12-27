@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.19;
 
-import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
-import { MaxApyVaultHandler, MockERC20, MaxApyVault } from "../handlers/MaxApyVaultHandler.t.sol";
 import { IStrategyHandler } from "../../interfaces/IStrategyHandler.sol";
+import { IStrategyWrapper } from "../../interfaces/IStrategyWrapper.sol";
+import { MaxApyVault, MaxApyVaultHandler, MockERC20 } from "../handlers/MaxApyVaultHandler.t.sol";
 import { StdInvariant } from "forge-std/StdInvariant.sol";
 import { Test } from "forge-std/Test.sol";
 
