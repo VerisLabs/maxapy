@@ -19,6 +19,9 @@ import {
     BaseConvexStrategy, BaseStrategy, IMaxApyVault, SafeTransferLib
 } from "src/strategies/base/BaseConvexStrategy.sol";
 
+import {SwapManager} from "src/swaps/SwapManager.sol";
+import {console2} from "forge-std/console2.sol";
+
 /// @title ConvexCrvUSDWethCollateralStrategy
 /// @author MaxApy
 /// @notice `ConvexCrvUSDWethCollateralStrategy` supplies CrvUSD into the CrvUSD(WETH Collateral) lending pool in Curve,
@@ -57,6 +60,9 @@ contract ConvexCrvUSDWethCollateralStrategy is BaseConvexStrategy {
     /// @notice Curve's usdc-crvUsd pool
     ICurveLpPool public curveUsdcCrvUsdPool;
 
+
+    SwapManager public swapManager;
+
     ////////////////////////////////////////////////////////////////
     ///                     INITIALIZATION                       ///
     ////////////////////////////////////////////////////////////////
@@ -74,7 +80,8 @@ contract ConvexCrvUSDWethCollateralStrategy is BaseConvexStrategy {
         bytes32 _strategyName,
         address _strategist,
         ICurveLendingPool _curveLendingPool,
-        ICurveLpPool _curveUsdcCrvUsdPool
+        ICurveLpPool _curveUsdcCrvUsdPool,
+        SwapManager _swapManager
     )
         public
         initializer
@@ -115,6 +122,11 @@ contract ConvexCrvUSDWethCollateralStrategy is BaseConvexStrategy {
 
         minSwapCrv = 1e14;
         minSwapCvx = 1e14;
+
+
+        swapManager = _swapManager;
+        console2.log("###   ~ file: ConvexCrvUSDWethCollateralStrategy.sol:127 ~ swapManager:", address(swapManager));
+
     }
 
     ////////////////////////////////////////////////////////////////
@@ -147,7 +159,9 @@ contract ConvexCrvUSDWethCollateralStrategy is BaseConvexStrategy {
         amount = Math.min(maxSingleTrade, amount);
 
         // Swap USDC for crvUsd
-        uint256 crvUsdReceived = curveUsdcCrvUsdPool.exchange(0, 1, amount, 0);
+        // uint256 crvUsdReceived = curveUsdcCrvUsdPool.exchange(0, 1, amount, 0);
+
+        uint256 crvUsdReceived = swapManager.executeSwap(underlyingAsset, crvUsd, amount, address(this));
 
         // Add liquidity to the lending pool
         uint256 lpReceived = curveLendingPool.deposit(crvUsdReceived, address(this));
